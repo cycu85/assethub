@@ -157,6 +157,8 @@ System zdarzeń domenowych z subskrybentami:
 
 ### Metoda 1: Instalacja z Kreatoriem (Zalecana)
 
+#### Wariant A: Ubuntu 22.04 LTS
+
 1. **Przygotowanie Serwera Ubuntu 22.04**
    ```bash
    # Aktualizacja systemu
@@ -183,9 +185,9 @@ System zdarzeń domenowych z subskrybentami:
    sudo mysql_secure_installation
    
    # Utworzenie bazy danych i użytkownika
-   sudo mysql -e "CREATE DATABASE myapp2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   sudo mysql -e "CREATE USER 'myapp2'@'localhost' IDENTIFIED BY 'secure_password';"
-   sudo mysql -e "GRANT ALL PRIVILEGES ON myapp2.* TO 'myapp2'@'localhost';"
+   sudo mysql -e "CREATE DATABASE assethub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   sudo mysql -e "CREATE USER 'assethub'@'localhost' IDENTIFIED BY 'secure_password';"
+   sudo mysql -e "GRANT ALL PRIVILEGES ON assethub.* TO 'assethub'@'localhost';"
    sudo mysql -e "FLUSH PRIVILEGES;"
    
    # Instalacja Apache
@@ -221,7 +223,7 @@ System zdarzeń domenowych z subskrybentami:
    # Skopiuj szablon i dostosuj do swoich potrzeb:
    sudo -u www-data cp .env.example .env
    sudo -u www-data nano .env
-   # Zmień DATABASE_URL na: mysql://myapp2:secure_password@localhost:3306/myapp2
+   # Zmień DATABASE_URL na: mysql://assethub:secure_password@localhost:3306/assethub
    # WAŻNE: Plik .env zawiera hasła i NIE jest w git!
    
    # Instalacja zależności
@@ -249,24 +251,24 @@ System zdarzeń domenowych z subskrybentami:
 5. **Konfiguracja Apache**
    ```bash
    # Utworzenie pliku konfiguracyjnego
-   sudo tee /etc/apache2/sites-available/myapp2.conf > /dev/null <<EOF
+   sudo tee /etc/apache2/sites-available/assethub.conf > /dev/null <<EOF
    <VirtualHost *:80>
        ServerName your-domain.com
-       DocumentRoot /var/www/myapp2/public
+       DocumentRoot /var/www/assethub/public
        
-       <Directory /var/www/myapp2/public>
+       <Directory /var/www/assethub/public>
            AllowOverride All
            Require all granted
            DirectoryIndex index.php
        </Directory>
        
-       ErrorLog \${APACHE_LOG_DIR}/myapp2_error.log
-       CustomLog \${APACHE_LOG_DIR}/myapp2_access.log combined
+       ErrorLog \${APACHE_LOG_DIR}/assethub_error.log
+       CustomLog \${APACHE_LOG_DIR}/assethub_access.log combined
    </VirtualHost>
    EOF
    
    # Aktywacja strony
-   sudo a2ensite myapp2.conf
+   sudo a2ensite assethub.conf
    sudo a2dissite 000-default.conf
    sudo systemctl reload apache2
    ```
@@ -279,6 +281,137 @@ System zdarzeń domenowych z subskrybentami:
      - **Krok 3**: Konfiguracja bazy danych (opcjonalnie z danymi przykładowymi)
      - **Krok 4**: Utworzenie konta administratora
      - **Krok 5**: Zakończenie instalacji
+
+#### Wariant B: Ubuntu 24.04 LTS (Noble Numbat)
+
+Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
+
+1. **Przygotowanie Serwera Ubuntu 24.04**
+   ```bash
+   # Aktualizacja systemu
+   sudo apt update && sudo apt upgrade -y
+   
+   # Instalacja PHP 8.3 i rozszerzeń (Ubuntu 24.04 domyślnie)
+   sudo apt install -y php8.3 php8.3-cli php8.3-fpm php8.3-common \
+     php8.3-mysql php8.3-pdo php8.3-intl php8.3-mbstring \
+     php8.3-xml php8.3-curl php8.3-gd php8.3-zip php8.3-opcache \
+     php8.3-ldap php8.3-bcmath php8.3-readline
+   ```
+
+2. **Instalacja MySQL i Apache**
+   ```bash
+   # Instalacja MySQL 8.0 (domyślnie w Ubuntu 24.04)
+   sudo apt install -y mysql-server
+   sudo systemctl enable mysql
+   sudo systemctl start mysql
+   
+   # Zabezpieczenie instalacji MySQL
+   sudo mysql_secure_installation
+   
+   # Utworzenie bazy danych i użytkownika
+   sudo mysql -e "CREATE DATABASE assethub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   sudo mysql -e "CREATE USER 'assethub'@'localhost' IDENTIFIED BY 'secure_password';"
+   sudo mysql -e "GRANT ALL PRIVILEGES ON assethub.* TO 'assethub'@'localhost';"
+   sudo mysql -e "FLUSH PRIVILEGES;"
+   
+   # Instalacja Apache
+   sudo apt install -y apache2
+   
+   # Włączenie modułów (PHP 8.3)
+   sudo a2enmod rewrite
+   sudo a2enmod php8.3
+   
+   # Uruchomienie usług
+   sudo systemctl enable apache2
+   sudo systemctl start apache2
+   ```
+
+3. **Instalacja Composer (najnowsza wersja)**
+   ```bash
+   # Pobranie najnowszego Composera
+   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+   php -r "if (hash_file('sha384', 'composer-setup.php') === file_get_contents('https://composer.github.io/installer.sig')) { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+   php composer-setup.php
+   php -r "unlink('composer-setup.php');"
+   sudo mv composer.phar /usr/local/bin/composer
+   sudo chmod +x /usr/local/bin/composer
+   ```
+
+4. **Pobranie i Konfiguracja AssetHub**
+   ```bash
+   # Przejście do katalogu web
+   cd /var/www
+   
+   # Klonowanie repozytorium
+   sudo git clone https://github.com/cycu85/assethub.git
+   sudo chown -R www-data:www-data assethub
+   cd assethub
+   
+   # Konfiguracja środowiska
+   sudo -u www-data cp .env.example .env
+   sudo -u www-data nano .env
+   # Zmień DATABASE_URL na: mysql://assethub:secure_password@localhost:3306/assethub
+   
+   # Instalacja zależności z PHP 8.3
+   sudo -u www-data composer install --no-dev --optimize-autoloader
+   sudo -u www-data composer require symfony/asset
+   
+   # Utworzenie struktury bazy danych
+   sudo -u www-data php bin/console doctrine:database:create
+   sudo -u www-data php bin/console doctrine:migrations:migrate --no-interaction
+   
+   # Ustawienie uprawnień (Ubuntu 24.04)
+   sudo chmod -R 755 var/
+   sudo chmod -R 775 var/cache var/log
+   sudo chown -R www-data:www-data var/
+   
+   # Tworzenie katalogów
+   sudo -u www-data mkdir -p var/log public/uploads/avatars var/backups
+   sudo chmod 755 public/uploads/avatars var/backups
+   ```
+
+5. **Konfiguracja Apache dla Ubuntu 24.04**
+   ```bash
+   # Utworzenie pliku konfiguracyjnego
+   sudo tee /etc/apache2/sites-available/assethub.conf > /dev/null <<EOF
+   <VirtualHost *:80>
+       ServerName your-domain.com
+       DocumentRoot /var/www/assethub/public
+       
+       <Directory /var/www/assethub/public>
+           AllowOverride All
+           Require all granted
+           DirectoryIndex index.php
+           
+           # Dodatkowe zabezpieczenia dla Ubuntu 24.04
+           <FilesMatch "\.php$">
+               SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost"
+           </FilesMatch>
+       </Directory>
+       
+       # Ulepszony logging
+       ErrorLog \${APACHE_LOG_DIR}/assethub_error.log
+       CustomLog \${APACHE_LOG_DIR}/assethub_access.log combined
+       LogLevel info ssl:warn
+   </VirtualHost>
+   EOF
+   
+   # Włączenie proxy_fcgi dla FPM (Ubuntu 24.04)
+   sudo a2enmod proxy_fcgi setenvif
+   sudo a2enconf php8.3-fpm
+   
+   # Aktywacja strony
+   sudo a2ensite assethub.conf
+   sudo a2dissite 000-default.conf
+   sudo systemctl reload apache2
+   
+   # Restart PHP-FPM
+   sudo systemctl restart php8.3-fpm
+   ```
+
+6. **Uruchomienie Kreatora Instalacji**
+   - Procedura identyczna jak dla Ubuntu 22.04
+   - Przejdź do: `http://your-domain.com/install`
 
 ### Metoda 2: Instalacja Manualna
 
@@ -297,7 +430,7 @@ System zdarzeń domenowych z subskrybentami:
    # .env - NIGDY NIE COMMITUJ TEGO PLIKU!
    APP_ENV=prod
    APP_SECRET=your-secret-key-here
-   DATABASE_URL=mysql://myapp2:secure_password@localhost:3306/myapp2
+   DATABASE_URL=mysql://assethub:secure_password@localhost:3306/assethub
    MAILER_DSN=smtp://localhost
    ```
    
@@ -321,7 +454,7 @@ System zdarzeń domenowych z subskrybentami:
 
 #### MySQL (Domyślna)
 ```env
-DATABASE_URL=mysql://myapp2:secure_password@localhost:3306/myapp2
+DATABASE_URL=mysql://assethub:secure_password@localhost:3306/assethub
 ```
 
 #### SQLite
@@ -331,7 +464,7 @@ DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db
 
 #### PostgreSQL
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/myapp2
+DATABASE_URL=postgresql://username:password@localhost:5432/assethub
 ```
 
 ### Konfiguracja Email
@@ -358,7 +491,7 @@ MAILER_DSN=gmail://username:password@default
    ```apache
    <VirtualHost *:443>
        ServerName your-domain.com
-       DocumentRoot /var/www/myapp2/public
+       DocumentRoot /var/www/assethub/public
        
        SSLEngine on
        SSLCertificateFile /etc/letsencrypt/live/your-domain.com/fullchain.pem
@@ -714,7 +847,7 @@ tests/
 2. **Backup Bazy Danych**
    ```bash
    # MySQL
-   mysqldump -u myapp2 -p myapp2 > backup_$(date +%Y%m%d_%H%M%S).sql
+   mysqldump -u assethub -p assethub > backup_$(date +%Y%m%d_%H%M%S).sql
    
    # SQLite (jeśli używasz)
    cp var/data.db var/backup/data_$(date +%Y%m%d_%H%M%S).db
@@ -733,7 +866,7 @@ tests/
    tail -f var/log/doctrine.log     # Logi bazy danych
    
    # Logi Apache
-   tail -f /var/log/apache2/myapp2_error.log
+   tail -f /var/log/apache2/assethub_error.log
    ```
 
 ### Zabezpieczenia Serwera
