@@ -1,0 +1,19 @@
+framework:
+    rate_limiter:
+        # Ograniczenie logowania - max 5 prób na 15 minut na IP
+        login:
+            policy: 'sliding_window'
+            limit: 5
+            interval: '15 minutes'
+            
+        # Ograniczenie API - max 100 requestów na minutę na IP
+        api:
+            policy: 'fixed_window'
+            limit: 100
+            interval: '1 minute'
+            
+        # Ograniczenie wyszukiwania - max 30 requestów na minutę na użytkownika
+        search:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '1 minute'

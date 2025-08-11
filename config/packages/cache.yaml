@@ -1,19 +1,40 @@
 framework:
     cache:
         # Unique name of your app: used to compute stable namespaces for cache keys.
-        #prefix_seed: your_vendor_name/app_name
+        prefix_seed: assethub/app
+        
+        # Use Redis if available, fallback to filesystem
+        app: 'cache.adapter.redis'
+        default_redis_provider: 'redis://localhost:6379/0'
+        
+        pools:
+            # Cache dla ustawień systemu
+            cache.settings:
+                adapter: cache.adapter.redis
+                default_lifetime: 3600  # 1 hour
+                
+            # Cache dla sesji użytkowników  
+            cache.sessions:
+                adapter: cache.adapter.redis
+                default_lifetime: 86400  # 24 hours
+                
+            # Cache dla uprawnień użytkowników
+            cache.permissions:
+                adapter: cache.adapter.redis  
+                default_lifetime: 1800   # 30 minutes
+                
+            # Cache dla danych LDAP
+            cache.ldap:
+                adapter: cache.adapter.redis
+                default_lifetime: 900    # 15 minutes
 
-        # The "app" cache stores to the filesystem by default.
-        # The data in this cache should persist between deploys.
-        # Other options include:
+when@dev:
+    framework:
+        cache:
+            # W środowisku dev używaj filesystem cache
+            app: 'cache.adapter.filesystem'
 
-        # Redis
-        #app: cache.adapter.redis
-        #default_redis_provider: redis://localhost
-
-        # APCu (not recommended with heavy random-write workloads as memory fragmentation can cause perf issues)
-        #app: cache.adapter.apcu
-
-        # Namespaced pools use the above "app" backend by default
-        #pools:
-            #my.dedicated.cache: null
+when@test:
+    framework:
+        cache:
+            app: 'cache.adapter.array'

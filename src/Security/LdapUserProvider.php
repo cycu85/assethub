@@ -55,7 +55,10 @@ class LdapUserProvider implements UserProviderInterface
                 }
                 
                 $ldap->bind($searchDn, $searchPassword);
-                $query = $ldap->query($baseDn, "({$uidKey}={$identifier})");
+                
+                // Zabezpieczenie przed LDAP injection - escapowanie specjalnych znaków
+                $escapedIdentifier = ldap_escape($identifier, '', LDAP_ESCAPE_FILTER);
+                $query = $ldap->query($baseDn, "({$uidKey}={$escapedIdentifier})");
                 $result = $query->execute();
                 
                 if ($result->count() > 0) {

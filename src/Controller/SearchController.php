@@ -8,17 +8,26 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class SearchController extends AbstractController
 {
     public function __construct(
         private UserRepository $userRepository,
-        private PermissionService $permissionService
+        private PermissionService $permissionService,
+        private RateLimiterFactory $searchLimiter
     ) {}
 
     #[Route('/api/search', name: 'api_search', methods: ['GET'])]
     public function search(Request $request): JsonResponse
     {
+        // Rate limiting - sprawdź czy użytkownik nie przekroczył limitu wyszukiwań
+        $limiter = $this->searchLimiter->create($this->getUser()->getId());
+        if (!$limiter->consume(1)->isAccepted()) {
+            throw new TooManyRequestsHttpException(60, 'Too many search requests. Please wait a moment.');
+        }
+        
         $query = trim($request->query->get('q', ''));
         
         if (strlen($query) < 2) {

@@ -7,6 +7,8 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 class SettingService
 {
@@ -14,24 +16,31 @@ class SettingService
         private SettingRepository $settingRepository,
         private SluggerInterface $slugger,
         private LoggerInterface $logger,
-        private string $publicDir
+        private string $publicDir,
+        private CacheInterface $settingsCache
     ) {
     }
 
     /**
-     * Pobierz wartość ustawienia
+     * Pobierz wartość ustawienia z cache
      */
     public function get(string $key, ?string $defaultValue = null): ?string
     {
-        return $this->settingRepository->getValueByKey($key, $defaultValue);
+        return $this->settingsCache->get('setting_' . $key, function (ItemInterface $item) use ($key, $defaultValue) {
+            $item->expiresAfter(3600); // 1 hour
+            return $this->settingRepository->getValueByKey($key, $defaultValue);
+        });
     }
 
     /**
-     * Ustaw wartość ustawienia
+     * Ustaw wartość ustawienia i usuń z cache
      */
     public function set(string $key, ?string $value, string $category = 'general', string $type = 'text', ?string $description = null): void
     {
         $this->settingRepository->setValue($key, $value, $category, $type, $description);
+        
+        // Usuń z cache po aktualizacji
+        $this->settingsCache->delete('setting_' . $key);
         
         $this->logger->info('Setting updated', [
             'key' => $key,

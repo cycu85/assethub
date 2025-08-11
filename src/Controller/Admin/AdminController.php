@@ -1578,6 +1578,11 @@ class AdminController extends AbstractController
         
         foreach ($tables as $table) {
             try {
+                // Zabezpieczenie przed SQL injection - walidacja nazwy tabeli
+                if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+                    $this->logger->warning('Invalid table name detected', ['table' => $table]);
+                    continue;
+                }
                 $connection->executeStatement("OPTIMIZE TABLE `{$table}`");
                 $optimized++;
             } catch (\Exception $e) {
@@ -1621,6 +1626,11 @@ class AdminController extends AbstractController
         
         foreach ($tables as $table) {
             try {
+                // Zabezpieczenie przed SQL injection - walidacja nazwy tabeli
+                if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+                    $this->logger->warning('Invalid table name detected', ['table' => $table]);
+                    continue;
+                }
                 $connection->executeStatement("ANALYZE TABLE `{$table}`");
                 $analyzed++;
             } catch (\Exception $e) {

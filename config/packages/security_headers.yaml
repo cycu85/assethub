@@ -1,0 +1,15 @@
+framework:
+    http_method_override: false
+    
+    # Security headers
+    response:
+        headers:
+            # Content Security Policy - ochrona przed XSS
+            Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none';"
+            
+            # Inne security headers
+            X-Content-Type-Options: "nosniff"
+            X-Frame-Options: "DENY"  
+            X-XSS-Protection: "1; mode=block"
+            Referrer-Policy: "strict-origin-when-cross-origin"
+            Permissions-Policy: "geolocation=(), microphone=(), camera=()"

@@ -21,6 +21,8 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Credentials\CustomCre
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\SecurityRequestAttributes;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class LdapAuthenticator extends AbstractLoginFormAuthenticator
 {
@@ -31,11 +33,18 @@ class LdapAuthenticator extends AbstractLoginFormAuthenticator
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
         private SettingService $settingService,
+        private RateLimiterFactory $loginLimiter,
         private ?LoggerInterface $logger = null
     ) {}
 
     public function authenticate(Request $request): Passport
     {
+        // Rate limiting - sprawdź czy IP nie przekroczył limitu
+        $limiter = $this->loginLimiter->create($request->getClientIp());
+        if (!$limiter->consume(1)->isAccepted()) {
+            throw new TooManyRequestsHttpException(900, 'Too many login attempts. Please try again in 15 minutes.');
+        }
+        
         $username = $request->getPayload()->getString('_username');
         $password = $request->getPayload()->getString('_password');
 

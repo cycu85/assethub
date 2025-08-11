@@ -2,7 +2,10 @@ security:
     # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         App\Entity\User:
-            algorithm: auto
+            algorithm: 'argon2id'
+            memory_cost: 65536      # 64 MB
+            time_cost: 4            # 4 iterations  
+            threads: 3              # 3 threads
 
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:

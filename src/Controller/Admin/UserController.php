@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Knp\Component\Pager\PaginatorInterface;
 
 #[Route('/admin/users')]
 class UserController extends AbstractController
@@ -28,8 +29,12 @@ class UserController extends AbstractController
     }
 
     #[Route('/', name: 'admin_users_index')]
-    public function index(UserRepository $userRepository, DictionaryRepository $dictionaryRepository, Request $request): Response
-    {
+    public function index(
+        UserRepository $userRepository, 
+        DictionaryRepository $dictionaryRepository, 
+        Request $request,
+        PaginatorInterface $paginator
+    ): Response {
         $user = $this->getUser();
         
         if (!$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_VIEW') && 
@@ -42,7 +47,17 @@ class UserController extends AbstractController
             return $this->redirectToRoute('error_access_denied');
         }
 
-        $users = $userRepository->findAll();
+        // Pobierz queryBuilder zamiast gotowych rezultatów
+        $queryBuilder = $userRepository->createQueryBuilder('u')
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC');
+
+        // Paginacja - 25 użytkowników na stronę
+        $users = $paginator->paginate(
+            $queryBuilder->getQuery(),
+            $request->query->getInt('page', 1),
+            25
+        );
 
         // Pobierz słowniki dla oddziałów i statusów
         $branches = $dictionaryRepository->findByType('employee_branches');
