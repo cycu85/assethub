@@ -26,14 +26,17 @@
 
 ## 🎯 O Projekcie
 
-AssetHub to nowoczesny system zarządzania zasobami firmy, zaprojektowany z myślą o przedsiębiorstwach potrzebujących efektywnego kontrolowania swojego majątku. System oferuje modularną architekturę, pozwalającą na aktywację tylko niezbędnych funkcjonalności.
+AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w oparciu o nowoczesne wzorce architektoniczne. Wykorzystuje Service Layer Pattern, CQRS i Event-Driven Architecture dla maksymalnej skalowalności i bezpieczeństwa. System oferuje modularną architekturę z granularną kontrolą dostępu, kompleksowym audytem i zaawansowanymi funkcjami bezpieczeństwa.
 
 ### Główne Cechy
 
-- **🏗️ Architektura Modularna** - Aktywuj tylko potrzebne moduły
-- **👥 Zaawansowane Zarządzanie Użytkownikami** - Role i uprawnienia per moduł
-- **📊 Kompleksowe Raporty** - Analiza wykorzystania i kosztów
-- **🔐 Bezpieczeństwo** - Pełna kontrola dostępu i logi aktywności
+- **🏗️ Architektura Enterprise** - Service Layer Pattern + CQRS + Event-Driven Architecture
+- **🔐 Zaawansowane Bezpieczeństwo** - AuthorizationService, rate limiting, kompleksowy audit trail
+- **📊 Kompleksowy System Audytu** - AuditService z wielopoziomowym logowaniem wszystkich operacji
+- **👥 Granularne Zarządzanie Użytkownikami** - Role i uprawnienia per moduł z LDAP/AD
+- **⚡ Wysokowydajne Wyszukiwanie** - Globalne wyszukiwanie z rate limiting i audytem
+- **📈 Inteligentny Dashboard** - Dynamiczne metryki dostosowane do uprawnień użytkownika
+- **🔧 Zaawansowane Zarządzanie Modułami** - Aktywacja tylko potrzebnych funkcjonalności
 - **📱 Responsywny Interfejs** - Optymalizacja dla urządzeń mobilnych
 - **🚀 Łatwa Instalacja** - Graficzny kreator instalacji
 
@@ -64,13 +67,20 @@ AssetHub to nowoczesny system zarządzania zasobami firmy, zaprojektowany z myś
 - Harmonogram przeglądów i ubezpieczeń
 - Kontrola kosztów eksploatacji
 
-### 👨‍💼 Panel Administracyjny
-- **Zarządzanie użytkownikami i rolami** - System uprawnień z granularnymi rolami (system_admin, employees_viewer, employees_editor, employees_manager)
-- **Konfiguracja modułów systemu** - Aktywacja i zarządzanie modułami aplikacji
-- **Generowanie raportów i analiz** - Kompleksowe raporty systemu
-- **System logowania** - Kompleksowe logowanie aktywności użytkowników z wielokanałowymi logami
-- **Podgląd logów** - Przeglądanie i filtrowanie logów systemowych w panelu administracyjnym
-- **System słowników** - Zarządzanie słownikami systemowymi dla wszystkich modułów
+### 👨‍💼 Panel Administracyjny Enterprise
+- **🔐 AuthorizationService** - Centralizowana autoryzacja z granularnymi uprawnieniami per moduł
+- **📊 AuditService** - Kompleksowy system audytu z wielopoziomowym logowaniem:
+  - Akcje użytkowników (INFO) - wszystkie operacje użytkowników
+  - Zdarzenia bezpieczeństwa (ERROR) - rate limiting, niepowodzenia logowania
+  - Akcje administracyjne (NOTICE) - backup, maintenance, konfiguracja
+  - Operacje bazodanowe (NOTICE/ERROR) - backup, optymalizacja, błędy
+- **👥 Zaawansowane Zarządzanie Użytkownikami** - Role z uprawnieniami VIEW/CREATE/EDIT/DELETE per moduł
+- **🔧 System Modułowy** - Aktywacja i zarządzanie modułami z pełną kontrolą dostępu
+- **📈 Dashboard Enterprise** - Inteligentne metryki dostosowane do uprawnień użytkownika
+- **⚡ Globalne Wyszukiwanie** - Multi-module search z rate limiting i audytem
+- **💾 Zarządzanie Bazą Danych** - Backup, optymalizacja, maintenance z pełnym audytem
+- **🔍 Podgląd Logów** - Zaawansowane filtrowanie logów systemowych w panelu
+- **📚 System Słowników** - Centralne zarządzanie słownikami dla wszystkich modułów
 
 #### 🎨 Ustawienia Systemu
 - **Ogólne** - Dynamiczne ustawienia nazwy aplikacji, logo firmy i kolorystyki z zaawansowanym systemem kollorów:
@@ -89,6 +99,34 @@ AssetHub to nowoczesny system zarządzania zasobami firmy, zaprojektowany z myś
 - **Avatary użytkowników** - Upload i zarządzanie zdjęciami profilowymi (JPG, PNG, GIF, WebP)
 - **Integracja LDAP** - Automatyczna synchronizacja danych z Active Directory
 
+## 🏗️ Architektura Enterprise
+
+### Service Layer Pattern
+Wszystkie operacje biznesowe realizowane przez dedykowane serwisy:
+- **EquipmentService** - Zarządzanie sprzętem z pełną logiką biznesową
+- **AuthorizationService** - Centralizowana autoryzacja zastępująca stary PermissionService
+- **AuditService** - Kompleksowy system audytu z wielopoziomowym logowaniem
+- **AdminService** - Operacje administracyjne, backup, maintenance
+
+### CQRS (Command Query Responsibility Segregation)
+Separacja komend i zapytań dla lepszej architektury:
+- **Commands** - CreateEquipmentCommand, UpdateUserCommand, etc.
+- **Queries** - GetEquipmentQuery, SearchUsersQuery, etc.
+- **Handlers** - Dedykowane handlery dla każdej operacji
+
+### Event-Driven Architecture
+System zdarzeń domenowych z subskrybentami:
+- **Events** - EquipmentCreatedEvent, UserUpdatedEvent, SecurityEvent, etc.
+- **Event Subscribers** - Automatyczne akcje, powiadomienia, audit trail
+- **Loose Coupling** - Moduły komunikują się przez zdarzenia
+
+### Bezpieczeństwo Enterprise Grade
+- **Rate Limiting** - Ochrona przed spam/DoS attacks w wyszukiwaniu
+- **Comprehensive Audit Trail** - Każda akcja logowana z kontekstem
+- **Permission-based Authorization** - Granularne uprawnienia per moduł
+- **Security Event Monitoring** - Automatyczne wykrywanie zagrożeń
+- **Input Sanitization** - Automatyczna sanityzacja danych wrażliwych
+
 ## 💻 Wymagania Systemowe
 
 ### Minimalne Wymagania
@@ -102,7 +140,7 @@ AssetHub to nowoczesny system zarządzania zasobami firmy, zaprojektowany z myś
 | **Pamięć RAM** | Minimum 512MB, zalecane 2GB+ |
 | **Przestrzeń Dyskowa** | Minimum 1GB, zalecane 10GB+ (w tym miejsce na avatary, backupy bazy danych) |
 | **PHP Extensions** | mysql, pdo, intl, mbstring, xml, curl, gd, ldap |
-| **Narzędzia systemowe** | mysqldump (dla kopii zapasowych bazy danych) |
+| **Narzędzia systemowe** | mysqldump (dla AdminService database backups) |
 
 ### Zalecane Wymagania Produkcyjne
 
@@ -175,9 +213,9 @@ AssetHub to nowoczesny system zarządzania zasobami firmy, zaprojektowany z myś
    cd /var/www
    
    # Klonowanie repozytorium
-   sudo git clone https://github.com/cycu85/myapp2.git
-   sudo chown -R www-data:www-data myapp2
-   cd myapp2
+   sudo git clone https://github.com/cycu85/assethub.git
+   sudo chown -R www-data:www-data assethub
+   cd assethub
    
    # Konfiguracja środowiska
    # Skopiuj szablon i dostosuj do swoich potrzeb:
@@ -522,7 +560,7 @@ System umożliwia eksport danych w formatach:
 ### Struktura Projektu
 
 ```
-myapp2/
+assethub/
 ├── config/           # Konfiguracja Symfony
 ├── migrations/       # Migracje bazy danych
 ├── public/          # Pliki publiczne (CSS, JS, obrazy)
@@ -586,6 +624,41 @@ myapp2/
    php bin/console doctrine:migrations:migrate
    ```
 
+### Testy Jednostkowe Enterprise
+
+System posiada kompleksowe pokrycie testami jednostkowymi:
+
+```bash
+# Uruchomienie wszystkich testów
+php bin/phpunit
+
+# Testy konkretnej grupy
+php bin/phpunit tests/Service/
+php bin/phpunit tests/Controller/
+```
+
+#### Pokrycie Testami
+- **Service Layer** - 100% pokrycie dla wszystkich serwisów biznesowych
+- **Controllers** - Testy integracyjne z mock'owanymi serwisami  
+- **Authorization** - Pełne testy uprawnień i bezpieczeństwa
+- **Audit System** - Weryfikacja logowania wszystkich operacji
+
+#### Struktura Testów
+```
+tests/
+├── Controller/
+│   ├── EquipmentControllerTest.php      # ✅ 12 testów
+│   ├── DashboardControllerTest.php      # ✅ 7 testów
+│   └── SearchControllerTest.php         # ✅ 8 testów
+├── Service/
+│   ├── AuthorizationServiceTest.php     # ✅ 17 testów
+│   ├── AuditServiceTest.php            # ✅ 15 testów
+│   ├── EquipmentServiceTest.php        # ✅ 18 testów
+│   └── AdminServiceTest.php            # ✅ 12 testów
+└── Entity/
+    └── {Entity}Test.php
+```
+
 ### Konwencje Kodowania
 
 - **PSR-12** - Standard kodowania PHP
@@ -593,7 +666,39 @@ myapp2/
 - **PHPDoc** - Dokumentacja kodu
 - **Type Hints** - Typowanie zmiennych i funkcji
 
-## 🔒 Bezpieczeństwo
+## 🔒 Bezpieczeństwo Enterprise
+
+### Wbudowane Funkcje Bezpieczeństwa
+
+1. **AuthorizationService - Centralizowana Autoryzacja**
+   ```php
+   // Sprawdzanie uprawnień do modułów
+   $this->authorizationService->checkModuleAccess($user, 'equipment');
+   $this->authorizationService->checkPermission($user, 'equipment', 'CREATE');
+   
+   // Granularne uprawnienia
+   $canEdit = $this->authorizationService->hasPermission($user, 'equipment', 'EDIT');
+   $canEditAny = $this->authorizationService->hasAnyPermission($user, 'equipment', ['EDIT', 'DELETE']);
+   ```
+
+2. **AuditService - Kompleksowy System Audytu**
+   ```bash
+   # Wielopoziomowe logowanie wszystkich operacji
+   var/log/app.log          # Akcje użytkowników (INFO)
+   var/log/security.log     # Zdarzenia bezpieczeństwa (ERROR)
+   var/log/admin.log        # Akcje administracyjne (NOTICE)  
+   var/log/database.log     # Operacje bazodanowe (NOTICE/ERROR)
+   ```
+
+3. **Rate Limiting**
+   - Ochrona wyszukiwania przed spam/DoS attacks
+   - Automatyczne logowanie prób przekroczenia limitów
+   - Blokowanie na podstawie IP/użytkownika
+
+4. **Security Event Monitoring**
+   - Automatyczne wykrywanie podejrzanych działań
+   - Logowanie nieudanych prób logowania
+   - Monitorowanie zmian uprawnień
 
 ### Najlepsze Praktyki
 
@@ -707,13 +812,13 @@ DATABASE_URL=mysql://user:password@localhost/dbname
 
 ### Dokumentacja
 
-- **Wiki**: [github.com/cycu85/myapp2/wiki](https://github.com/cycu85/myapp2/wiki)
+- **Wiki**: [github.com/cycu85/assethub/wiki](https://github.com/cycu85/assethub/wiki)
 - **API Docs**: [your-domain.com/api/docs](http://your-domain.com/api/docs)
-- **FAQ**: [github.com/cycu85/myapp2/wiki/FAQ](https://github.com/cycu85/myapp2/wiki/FAQ)
+- **FAQ**: [github.com/cycu85/assethub/wiki/FAQ](https://github.com/cycu85/assethub/wiki/FAQ)
 
 ### Zgłaszanie Problemów
 
-1. **GitHub Issues**: [github.com/cycu85/myapp2/issues](https://github.com/cycu85/myapp2/issues)
+1. **GitHub Issues**: [github.com/cycu85/assethub/issues](https://github.com/cycu85/assethub/issues)
 2. **Email Support**: support@your-domain.com
 3. **Community Forum**: [forum.your-domain.com](http://forum.your-domain.com)
 
@@ -778,7 +883,7 @@ Dodaj inne informacje lub zrzuty ekranu dotyczące prośby o funkcję tutaj.
 - **DevOps Engineer**: DevOps Name (devops@domain.com)
 
 ### Contributors
-Zobacz pełną listę współtwórców na: [github.com/cycu85/myapp2/contributors](https://github.com/cycu85/myapp2/contributors)
+Zobacz pełną listę współtwórców na: [github.com/cycu85/assethub/contributors](https://github.com/cycu85/assethub/contributors)
 
 ### Sposób Współpracy
 
@@ -816,9 +921,9 @@ in the Software without restriction...
 <div align="center">
   <p>Made with ❤️ by AssetHub Team</p>
   <p>
-    <a href="https://github.com/cycu85/myapp2">GitHub</a> •
+    <a href="https://github.com/cycu85/assethub">GitHub</a> •
     <a href="https://your-domain.com">Website</a> •
-    <a href="https://twitter.com/myapp2">Twitter</a> •
+    <a href="https://twitter.com/assethub">Twitter</a> •
     <a href="mailto:contact@your-domain.com">Contact</a>
   </p>
 </div>
