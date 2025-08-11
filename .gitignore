@@ -28,6 +28,3 @@ yarn-error.log
 
 # Claude Code settings
 .claude/
-
-# AI Context files - internal documentation
-konteks.txt
