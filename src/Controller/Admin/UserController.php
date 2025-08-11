@@ -17,80 +17,64 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Knp\Component\Pager\PaginatorInterface;
+use App\Service\AuthorizationService;
+use App\Service\UserService;
+use App\Service\AuditService;
 
 #[Route('/admin/users')]
 class UserController extends AbstractController
 {
     public function __construct(
-        private PermissionService $permissionService,
+        private AuthorizationService $authorizationService,
+        private UserService $userService,
+        private AuditService $auditService,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {
     }
 
     #[Route('/', name: 'admin_users_index')]
-    public function index(
-        UserRepository $userRepository, 
-        DictionaryRepository $dictionaryRepository, 
-        Request $request,
-        PaginatorInterface $paginator
-    ): Response {
+    public function index(Request $request): Response {
         $user = $this->getUser();
         
-        if (!$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_VIEW') && 
-            !$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') && 
-            !$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL')) {
-            $this->logger->warning('Unauthorized employees access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp()
-            ]);
-            return $this->redirectToRoute('error_access_denied');
-        }
+        // Sprawdź uprawnienia - użyj nowej metody z AuthorizationService
+        $this->authorizationService->hasAnyPermission($user, 'admin', [
+            'EMPLOYEES_VIEW',
+            'EMPLOYEES_EDIT_BASIC', 
+            'EMPLOYEES_EDIT_FULL'
+        ], $request);
 
-        // Pobierz queryBuilder zamiast gotowych rezultatów
-        $queryBuilder = $userRepository->createQueryBuilder('u')
-            ->orderBy('u.lastName', 'ASC')
-            ->addOrderBy('u.firstName', 'ASC');
+        // Pobierz użytkowników z paginacją przez UserService
+        $page = $request->query->getInt('page', 1);
+        $filters = [
+            'search' => $request->query->get('search'),
+            'department' => $request->query->get('department'),
+            'active' => $request->query->get('active')
+        ];
+        
+        $users = $this->userService->getUsersWithPagination($page, 25, $filters);
 
-        // Paginacja - 25 użytkowników na stronę
-        $users = $paginator->paginate(
-            $queryBuilder->getQuery(),
-            $request->query->getInt('page', 1),
-            25
-        );
+        // Pobierz słowniki przez UserService
+        $dictionaries = $this->userService->getDictionariesForForms();
 
-        // Pobierz słowniki dla oddziałów i statusów
-        $branches = $dictionaryRepository->findByType('employee_branches');
-        $statuses = $dictionaryRepository->findByType('employee_statuses');
+        // Loguj dostęp przez AuditService
+        $this->auditService->logUserAction($user, 'view_users_index', [
+            'page' => $page,
+            'filters' => array_filter($filters),
+            'total_users' => $users->getTotalItemCount()
+        ], $request);
 
-        // Stwórz mapy value => name dla łatwego dostępu w szablonie
-        $branchesMap = [];
-        foreach ($branches as $branch) {
-            $branchesMap[$branch->getValue()] = $branch->getName();
-        }
-
-        $statusesMap = [];
-        foreach ($statuses as $status) {
-            $statusesMap[$status->getValue()] = $status->getName();
-        }
-
-        $this->logger->info('Admin users index accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
-            'users_count' => count($users)
-        ]);
-
-        // Check user permissions for template
-        $canEdit = $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') || 
-                   $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
-        $canEditFull = $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
+        // Check user permissions for template  
+        $canEdit = $this->authorizationService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') || 
+                   $this->authorizationService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
+        $canEditFull = $this->authorizationService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
         
         return $this->render('admin/users/index.html.twig', [
             'users' => $users,
             'can_edit' => $canEdit,
             'can_edit_full' => $canEditFull,
-            'branches_map' => $branchesMap,
-            'statuses_map' => $statusesMap,
+            'dictionaries' => $dictionaries,
+            'statistics' => $this->userService->getUserStatistics()
         ]);
     }
 

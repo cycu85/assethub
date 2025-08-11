@@ -26,3 +26,20 @@ services:
     App\Service\SettingService:
         arguments:
             $settingsCache: '@cache.settings'
+            
+    # Authorization service with permissions cache
+    App\Service\AuthorizationService:
+        arguments:
+            $permissionsCache: '@cache.permissions'
+            
+    # LDAP service with cache
+    App\Service\LdapService:
+        arguments:
+            $ldapCache: '@cache.ldap'
+            
+    # Exception listener
+    App\EventListener\ExceptionListener:
+        arguments:
+            $environment: '%kernel.environment%'
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception }
