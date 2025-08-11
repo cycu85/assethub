@@ -7,7 +7,9 @@ use App\Form\EmailSettingsType;
 use App\Form\GeneralSettingsType;
 use App\Form\LdapSettingsType;
 use App\Repository\ModuleRepository;
-use App\Service\PermissionService;
+use App\Service\AuthorizationService;
+use App\Service\AdminService;
+use App\Service\AuditService;
 use App\Service\SettingService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,7 +29,9 @@ use Symfony\Component\Routing\Annotation\Route;
 class AdminController extends AbstractController
 {
     public function __construct(
-        private PermissionService $permissionService,
+        private AuthorizationService $authorizationService,
+        private AdminService $adminService,
+        private AuditService $auditService,
         private ModuleRepository $moduleRepository,
         private SettingService $settingService,
         private MailerInterface $mailer,
@@ -38,46 +42,36 @@ class AdminController extends AbstractController
     }
 
     #[Route('/', name: 'admin_dashboard')]
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'admin')) {
-            $this->logger->warning('Unauthorized admin dashboard access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $this->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do panelu administracyjnego');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'admin', $request);
 
-        $this->logger->info('Admin dashboard accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $this->getClientIp()
-        ]);
+        // Get dashboard data via AdminService
+        $dashboardData = $this->adminService->getDashboardData();
 
-        return $this->render('admin/dashboard.html.twig');
+        // Audit dashboard access
+        $this->auditService->logUserAction($user, 'view_admin_dashboard', [], $request);
+
+        return $this->render('admin/dashboard.html.twig', $dashboardData);
     }
 
     #[Route('/modules', name: 'admin_modules')]
-    public function modules(): Response
+    public function modules(Request $request): Response
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'admin')) {
-            $this->logger->warning('Unauthorized admin modules access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $this->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do panelu administracyjnego');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'admin', $request);
 
         $modules = $this->moduleRepository->findAll();
         
-        $this->logger->info('Admin modules page accessed', [
-            'user' => $user->getUsername(),
-            'modules_count' => count($modules),
-            'ip' => $this->getClientIp()
-        ]);
+        // Audit modules page access
+        $this->auditService->logUserAction($user, 'view_admin_modules', [
+            'modules_count' => count($modules)
+        ], $request);
 
         return $this->render('admin/modules/index.html.twig', [
             'modules' => $modules,
@@ -378,85 +372,68 @@ class AdminController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'admin')) {
-            $this->logger->warning('Unauthorized admin database settings access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do panelu administracyjnego');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'admin', $request);
 
-        // Pobierz informacje o bazie danych
-        $databaseInfo = $this->getDatabaseInfo();
+        // Get database info via AdminService
+        $databaseInfo = $this->adminService->getDatabaseInfo();
         
-        // Sprawdź który przycisk został kliknięty
+        // Handle POST operations
         if ($request->isMethod('POST')) {
             $action = $request->request->get('action');
             
             try {
                 switch ($action) {
                     case 'backup':
-                        $filename = $this->createDatabaseBackup();
+                        $filename = $this->adminService->createDatabaseBackup();
                         $this->addFlash('success', 'Kopia zapasowa została utworzona: ' . $filename);
                         
-                        $this->logger->info('Database backup created successfully', [
-                            'user' => $user->getUsername(),
-                            'filename' => $filename,
-                            'ip' => $request->getClientIp()
-                        ]);
+                        $this->auditService->logUserAction($user, 'database_backup_created', [
+                            'filename' => $filename
+                        ], $request);
                         break;
                         
                     case 'optimize':
-                        $result = $this->optimizeDatabase();
-                        $this->addFlash('success', 'Baza danych została zoptymalizowana. Zoptymalizowano ' . $result['optimized'] . ' tabel.');
+                        $result = $this->adminService->performDatabaseMaintenance('optimize');
+                        $this->addFlash('success', 'Baza danych została zoptymalizowana. Zoptymalizowano ' . $result['affected_tables'] . ' tabel.');
                         
-                        $this->logger->info('Database optimized successfully', [
-                            'user' => $user->getUsername(),
-                            'optimized_tables' => $result['optimized'],
-                            'ip' => $request->getClientIp()
-                        ]);
+                        $this->auditService->logUserAction($user, 'database_optimized', [
+                            'optimized_tables' => $result['affected_tables']
+                        ], $request);
                         break;
                         
                     case 'analyze':
-                        $result = $this->analyzeDatabase();
-                        $this->addFlash('success', 'Analiza bazy danych została zakończona. Przeanalizowano ' . $result['analyzed'] . ' tabel.');
+                        $result = $this->adminService->performDatabaseMaintenance('analyze');
+                        $this->addFlash('success', 'Analiza bazy danych została zakończona. Przeanalizowano ' . $result['affected_tables'] . ' tabel.');
                         
-                        $this->logger->info('Database analyzed successfully', [
-                            'user' => $user->getUsername(),
-                            'analyzed_tables' => $result['analyzed'],
-                            'ip' => $request->getClientIp()
-                        ]);
+                        $this->auditService->logUserAction($user, 'database_analyzed', [
+                            'analyzed_tables' => $result['affected_tables']
+                        ], $request);
                         break;
                         
                     case 'clear_logs':
-                        $result = $this->clearOldLogs();
-                        $this->addFlash('success', 'Stare logi zostały wyczyszczone. Usunięto ' . $result['deleted'] . ' wpisów.');
+                        $result = $this->adminService->clearSystemLogs();
+                        $this->addFlash('success', 'Stare logi zostały wyczyszczone. Usunięto ' . $result['deleted_files'] . ' plików.');
                         
-                        $this->logger->info('Old logs cleared successfully', [
-                            'user' => $user->getUsername(),
-                            'deleted_logs' => $result['deleted'],
-                            'ip' => $request->getClientIp()
-                        ]);
+                        $this->auditService->logUserAction($user, 'system_logs_cleared', [
+                            'deleted_files' => $result['deleted_files']
+                        ], $request);
                         break;
                 }
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Błąd podczas wykonywania operacji: ' . $e->getMessage());
                 
-                $this->logger->error('Database operation failed', [
-                    'user' => $user->getUsername(),
+                $this->auditService->logUserAction($user, 'database_operation_failed', [
                     'action' => $action,
-                    'error' => $e->getMessage(),
-                    'ip' => $request->getClientIp()
-                ]);
+                    'error' => $e->getMessage()
+                ], $request);
             }
             
             return $this->redirectToRoute('admin_settings_database');
         }
 
-        $this->logger->info('Admin database settings page accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp()
-        ]);
+        // Audit database settings page access
+        $this->auditService->logUserAction($user, 'view_admin_database_settings', [], $request);
 
         return $this->render('admin/settings/database.html.twig', [
             'database_info' => $databaseInfo,

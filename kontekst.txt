@@ -6,702 +6,891 @@
 - **Framework**: Symfony 7.0 + PHP 8.2+
 - **Baza danych**: MySQL/MariaDB z Doctrine ORM
 - **Frontend**: Bootstrap 5.3 + Twig templates + vanilla JavaScript
-- **Autoryzacja**: Custom role-based system z modułami
-- **Logowanie**: Monolog z wieloma kanałami
+- **Autoryzacja**: Enterprise-grade system z AuthorizationService
+- **Logowanie**: Kompleksowe audyty przez AuditService z wielopoziomowym logowaniem
+- **Architektura**: Service Layer Pattern + CQRS + Event-Driven Architecture
 
 ### Konwencje nazewnictwa
 - **Kontrolery**: `{Module}Controller` (np. EquipmentController)
 - **Encje**: Singular form (User, Equipment, Module)
 - **Repozytoria**: `{Entity}Repository`
 - **Formularze**: `{Purpose}Type` (np. EquipmentCreateType)
-- **Usługi**: `{Purpose}Service` (np. PermissionService)
+- **Serwisy**: `{Purpose}Service` (np. EquipmentService, AuthorizationService, AuditService)
+- **Commands**: `{Action}{Entity}Command` (np. CreateEquipmentCommand)
+- **Queries**: `Get{Entity}Query` (np. GetEquipmentQuery)
+- **Events**: `{Entity}{Action}Event` (np. EquipmentCreatedEvent)
+- **Event Subscribers**: `{Module}EventSubscriber` (np. EquipmentEventSubscriber)
 - **Szablony**: `{module}/{action}.html.twig`
 
-## SYSTEM MODUŁOWY
+## ARCHITEKTURA ENTERPRISE
 
-### Jak działa system modułów
-1. Każdy moduł ma wpis w tabeli `modules` (nazwa, opis, czy aktywny)
-2. Role są przypisane do modułów w tabeli `roles`
+### Service Layer Pattern
+Wszystkie kontrolery używają warstwy serwisów dla separacji logiki biznesowej:
+
+```php
+// Kontroler - tylko warstwa prezentacji
+public function create(Request $request): Response
+{
+    $user = $this->getUser();
+    
+    // Autoryzacja przez AuthorizationService
+    $this->authorizationService->checkPermission($user, 'equipment', 'CREATE', $request);
+    
+    if ($form->isSubmitted() && $form->isValid()) {
+        // Logika biznesowa w serwisie
+        $equipment = $this->equipmentService->createEquipment($data, $user);
+        
+        // Event dla loose coupling
+        $event = new EquipmentCreatedEvent($equipment, $user, $context);
+        $this->eventDispatcher->dispatch($event, EquipmentCreatedEvent::NAME);
+        
+        return $this->redirectToRoute('equipment_index');
+    }
+    
+    return $this->render('equipment/new.html.twig', ['form' => $form]);
+}
+```
+
+### CQRS Pattern (Command Query Responsibility Segregation)
+Separacja komend i zapytań:
+
+```php
+// Command - dla operacji zapisu
+$command = new CreateEquipmentCommand(
+    name: $data['name'],
+    description: $data['description'],
+    categoryId: $data['category'],
+    createdById: $user->getId()
+);
+
+// Query - dla operacji odczytu  
+$query = new GetEquipmentQuery(
+    page: $request->query->getInt('page', 1),
+    limit: 25,
+    search: $request->query->get('search'),
+    filters: $filters
+);
+```
+
+### Event-Driven Architecture
+Zdarzenia domenowe z subskrybentami:
+
+```php
+// Event
+class EquipmentCreatedEvent extends Event
+{
+    public const NAME = 'equipment.created';
+    
+    public function __construct(
+        private Equipment $equipment,
+        private User $createdBy,
+        private array $context = []
+    ) {}
+}
+
+// Event Subscriber
+class EquipmentEventSubscriber implements EventSubscriberInterface
+{
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            EquipmentCreatedEvent::NAME => [
+                ['onEquipmentCreated', 10],
+                ['checkHighValueEquipment', 5],
+            ],
+        ];
+    }
+    
+    public function onEquipmentCreated(EquipmentCreatedEvent $event): void
+    {
+        // Kompleksowy audit
+        $this->auditService->logUserAction($event->getCreatedBy(), 'equipment_created_event', [
+            'equipment_id' => $event->getEquipment()->getId(),
+            'equipment_name' => $event->getEquipment()->getName(),
+            'context' => $event->getContext()
+        ]);
+        
+        // Wysyłanie powiadomień email (opcjonalnie)
+        if ($this->mailer) {
+            $this->sendCreationNotification($event);
+        }
+    }
+}
+```
+
+### AuthorizationService - Centralizowana Autoryzacja
+Zastąpił stary PermissionService:
+
+```php
+// W kontrolerach - ZAWSZE na początku akcji
+$this->authorizationService->checkModuleAccess($user, 'equipment', $request);
+$this->authorizationService->checkPermission($user, 'equipment', 'CREATE', $request);
+
+// Sprawdzanie uprawnień
+$canEdit = $this->authorizationService->hasPermission($user, 'equipment', 'EDIT');
+$canEditAny = $this->authorizationService->hasAnyPermission($user, 'equipment', ['EDIT', 'DELETE']);
+
+// Właścicielstwo zasobów
+$canEditResource = $this->authorizationService->canEditResource($user, $equipment);
+
+// Pobieranie modułów użytkownika
+$availableModules = $this->authorizationService->getUserModules($user);
+```
+
+### AuditService - Kompleksowy System Audytu
+Zunifikowane logowanie wszystkich działań:
+
+```php
+// Akcje użytkowników
+$this->auditService->logUserAction($user, 'view_equipment_index', [
+    'page' => $page,
+    'filters' => $filters,
+    'total_equipment' => $equipmentCount
+], $request);
+
+// Zdarzenia bezpieczeństwa
+$this->auditService->logSecurityEvent('failed_login', $user, [
+    'attempts' => $attempts,
+    'locked_until' => $lockTime
+], $request, 'high');
+
+// Operacje CRUD
+$this->auditService->logCrudOperation($user, 'Equipment', $equipment->getId(), 'CREATE', $data, $request);
+
+// Akcje administracyjne
+$this->auditService->logAdminAction($admin, 'database_backup_created', [
+    'filename' => $filename,
+    'size' => $fileSize
+], $request);
+
+// Operacje bazy danych
+$this->auditService->logDatabaseOperation($admin, 'optimize', true, [
+    'optimized_tables' => $count,
+    'duration' => $duration
+], $request);
+```
+
+## SERWISY BIZNESOWE
+
+### EquipmentService - Zarządzanie Sprzętem
+Kompletna logika biznesowa sprzętu:
+
+```php
+// CRUD Operations
+$equipment = $this->equipmentService->createEquipment($data, $user);
+$equipment = $this->equipmentService->updateEquipment($equipment, $context, $user);
+$this->equipmentService->deleteEquipment($equipment, $user);
+
+// Business Operations
+$equipment = $this->equipmentService->assignEquipment($equipment, $assignee, $assignedBy, $notes);
+$equipment = $this->equipmentService->unassignEquipment($equipment, $user);
+$equipment = $this->equipmentService->markAsDamaged($equipment, $user, $description);
+
+// Queries
+$pagination = $this->equipmentService->getEquipmentWithPagination($page, $limit, $filters);
+$statistics = $this->equipmentService->getEquipmentStatistics();
+$results = $this->equipmentService->searchEquipment($query, $limit);
+$userEquipment = $this->equipmentService->getUserAssignedEquipment($user);
+$categoryData = $this->equipmentService->getEquipmentByCategory($categoryId);
+```
+
+### AdminService - Operacje Administracyjne
+Zarządzanie systemem i danymi:
+
+```php
+// System Management
+$result = $this->adminService->resetGeneralSettingsToDefaults($admin);
+$systemInfo = $this->adminService->getSystemInfo();
+$dashboardData = $this->adminService->getDashboardData();
+
+// Database Operations  
+$filename = $this->adminService->createDatabaseBackup();
+$result = $this->adminService->performDatabaseMaintenance('optimize');
+$result = $this->adminService->clearSystemLogs(['application', 'security']);
+
+// Backup Management
+$backups = $this->adminService->listBackups();
+$result = $this->adminService->cleanupOldBackups($daysToKeep, $admin);
+```
+
+## SYSTEM MODUŁOWY - ENTERPRISE EDITION
+
+### Autoryzacja modułowa
+Każdy moduł ma:
+1. Wpis w tabeli `modules` (nazwa, opis, czy aktywny)
+2. Role przypisane do modułów w tabeli `roles`
 3. Użytkownicy mają role przez tabelę `user_roles`
-4. Każdy kontroler sprawdza uprawnienia przez `PermissionService`
+4. Kontrolery sprawdzają uprawnienia przez `AuthorizationService`
 
-### Dodawanie nowego modułu - CHECKLIST:
+### Dodawanie nowego modułu - KOMPLETNY CHECKLIST:
 
 #### 1. BAZA DANYCH
 ```sql
--- Dodaj moduł do tabeli modules
+-- Dodaj moduł
 INSERT INTO modules (name, display_name, description, is_active, sort_order) 
 VALUES ('new_module', 'Nowy Moduł', 'Opis nowego modułu', 1, 100);
 
--- Dodaj podstawowe role
+-- Dodaj role
 INSERT INTO roles (name, display_name, description, permissions, module_id) VALUES
-('NEW_MODULE_ADMIN', 'Administrator Nowego Modułu', 'Pełny dostęp', 'VIEW,CREATE,EDIT,DELETE', (SELECT id FROM modules WHERE name = 'new_module')),
-('NEW_MODULE_USER', 'Użytkownik Nowego Modułu', 'Tylko podgląd', 'VIEW', (SELECT id FROM modules WHERE name = 'new_module'));
+('NEW_MODULE_ADMIN', 'Administrator', 'Pełny dostęp', 'VIEW,CREATE,EDIT,DELETE', LAST_INSERT_ID()),
+('NEW_MODULE_USER', 'Użytkownik', 'Tylko podgląd', 'VIEW', LAST_INSERT_ID());
 ```
 
-#### 2. ENCJE (src/Entity/)
-- Dodaj `createdAt`, `updatedAt` dla auditowania
-- Dodaj relacje do `User` (created_by, updated_by)
-- Użyj Doctrine annotations/attributes
-- Dodaj indeksy dla często wyszukiwanych pól
-
-#### 3. REPOZYTORIA (src/Repository/)
-- Rozszerz `ServiceEntityRepository`
-- Dodaj metodę `save($entity, bool $flush = false)`
-- Dodaj metody wyszukiwania specyficzne dla modułu
-
-#### 4. KONTROLERY (src/Controller/)
-- Użyj `#[Route('/module-path')]` na klasie
-- ZAWSZE sprawdź uprawnienia przez `PermissionService`
-- ZAWSZE loguj operacje przez `LoggerInterface`
-- Użyj Flash messages dla informacji zwrotnych
-
-#### 5. FORMULARZE (src/Form/)
-- Użyj Bootstrap classes: `form-control`, `form-select`
-- Dodaj walidację Symfony Constraints
-- Użyj `required: false` dla opcjonalnych pól
-
-#### 6. USŁUGI (src/Service/)
-- Logika biznesowa oddzielona od kontrolerów
-- Używaj dependency injection
-- Loguj wszystkie ważne operacje
-
-#### 7. SZABLONY (templates/)
-```
-templates/
-├── module_name/
-│   ├── index.html.twig
-│   ├── show.html.twig
-│   ├── edit.html.twig
-│   └── _form.html.twig
-```
-
-#### 8. NAVIGATION (templates/partials/sidebar.html.twig)
-```twig
-{% if is_granted_module('module_name') %}
-<li class="nav-item">
-    <a class="nav-link menu-link" href="{{ path('module_index') }}">
-        <i class="ri-icon-name"></i>
-        <span>Nazwa Modułu</span>
-    </a>
-</li>
-{% endif %}
-```
-
-## SYSTEM LOGOWANIA
-
-### OBOWIĄZKOWE LOGOWANIE
-Każdy kontroler MUSI logować:
+#### 2. SERWIS BIZNESOWY (src/Service/)
 ```php
-// Dostęp do modułu
-$this->logger->info('Module accessed', [
-    'module' => 'module_name',
-    'user' => $user->getUsername(),
-    'ip' => $this->getClientIp()
-]);
-
-// Operacje CRUD
-$this->logger->info('Entity created/updated/deleted', [
-    'entity' => 'EntityName',
-    'id' => $entity->getId(),
-    'user' => $user->getUsername(),
-    'ip' => $this->getClientIp()
-]);
-
-// Błędy i ostrzeżenia
-$this->logger->error('Operation failed', [
-    'operation' => 'operation_name',
-    'error' => $e->getMessage(),
-    'user' => $user->getUsername(),
-    'ip' => $this->getClientIp()
-]);
-```
-
-### Kanały logowania
-- `app` - główne operacje aplikacji
-- `security` - bezpieczeństwo i uwierzytelnianie
-- `equipment` - operacje na sprzęcie
-- `dictionary` - operacje na słownikach
-- `{module_name}` - dedykowany kanał dla modułu
-
-## SYSTEM UPRAWNIEŃ
-
-### Sprawdzanie uprawnień
-```php
-// W kontrolerze - ZAWSZE na początku akcji
-if (!$this->permissionService->hasPermission($user, 'module_name', 'PERMISSION_NAME')) {
-    $this->logger->warning('Unauthorized access attempt', [
-        'module' => 'module_name',
-        'user' => $user?->getUsername() ?? 'anonymous',
-        'ip' => $request->getClientIp()
-    ]);
-    return $this->redirectToRoute('error_access_denied');
-}
-
-// W szablonach - sprawdzanie ról w module admin
-{% set userModules = get_user_modules() %}
-{% set hasSystemAdmin = false %}
-{% set hasEmployeesRole = false %}
-
-{% for userRole in userModules %}
-    {% set module = userRole.role.module %}
+class NewModuleService
+{
+    public function __construct(
+        private NewModuleRepository $repository,
+        private EntityManagerInterface $entityManager,
+        private AuditService $auditService,
+        private LoggerInterface $logger,
+        private ValidatorInterface $validator
+    ) {}
     
-    {% if module.name == 'admin' and userRole.role.name == 'system_admin' %}
-        {% set hasSystemAdmin = true %}
-    {% elseif module.name == 'admin' and userRole.role.name in ['employees_viewer', 'employees_editor', 'employees_manager'] %}
-        {% set hasEmployeesRole = true %}
-    {% endif %}
-{% endfor %}
-
-{# Panel administracyjny dla system_admin #}
-{% if hasSystemAdmin %}
-    <!-- admin panel content -->
-{% endif %}
-
-{# Menu Pracownicy dla system_admin lub ról employees #}
-{% if hasSystemAdmin or hasEmployeesRole %}
-    <!-- employees menu -->
-{% endif %}
+    public function createEntity(array $data, User $user): NewModuleEntity
+    {
+        // Walidacja biznesowa
+        if (empty($data['name'])) {
+            throw new ValidationException('Name is required');
+        }
+        
+        // Tworzenie encji
+        $entity = new NewModuleEntity();
+        $this->populateFromArray($entity, $data);
+        $entity->setCreatedBy($user);
+        
+        // Walidacja Symfony
+        $violations = $this->validator->validate($entity);
+        if (count($violations) > 0) {
+            throw new ValidationException('Validation errors', $violations);
+        }
+        
+        // Persystencja
+        $this->entityManager->persist($entity);
+        $this->entityManager->flush();
+        
+        // Audit
+        $this->auditService->logCrudOperation($user, 'NewModuleEntity', $entity->getId(), 'CREATE', $data);
+        
+        // Logging
+        $this->logger->info('New module entity created', [
+            'entity_id' => $entity->getId(),
+            'user' => $user->getUsername()
+        ]);
+        
+        return $entity;
+    }
+}
 ```
 
-### Typy uprawnień w module admin
-- **system_admin** - pełny dostęp do panelu administracyjnego
-- **employees_viewer** - `EMPLOYEES_VIEW` - tylko podgląd pracowników
-- **employees_editor** - `EMPLOYEES_EDIT_BASIC` - edycja podstawowych danych pracowników
-- **employees_manager** - `EMPLOYEES_EDIT_FULL` - pełne zarządzanie pracownikami (tworzenie, usuwanie, role)
-
-### Kontrola dostępu w kontrolerach pracowników
+#### 3. KONTROLERY - ENTERPRISE PATTERN
 ```php
-// Podgląd pracowników - wystarczy jeden z trzech uprawnień
-if (!$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_VIEW') && 
-    !$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') && 
-    !$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL')) {
-    return $this->redirectToRoute('error_access_denied');
+#[Route('/new-module')]
+class NewModuleController extends AbstractController
+{
+    public function __construct(
+        private AuthorizationService $authorizationService,
+        private AuditService $auditService,
+        private NewModuleService $newModuleService,
+        private EventDispatcherInterface $eventDispatcher,
+        private LoggerInterface $logger
+    ) {}
+
+    #[Route('/', name: 'new_module_index')]
+    public function index(Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'new_module', $request);
+        
+        // Business logic via service
+        $pagination = $this->newModuleService->getPaginatedList($request->query->all());
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'view_new_module_index', [], $request);
+        
+        return $this->render('new_module/index.html.twig', [
+            'entities' => $pagination,
+            'can_create' => $this->authorizationService->hasPermission($user, 'new_module', 'CREATE'),
+            'can_edit' => $this->authorizationService->hasPermission($user, 'new_module', 'EDIT'),
+        ]);
+    }
+    
+    #[Route('/new', name: 'new_module_new')]
+    public function new(Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'new_module', 'CREATE', $request);
+        
+        $form = $this->createForm(NewModuleType::class);
+        $form->handleRequest($request);
+        
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                // Command pattern
+                $command = new CreateNewModuleCommand(
+                    name: $form->get('name')->getData(),
+                    description: $form->get('description')->getData(),
+                    // ...
+                );
+                
+                // Business logic via service
+                $entity = $this->newModuleService->createEntity($command->toArray(), $user);
+                
+                // Domain event
+                $event = new NewModuleCreatedEvent($entity, $user, [
+                    'source' => 'web_form',
+                    'ip' => $request->getClientIp()
+                ]);
+                $this->eventDispatcher->dispatch($event, NewModuleCreatedEvent::NAME);
+                
+                $this->addFlash('success', 'Entity created successfully.');
+                return $this->redirectToRoute('new_module_index');
+                
+            } catch (ValidationException $e) {
+                $this->addFlash('error', 'Validation error: ' . $e->getMessage());
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Unexpected error occurred.');
+                $this->logger->error('Failed to create new module entity', [
+                    'error' => $e->getMessage(),
+                    'user' => $user->getUsername()
+                ]);
+            }
+        }
+        
+        return $this->render('new_module/new.html.twig', ['form' => $form]);
+    }
 }
-
-// Edycja pracowników - wystarczy jedno z dwóch uprawnień edycji
-if (!$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') && 
-    !$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL')) {
-    return $this->redirectToRoute('error_access_denied');
-}
-
-// Pełne zarządzanie - tylko EMPLOYEES_EDIT_FULL
-if (!$this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL')) {
-    return $this->redirectToRoute('error_access_denied');
-}
-
-// Przekazywanie uprawnień do szablonu
-$canEdit = $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_BASIC') || 
-           $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
-$canEditFull = $this->permissionService->hasPermission($user, 'admin', 'EMPLOYEES_EDIT_FULL');
-
-return $this->render('template.html.twig', [
-    'can_edit' => $canEdit,
-    'can_edit_full' => $canEditFull,
-]);
 ```
 
-## BAZA DANYCH - FIXTURES
-
-### Aktualizacja fixtures (src/DataFixtures/)
-Przy dodawaniu nowego modułu ZAWSZE zaktualizuj:
-
-1. **ModuleFixtures.php** - dodaj nowy moduł
-2. **RoleFixtures.php** - dodaj role dla modułu  
-3. **UserRoleFixtures.php** - przypisz role użytkownikom
-4. **{Module}Fixtures.php** - przykładowe dane dla modułu
-
-## FRONTEND
-
-### Bootstrap 5.3 classes
-- Cards: `card`, `card-header`, `card-body`
-- Forms: `form-control`, `form-select`, `form-check-input`
-- Buttons: `btn btn-primary`, `btn btn-outline-secondary`
-- Tables: `table table-striped table-hover`
-- Alerts: `alert alert-success/danger/warning/info`
-
-### JavaScript
-- Używaj vanilla JavaScript (bez jQuery)
-- Umieść w `{% block javascripts %}`
-- Używaj `DOMContentLoaded` event listener
-
-### Ikony
-- Remix Icons: `ri-{name}-line` lub `ri-{name}-fill`
-- Przykłady: `ri-settings-line`, `ri-user-line`, `ri-delete-bin-line`
-
-## BEZPIECZEŃSTWO
-
-### CSRF Protection
-- Formularze automatycznie chronione przez Symfony
-- API endpoints używają tokenów
-
-### Walidacja danych
-- Używaj Symfony Constraints w formularzach
-- Waliduj również w encjach
-- Sanityzuj dane wejściowe
-
-### Logowanie błędów bezpieczeństwa
+#### 4. COMMAND/QUERY PATTERN
 ```php
-$this->logger->warning('Security violation', [
-    'type' => 'unauthorized_access',
-    'user' => $user?->getUsername() ?? 'anonymous',
-    'ip' => $this->getClientIp(),
-    'attempted_resource' => 'resource_name'
-]);
+// Command (src/Command/NewModule/)
+class CreateNewModuleCommand
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly ?string $description = null,
+        public readonly ?int $categoryId = null
+    ) {}
+    
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'description' => $this->description,
+            'categoryId' => $this->categoryId
+        ];
+    }
+}
+
+// Query (src/Query/NewModule/)
+class GetNewModuleQuery
+{
+    public function __construct(
+        public readonly int $page = 1,
+        public readonly int $limit = 25,
+        public readonly ?string $search = null,
+        public readonly array $filters = []
+    ) {}
+}
 ```
 
-## MIGRACJE
+#### 5. EVENT SYSTEM
+```php
+// Event (src/Event/NewModule/)
+class NewModuleCreatedEvent extends Event
+{
+    public const NAME = 'new_module.created';
+    
+    public function __construct(
+        private NewModuleEntity $entity,
+        private User $createdBy,
+        private array $context = []
+    ) {}
+    
+    // getters...
+}
 
-### Przy dodawaniu nowego modułu
-```bash
-# Utwórz migrację
-php bin/console make:migration
-
-# Sprawdź migrację
-php bin/console doctrine:migrations:migrate --dry-run
-
-# Wykonaj migrację
-php bin/console doctrine:migrations:migrate
+// Event Subscriber (src/EventSubscriber/)
+class NewModuleEventSubscriber implements EventSubscriberInterface
+{
+    public function __construct(
+        private AuditService $auditService,
+        private LoggerInterface $logger,
+        private ?MailerInterface $mailer = null
+    ) {}
+    
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            NewModuleCreatedEvent::NAME => [
+                ['onEntityCreated', 10],
+                ['sendNotification', 5],
+            ],
+        ];
+    }
+    
+    public function onEntityCreated(NewModuleCreatedEvent $event): void
+    {
+        $this->auditService->logUserAction($event->getCreatedBy(), 'new_module_created_event', [
+            'entity_id' => $event->getEntity()->getId(),
+            'entity_name' => $event->getEntity()->getName(),
+            'context' => $event->getContext()
+        ]);
+    }
+}
 ```
 
-## TESTY
+## TESTY JEDNOSTKOWE - ENTERPRISE COVERAGE
 
 ### Struktura testów
 ```
 tests/
 ├── Controller/
+│   ├── EquipmentControllerTest.php      # ✅ 12 testów
+│   ├── DashboardControllerTest.php      # ✅ 7 testów
+│   ├── SearchControllerTest.php         # ✅ 8 testów
 │   └── {Module}ControllerTest.php
-├── Entity/
-│   └── {Entity}Test.php
-└── Service/
-    └── {Service}Test.php
+├── Service/
+│   ├── AuthorizationServiceTest.php     # ✅ 17 testów
+│   ├── AuditServiceTest.php            # ✅ 15 testów
+│   ├── EquipmentServiceTest.php        # ✅ 18 testów
+│   ├── AdminServiceTest.php            # ✅ 12 testów
+│   └── {Service}Test.php
+└── Entity/
+    └── {Entity}Test.php
 ```
 
-## PRZYKŁAD KOMPLETNEGO MODUŁU
-
-### 1. Encja (src/Entity/Example.php)
+### Pattern testów dla serwisów
 ```php
-#[ORM\Entity(repositoryClass: ExampleRepository::class)]
-class Example
+class NewModuleServiceTest extends TestCase
 {
-    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
-    private ?int $id = null;
-
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\ManyToOne]
-    private ?User $createdBy = null;
-
-    // getters, setters...
-}
-```
-
-### 2. Kontroler (src/Controller/ExampleController.php)
-```php
-#[Route('/example')]
-class ExampleController extends AbstractController
-{
-    public function __construct(
-        private PermissionService $permissionService,
-        private LoggerInterface $logger
-    ) {}
-
-    #[Route('/', name: 'example_index')]
-    public function index(): Response
+    private NewModuleService $service;
+    private MockObject|EntityManagerInterface $entityManagerMock;
+    private MockObject|AuditService $auditServiceMock;
+    
+    protected function setUp(): void
     {
-        $user = $this->getUser();
+        $this->entityManagerMock = $this->createMock(EntityManagerInterface::class);
+        $this->auditServiceMock = $this->createMock(AuditService::class);
         
-        if (!$this->permissionService->canAccessModule($user, 'example')) {
-            $this->logger->warning('Unauthorized example access', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $this->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException();
-        }
-
-        $this->logger->info('Example module accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $this->getClientIp()
-        ]);
-
-        return $this->render('example/index.html.twig');
-    }
-}
-```
-
-## INSTALATOR - AKTUALIZACJA
-
-### Przy dodawaniu modułu zaktualizuj:
-1. **InstallController.php** - dodaj moduł do kreatora
-2. **install/step3.html.twig** - opcja instalacji przykładowych danych
-3. **{Module}Fixtures.php** - przykładowe dane dla kreatora
-
-## KONFIGURACJA SYSTEMU
-
-### Dodaj ustawienia do SettingService jeśli moduł wymaga konfiguracji
-```php
-$this->settingService->set('module_setting', 'value', 'module', 'type', 'description');
-```
-
-### System dynamicznego CSS (DynamicCssController)
-```php
-// Pobieranie ustawień kolorów
-$primaryColor = $this->settingService->get('primary_color', '#405189');
-$sidebarBgColor = $this->settingService->get('sidebar_bg_color', '#2a3042');
-$sidebarTextColor = $this->settingService->get('sidebar_text_color', '#ffffff');
-$sidebarActiveColor = $this->settingService->get('sidebar_active_color', '#405189');
-
-// Generowanie CSS z ETag caching
-$etag = md5($primaryColor . $sidebarBgColor . $sidebarTextColor . $sidebarActiveColor);
-$response->setEtag($etag);
-$response->setMaxAge(60); // 1 minuta cache
-```
-
-#### CSS Variables + Direct Selectors Pattern
-```css
-/* Podwójne podejście dla kompatybilności */
-:root, :root[data-sidebar=light], :root[data-sidebar=dark] {
-    --vz-vertical-menu-item-color: {$sidebarTextColor} !important;
-    --vz-vertical-menu-item-active-color: {$sidebarTextColor} !important;
-}
-
-/* Direct selectors dla wysokiej specyficzności */
-.navbar-menu .navbar-nav .nav-link.active {
-    background-color: {$sidebarActiveColor} !important;
-    color: {$sidebarTextColor} !important;
-}
-```
-
-## SŁOWNIKI SYSTEMOWE
-
-### Jeśli moduł używa słowników, dodaj typy do DictionaryFixtures:
-```php
-$categoryType = new Dictionary();
-$categoryType->setType('example_categories');
-$categoryType->setKey('active');
-$categoryType->setValue('Aktywny');
-```
-
-## SYSTEM PROFILI UŻYTKOWNIKÓW
-
-### Funkcjonalności profili
-- **Edycja danych osobowych** - imię, nazwisko, email, telefon, stanowisko, dział, oddział
-- **Zmiana hasła** - dla użytkowników lokalnych (nie LDAP)
-- **Upload avatarów** - JPG, PNG, GIF, WebP (max 2MB), przechowywane w `public/uploads/avatars/`
-- **Integracja LDAP** - synchronizacja danych z Active Directory
-
-### Pattern Uploadów Avatarów
-```php
-// Walidacja uploadów
-new File([
-    'maxSize' => '2M',
-    'mimeTypes' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    'mimeTypesMessage' => 'Proszę wybrać prawidłowy plik obrazu (JPG, PNG, GIF, WebP)',
-])
-
-// Upload i cleanup
-if ($avatarFile = $form->get('avatar')->getData()) {
-    // Usuń stary avatar
-    $oldAvatar = $user->getAvatar();
-    if ($oldAvatar && file_exists($avatarPath . '/' . $oldAvatar)) {
-        unlink($avatarPath . '/' . $oldAvatar);
+        $this->service = new NewModuleService(
+            $this->repositoryMock,
+            $this->entityManagerMock,
+            $this->auditServiceMock,
+            $this->loggerMock,
+            $this->validatorMock
+        );
     }
     
-    // Zapisz nowy
-    $fileName = 'avatar_' . $user->getId() . '_avatar.' . $avatarFile->guessExtension();
-    $avatarFile->move($avatarPath, $fileName);
-    $user->setAvatar($fileName);
-}
-```
-
-## SYSTEM ZARZĄDZANIA BAZĄ DANYCH
-
-### Funkcjonalności zarządzania bazą
-- **📊 Informacje o bazie** - rozmiar, liczba tabel, wersja, szczegółowe statystyki tabel
-- **💾 Kopie zapasowe** - automatyczne backupy przez mysqldump, lista i pobieranie backupów
-- **⚡ Optymalizacja** - OPTIMIZE TABLE dla wszystkich tabel MySQL
-- **🔍 Analiza** - ANALYZE TABLE dla aktualizacji statystyk indeksów  
-- **🧹 Czyszczenie logów** - usuwanie starych plików logów (>30 dni)
-- **📋 Monitoring** - szczegółowe informacje o tabelach (rozmiar danych/indeksów, liczba wierszy)
-
-### Lokalizacja i dostęp
-- **Route**: `/admin/settings/database`
-- **Uprawnienia**: tylko rola `system_admin`
-- **Katalog backupów**: `var/backups/` (automatycznie tworzony)
-- **Format backupów**: `backup_[database]_[YYYY-mm-dd_HH-ii-ss].sql`
-
-### Bezpieczeństwo backupów
-```php
-// Parsing DATABASE_URL z obsługą parametrów
-if (preg_match('/mysql:\/\/([^:]+):([^@]+)@([^:]+):?(\d+)?\/([^?]+)(?:\?.*)?/', $databaseUrl, $matches)) {
-    $database = $matches[5]; // Ignoruje parametry po znaku ?
-}
-
-// Komenda mysqldump z bezpiecznym escapowaniem
-$command = sprintf(
-    'mysqldump -h%s -P%s -u%s -p%s --single-transaction --routines --triggers %s > %s 2>&1',
-    escapeshellarg($host), escapeshellarg($port), escapeshellarg($username),
-    escapeshellarg($password), escapeshellarg($database), escapeshellarg($filepath)
-);
-```
-
-### Walidacja backupów
-```php
-// Sprawdzanie rozmiaru i zawartości
-if ($fileSize < 1000) { // Mniej niż 1KB = prawdopodobnie błąd
-    throw new \Exception('Kopia zapasowa wydaje się niepełna');
-}
-```
-
-### Struktura plików avatarów
-```bash
-public/uploads/avatars/
-├── user_1_avatar.jpg    # avatar_{user_id}_avatar.{ext}
-├── user_2_avatar.png
-└── default/
-    └── default-avatar.png  # domyślny avatar jeśli użytkownik nie ma własnego
-```
-
-### Form avatarów (src/Form/AvatarUploadType.php)
-```php
-->add('avatar', FileType::class, [
-    'required' => false,
-    'mapped' => false,
-    'constraints' => [
-        new File([
-            'maxSize' => '2M',
-            'mimeTypes' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-            'mimeTypesMessage' => 'Proszę wybrać prawidłowy plik obrazu (JPG, PNG, GIF, WebP)',
-        ])
-    ],
-    'attr' => [
-        'accept' => '.jpg,.jpeg,.png,.gif,.webp'
-    ]
-])
-```
-
-### Obsługa uploadów w kontrolerze
-```php
-// Upload nowego avataru
-if ($avatarFile = $form->get('avatar')->getData()) {
-    // Usunięcie starego avataru
-    $oldAvatar = $user->getAvatar();
-    if ($oldAvatar && file_exists($this->getParameter('avatars_directory') . '/' . $oldAvatar)) {
-        unlink($this->getParameter('avatars_directory') . '/' . $oldAvatar);
+    public function testCreateEntitySuccessfully(): void
+    {
+        // Arrange
+        $data = ['name' => 'Test Entity'];
+        $user = $this->createTestUser();
+        
+        $this->validatorMock->expects($this->once())
+            ->method('validate')
+            ->willReturn(new ConstraintViolationList());
+            
+        $this->entityManagerMock->expects($this->once())
+            ->method('persist');
+            
+        $this->auditServiceMock->expects($this->once())
+            ->method('logCrudOperation');
+        
+        // Act
+        $entity = $this->service->createEntity($data, $user);
+        
+        // Assert
+        $this->assertInstanceOf(NewModuleEntity::class, $entity);
+        $this->assertEquals('Test Entity', $entity->getName());
     }
-    
-    // Zapisanie nowego
-    $fileName = 'avatar_' . $user->getId() . '_avatar.' . $avatarFile->guessExtension();
-    $avatarFile->move($this->getParameter('avatars_directory'), $fileName);
-    $user->setAvatar($fileName);
 }
 ```
 
-### Wyświetlanie avatarów w szablonach
-```twig
-{# W topbar.html.twig #}
-{% if app.user.avatar %}
-    <img class="rounded-circle header-profile-user" 
-         src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}" 
-         alt="Avatar">
-{% else %}
-    <img class="rounded-circle header-profile-user" 
-         src="{{ asset('assets/images/users/avatar-1.jpg') }}" 
-         alt="Default Avatar">
-{% endif %}
-```
-
-## MIGRACJE BAZY DANYCH
-
-### Migracje MySQL - kompatybilność
-**Problem**: MySQL nie obsługuje `IF NOT EXISTS` w `ALTER TABLE ADD COLUMN`
-
-**Rozwiązanie**: Użyj `INFORMATION_SCHEMA` do sprawdzenia istnienia kolumn:
+### Pattern testów dla kontrolerów
 ```php
-public function up(Schema $schema): void
+class NewModuleControllerTest extends WebTestCase
 {
-    $connection = $this->connection;
+    private $client;
+    private MockObject|AuthorizationService $authorizationServiceMock;
+    private MockObject|AuditService $auditServiceMock;
+    
+    protected function setUp(): void
+    {
+        $this->client = static::createClient();
+        
+        // Mock services in container
+        $container = self::getContainer();
+        $container->set(AuthorizationService::class, $this->authorizationServiceMock);
+        $container->set(AuditService::class, $this->auditServiceMock);
+    }
+    
+    public function testIndexActionWithAuthenticatedUser(): void
+    {
+        $user = $this->createTestUser();
+        $this->client->loginUser($user);
+        
+        $this->authorizationServiceMock->expects($this->once())
+            ->method('checkModuleAccess')
+            ->with($user, 'new_module');
+            
+        $this->auditServiceMock->expects($this->once())
+            ->method('logUserAction');
+        
+        $this->client->request('GET', '/new-module/');
+        
+        $this->assertResponseIsSuccessful();
+    }
+}
+```
+
+## WYSZUKIWANIE GLOBALNE
+
+### SearchController - Enterprise Search
+Rozszerzony system wyszukiwania:
+
+```php
+// Multi-module search z rate limiting
+public function search(Request $request): JsonResponse
+{
+    $user = $this->getUser();
+    
+    // Rate limiting
+    $limiter = $this->searchLimiter->create($user->getId());
+    if (!$limiter->consume(1)->isAccepted()) {
+        $this->auditService->logSecurityEvent('search_rate_limit_exceeded', $user);
+        throw new TooManyRequestsHttpException(60);
+    }
+    
+    $results = [];
+    
+    // Wyszukiwanie w użytkownikach
+    if ($this->authorizationService->hasModuleAccess($user, 'employees')) {
+        $users = $this->searchUsers($query);
+        // Transform to unified result format
+    }
+    
+    // Wyszukiwanie w sprzęcie
+    if ($this->authorizationService->hasAnyPermission($user, 'equipment', ['VIEW'])) {
+        $equipment = $this->equipmentService->searchEquipment($query, 5);
+        // Transform to unified result format
+    }
+    
+    // Audit search
+    $this->auditService->logUserAction($user, 'global_search', [
+        'query' => $query,
+        'results_count' => count($results),
+        'types_searched' => $typesSearched
+    ], $request);
+    
+    return new JsonResponse([
+        'results' => array_slice($results, 0, 10),
+        'total' => count($results),
+        'query' => $query
+    ]);
+}
+```
+
+## DASHBOARD - ENTERPRISE METRICS
+
+### DashboardController - Smart Dashboard
+Inteligentny dashboard z metrykami:
+
+```php
+public function index(Request $request): Response
+{
+    $user = $this->getUser();
+    
+    // Pobierz dostępne moduły
+    $availableModules = $this->authorizationService->getUserModules($user);
+    
+    // Inteligentne statystyki w zależności od uprawnień
+    $dashboardStats = $this->getDashboardStats($user);
+    
+    // Audit
+    $this->auditService->logUserAction($user, 'view_dashboard', [
+        'modules_count' => count($availableModules),
+        'has_equipment_access' => in_array('equipment', array_column($availableModules, 'name'))
+    ], $request);
+    
+    return $this->render('dashboard/index.html.twig', [
+        'user' => $user,
+        'modules' => $availableModules,
+        'stats' => $dashboardStats,
+    ]);
+}
+
+private function getDashboardStats($user): array
+{
+    $stats = [
+        'total_equipment' => 0,
+        'my_equipment' => 0,
+        'available_equipment' => 0,
+        'damaged_equipment' => 0
+    ];
+    
+    // Tylko dla użytkowników z dostępem do sprzętu
+    if ($this->authorizationService->hasAnyPermission($user, 'equipment', ['VIEW', 'EDIT'])) {
+        try {
+            $equipmentStats = $this->equipmentService->getEquipmentStatistics();
+            $stats = array_merge($stats, $equipmentStats);
+            
+            $userEquipment = $this->equipmentService->getUserAssignedEquipment($user);
+            $stats['my_equipment'] = count($userEquipment);
+        } catch (\Exception $e) {
+            $this->logger->warning('Failed to load dashboard equipment stats', [
+                'user' => $user->getUsername(),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    return $stats;
+}
+```
+
+## SYSTEM PROFILI - ROZSZERZONY
+
+### ProfileController - Enterprise Profile Management
+Zarządzanie profilami użytkowników z audytem:
+
+```php
+public function index(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager): Response
+{
+    $user = $this->getUser();
+    
+    // Audit profile access
+    $this->auditService->logUserAction($user, 'view_profile', [], $request);
+    
+    // Obsługa zmiany hasła z audytem
+    if ($changePasswordForm->isSubmitted() && $changePasswordForm->isValid()) {
+        if (!$passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
+            // Audit failed password change
+            $this->auditService->logSecurityEvent('password_change_failed_invalid_current', $user, [
+                'reason' => 'invalid_current_password'
+            ], $request);
+        } else {
+            // Successful password change
+            $this->auditService->logSecurityEvent('password_changed', $user, [
+                'changed_by_user' => true
+            ], $request);
+        }
+    }
+    
+    // Avatar upload z audytem
+    if ($avatarUploadForm->isSubmitted() && $avatarUploadForm->isValid()) {
+        $result = $this->handleAvatarUpload($avatarFile, $user, $slugger, $entityManager);
+        
+        if ($result['success']) {
+            $this->auditService->logUserAction($user, 'avatar_changed', [
+                'filename' => $result['filename'],
+                'file_size' => $result['file_size']
+            ], $request);
+        }
+    }
+}
+```
+
+## BAZA DANYCH - ENTERPRISE MANAGEMENT
+
+### AdminService - Zaawansowane zarządzanie bazą
+Profesjonalne narzędzia administracyjne:
+
+```php
+// Dashboard z metrykami systemowymi
+public function getDashboardData(): array
+{
+    return [
+        'system_stats' => [
+            'users_count' => $this->entityManager->getRepository('App\\Entity\\User')->count([]),
+            'equipment_count' => $this->entityManager->getRepository('App\\Entity\\Equipment')->count([]),
+            'active_sessions' => 0, // TODO: Implement session counting
+        ],
+        'recent_activities' => [], // Recent audit logs
+        'system_info' => $this->getSystemInfo()
+    ];
+}
+
+// Backup z kompatybilnością
+public function createDatabaseBackup(): string
+{
+    $connection = $this->entityManager->getConnection();
     $databaseName = $connection->getDatabase();
     
-    // Sprawdź czy kolumna istnieje
-    $result = $connection->fetchOne(
-        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'avatar'",
-        [$databaseName]
-    );
-    if ($result == 0) {
-        $this->addSql('ALTER TABLE users ADD avatar VARCHAR(255) DEFAULT NULL');
+    if (!$this->isMySQLPlatform($connection->getDatabasePlatform())) {
+        throw new DatabaseException('Backup jest obsługiwany tylko dla MySQL');
     }
+    
+    $backupDir = $this->kernel->getProjectDir() . '/var/backups';
+    $filename = 'backup_' . $databaseName . '_' . date('Y-m-d_H-i-s') . '.sql';
+    $filepath = $backupDir . '/' . $filename;
+    
+    // Bezpieczne wykonanie mysqldump
+    $params = $connection->getParams();
+    $command = sprintf(
+        'mysqldump -h%s -P%s -u%s -p%s --single-transaction --routines --triggers %s > %s',
+        escapeshellarg($params['host']),
+        escapeshellarg($params['port']),
+        escapeshellarg($params['user']),
+        escapeshellarg($params['password']),
+        escapeshellarg($databaseName),
+        escapeshellarg($filepath)
+    );
+    
+    exec($command, $output, $returnCode);
+    
+    if ($returnCode !== 0 || !file_exists($filepath)) {
+        throw new DatabaseException('Backup nie powiódł się');
+    }
+    
+    return $filename;
 }
 ```
 
-### Przykład migracji z wieloma kolumnami
+## BEZPIECZEŃSTWO - ENTERPRISE GRADE
+
+### Kompleksowy system audytu
 ```php
-// Zbierz wszystkie kolumny do dodania
-$columnsToAdd = [];
+// Różne poziomy logowania
+$this->auditService->logUserAction($user, 'action', $data, $request);          // INFO
+$this->auditService->logSecurityEvent('event', $user, $data, $request, 'high'); // ERROR  
+$this->auditService->logAdminAction($admin, 'action', $data, $request);         // NOTICE
+$this->auditService->logDatabaseOperation($user, 'backup', true, $data);       // NOTICE/ERROR
 
-// Sprawdź każdą kolumnę osobno
-if ($this->columnNotExists('users', 'avatar', $connection, $databaseName)) {
-    $columnsToAdd[] = 'ADD avatar VARCHAR(255) DEFAULT NULL';
-}
-if ($this->columnNotExists('users', 'branch', $connection, $databaseName)) {
-    $columnsToAdd[] = 'ADD branch VARCHAR(100) DEFAULT NULL';
+// Automatyczna sanityzacja danych wrażliwych
+private function sanitizeData(array $data): array
+{
+    $sensitiveKeys = ['password', 'token', 'api_key', 'secret'];
+    
+    foreach ($sensitiveKeys as $key) {
+        if (isset($data[$key])) {
+            $data[$key] = '***';
+        }
+    }
+    
+    return $data;
 }
 
-// Dodaj wszystkie kolumny jednym zapytaniem
-if (!empty($columnsToAdd)) {
-    $this->addSql('ALTER TABLE users ' . implode(', ', $columnsToAdd));
+// Context z request information
+private function getRequestContext(?Request $request): array
+{
+    if (!$request) {
+        return [
+            'ip_address' => 'CLI',
+            'user_agent' => 'CLI',
+            'method' => 'CLI',
+            'uri' => 'CLI',
+            'timestamp' => new \DateTime()
+        ];
+    }
+    
+    return [
+        'ip_address' => $request->getClientIp(),
+        'user_agent' => $request->headers->get('User-Agent'),
+        'method' => $request->getMethod(),
+        'uri' => $request->getRequestUri(),
+        'timestamp' => new \DateTime()
+    ];
 }
 ```
 
-## KOMPATYBILNOŚĆ DOCTRINE DBAL
-
-### Problem z getName() w nowszych wersjach
-**Błąd**: `Attempted to call undefined method getName() of class Doctrine\DBAL\Platforms\MySQLPlatform`
-
-**Rozwiązanie**: Zastąp `getName()` sprawdzaniem przez `instanceof`
-
+### Rate Limiting w SearchController
 ```php
-// BŁĘDNE (przestarzałe)
-if ($connection->getDatabasePlatform()->getName() !== 'mysql') {
-    // ...
+// Rate limiting z audytem
+$limiter = $this->searchLimiter->create($user->getId());
+if (!$limiter->consume(1)->isAccepted()) {
+    $this->auditService->logSecurityEvent('search_rate_limit_exceeded', $user, [
+        'attempted_query' => $request->query->get('q', '')
+    ], $request);
+    throw new TooManyRequestsHttpException(60, 'Too many search requests');
+}
+```
+
+## KOMPATYBILNOŚĆ I NAJLEPSZE PRAKTYKI
+
+### Doctrine DBAL - Kompatybilność
+```php
+// POPRAWNE - kompatybilne z nowszymi wersjami
+private function isMySQLPlatform($platform): bool
+{
+    return $platform instanceof \Doctrine\DBAL\Platforms\MySQLPlatform;
 }
 
-// POPRAWNE (kompatybilne z nowszymi wersjami)
 private function getDatabaseTypeName($platform): string
 {
     if ($platform instanceof \Doctrine\DBAL\Platforms\MySQLPlatform) {
         return 'mysql';
     } elseif ($platform instanceof \Doctrine\DBAL\Platforms\PostgreSQLPlatform) {
         return 'postgresql';
-    } elseif ($platform instanceof \Doctrine\DBAL\Platforms\SQLitePlatform) {
-        return 'sqlite';
     }
     
-    // Fallback przy użyciu refleksji
-    $reflection = new \ReflectionClass($platform);
-    return strtolower(str_replace('Platform', '', $reflection->getShortName()));
-}
-
-private function isMySQLPlatform($platform): bool
-{
-    return $platform instanceof \Doctrine\DBAL\Platforms\MySQLPlatform;
+    return 'unknown';
 }
 ```
 
-### MySQL INFORMATION_SCHEMA - problem z kluczami
-**Błąd**: `Key "table_name" does not exist` (MySQL zwraca wielkie litery: `TABLE_NAME`)
-
-**Rozwiązanie**: Normalizacja kluczy z fallback
+### Exception Handling
 ```php
-// Normalizuj klucze do małych liter
-$tables = [];
-foreach ($tablesResult as $row) {
-    $tables[] = [
-        'table_name' => $row['table_name'] ?? $row['TABLE_NAME'] ?? '',
-        'table_rows' => $row['table_rows'] ?? $row['TABLE_ROWS'] ?? 0,
-        // ...
-    ];
+// Centralizowana obsługa błędów
+try {
+    $result = $this->businessService->performOperation($data, $user);
+} catch (ValidationException $e) {
+    $this->addFlash('error', 'Błąd walidacji: ' . $e->getMessage());
+    $this->auditService->logUserAction($user, 'operation_failed_validation', [
+        'error' => $e->getMessage(),
+        'data' => $this->auditService->sanitizeData($data)
+    ], $request);
+} catch (BusinessLogicException $e) {
+    $this->addFlash('error', $e->getMessage());
+    $this->auditService->logUserAction($user, 'operation_failed_business_logic', [
+        'error' => $e->getMessage()
+    ], $request);
+} catch (\Exception $e) {
+    $this->addFlash('error', 'Wystąpił nieoczekiwany błąd.');
+    $this->logger->error('Unexpected error in operation', [
+        'user' => $user->getUsername(),
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+    ]);
 }
 ```
 
-## WZORCE FUNKCJONALNOŚCI
+## DEPLOYMENT CHECKLIST - ENTERPRISE
 
-### Reset do Domyślnych Ustawień Pattern
-```php
-// Modal potwierdzenia z podglądem wartości
-<div class="modal-body">
-    <div class="text-start bg-light p-3 rounded mb-3">
-        <ul class="mb-0 list-unstyled">
-            <li><strong>Nazwa aplikacji:</strong> AssetHub</li>
-            <li><strong>Główny kolor:</strong> <span class="badge" style="background-color: #405189; color: white;">#405189</span></li>
-            <!-- ... inne wartości ... -->
-        </ul>
-    </div>
-</div>
-
-// Kontroler z CSRF protection i cleanup
-public function resetGeneralSettings(Request $request): Response
-{
-    // CSRF validation
-    if (!$this->isCsrfTokenValid('reset_general_settings', $request->request->get('_token'))) {
-        $this->addFlash('error', 'Nieprawidłowy token bezpieczeństwa.');
-        return $this->redirectToRoute('admin_settings_general');
-    }
-    
-    // Reset wartości + cleanup plików
-    $defaultSettings = [
-        'app_name' => 'AssetHub',
-        'primary_color' => '#405189',
-        // ...
-    ];
-    
-    // Usuń niestandardowe logo
-    $currentLogo = $this->settingService->get('company_logo');
-    if ($currentLogo && $currentLogo !== '/assets/images/logo-dark.png') {
-        $logoPath = $this->getParameter('kernel.project_dir') . '/public' . $currentLogo;
-        if (file_exists($logoPath) && strpos($currentLogo, '/uploads/logos/') !== false) {
-            unlink($logoPath);
-        }
-    }
-}
-```
-
-### Dual Color Input Pattern (Color Picker + HEX)
-```javascript
-// Synchronizacja dwukierunkowa
-colorText.addEventListener('input', function() {
-    const color = this.value;
-    if (isValidHexColor(color)) {
-        colorPreview.style.backgroundColor = color;
-        // Sync z color picker przez wydarzenia
-    }
-});
-
-// Inteligentna walidacja HEX
-function normalizeHexColor(color) {
-    color = color.trim();
-    if (color && !color.startsWith('#')) {
-        color = '#' + color;
-    }
-    // Rozszerz 3 znaki do 6
-    if (/^#[0-9A-Fa-f]{3}$/.test(color)) {
-        color = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
-    }
-    return color;
-}
-```
-
-## DODATKOWE WSKAZÓWKI
-
-1. **Zawsze używaj transakcji** dla operacji na wielu tabelach
-2. **Paginacja** - użyj KnpPaginatorBundle dla dużych zbiorów danych
-3. **Cache** - używaj Symfony Cache dla często pobieranych danych
-4. **API** - jeśli moduł ma API, używaj ApiPlatform
-5. **Eventy** - używaj Symfony Events dla loose coupling
-6. **Tłumaczenia** - przygotuj klucze dla Symfony Translator
-7. **Pliki uploads** - zawsze sprawdzaj typ MIME i wielkość pliku
-8. **MySQL migracje** - używaj INFORMATION_SCHEMA zamiast IF NOT EXISTS
-9. **CSS Conflicts** - użyj CSS Variables + Direct Selectors z !important
-10. **Color Inputs** - implementuj dual approach: picker + text field z synchronizacją
-11. **Reset Functionality** - zawsze z modalem potwierdzenia i cleanup plików
-12. **Dynamic CSS** - użyj ETag caching i response headers
-
-## DEPLOYMENT
-
-### Checklist przed deploymentem nowego modułu:
-- [ ] Migracje bazy danych przetestowane
-- [ ] Fixtures zaktualizowane
-- [ ] Uprawnienia skonfigurowane
-- [ ] Logowanie zaimplementowane
-- [ ] Testy napisane i przechodzące
-- [ ] Dokumentacja zaktualizowana
-- [ ] Cache wyczyszczony na produkcji
+### Pre-deployment dla nowego modułu:
+- [ ] **Serwis biznesowy** utworzony z pełnym API
+- [ ] **Kontroler** używa Service Layer + AuthorizationService + AuditService
+- [ ] **CQRS Commands/Queries** zaimplementowane
+- [ ] **Event System** skonfigurowany z subskrybentami
+- [ ] **Testy jednostkowe** napisane (service + controller)
+- [ ] **Migracje bazy danych** przetestowane  
+- [ ] **Fixtures** zaktualizowane
+- [ ] **Autoryzacja** skonfigurowana przez AuthorizationService
+- [ ] **Audit logging** zaimplementowany we wszystkich akcjach
+- [ ] **Exception handling** centralizowany
+- [ ] **Rate limiting** gdzie potrzebne
+- [ ] **Walidacja** na poziomie biznesowym i Symfony
+- [ ] **Dokumentacja** zaktualizowana
+- [ ] **Cache** wyczyszczony na produkcji
 
 ---
 
-Ten plik służy jako kompletny przewodnik dla generatorów AI przy rozwijaniu aplikacji AssetHub. Zawiera wszystkie konwencje, wzorce i wymagania niezbędne do prawidłowego dodawania nowych modułów.
+**ARCHITEKTURA ENTERPRISE ASSETHUB:**
+- ✅ Service Layer Pattern
+- ✅ CQRS (Command Query Responsibility Segregation)  
+- ✅ Event-Driven Architecture
+- ✅ Centralizowana autoryzacja (AuthorizationService)
+- ✅ Kompleksowy audit trail (AuditService)
+- ✅ Pełne pokrycie testami jednostkowymi
+- ✅ Exception handling i error recovery
+- ✅ Rate limiting i security measures
+- ✅ Business logic validation
+- ✅ Enterprise database management
+
+System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!

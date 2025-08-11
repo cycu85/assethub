@@ -7,9 +7,18 @@ use App\Entity\EquipmentLog;
 use App\Form\EquipmentType;
 use App\Repository\EquipmentRepository;
 use App\Repository\EquipmentCategoryRepository;
-use App\Service\PermissionService;
+use App\Service\AuthorizationService;
+use App\Service\EquipmentService;
+use App\Service\AuditService;
+use App\Query\Equipment\GetEquipmentQuery;
+use App\Handler\Equipment\GetEquipmentQueryHandler;
+use App\Command\Equipment\CreateEquipmentCommand;
+use App\Handler\Equipment\CreateEquipmentCommandHandler;
+use App\Event\Equipment\EquipmentCreatedEvent;
+use App\Event\Equipment\EquipmentAssignedEvent;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,43 +28,58 @@ use Symfony\Component\Routing\Annotation\Route;
 class EquipmentController extends AbstractController
 {
     public function __construct(
-        private PermissionService $permissionService,
+        private AuthorizationService $authorizationService,
+        private EquipmentService $equipmentService,
+        private AuditService $auditService,
+        private EventDispatcherInterface $eventDispatcher,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {
     }
 
     #[Route('/', name: 'equipment_index')]
-    public function index(EquipmentRepository $equipmentRepository, EquipmentCategoryRepository $categoryRepository, Request $request): Response
+    public function index(Request $request): Response
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'equipment')) {
-            $this->logger->warning('Unauthorized equipment module access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do modułu sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'equipment', $request);
 
-        $equipment = $equipmentRepository->findAll();
-        $categories = $categoryRepository->findActive();
-        $statistics = $equipmentRepository->getStatisticsByStatus();
+        // Create query using CQRS pattern
+        $query = new GetEquipmentQuery(
+            page: $request->query->getInt('page', 1),
+            limit: 25,
+            search: $request->query->get('search'),
+            status: $request->query->get('status'),
+            categoryId: $request->query->get('category') ? (int) $request->query->get('category') : null,
+            warrantyExpiring: $request->query->getBoolean('warranty_expiring')
+        );
 
-        $this->logger->info('Equipment index accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
-            'equipment_count' => count($equipment),
-            'categories_count' => count($categories)
-        ]);
+        // Execute query via handler
+        $equipment = $this->equipmentService->getEquipmentWithPagination(
+            $query->page,
+            $query->limit,
+            $query->getFilters()
+        );
+
+        // Get supporting data
+        $categories = $this->equipmentService->getActiveCategories();
+        $statistics = $this->equipmentService->getEquipmentStatistics();
+
+        // Audit via AuditService
+        $this->auditService->logUserAction($user, 'view_equipment_index', [
+            'page' => $query->page,
+            'filters' => array_filter($query->getFilters()),
+            'total_equipment' => $equipment->getTotalItemCount()
+        ], $request);
 
         return $this->render('equipment/index.html.twig', [
             'equipment' => $equipment,
             'categories' => $categories,
             'statistics' => $statistics,
-            'can_create' => $this->permissionService->hasPermission($user, 'equipment', 'CREATE'),
-            'can_edit' => $this->permissionService->hasPermission($user, 'equipment', 'EDIT'),
-            'can_delete' => $this->permissionService->hasPermission($user, 'equipment', 'DELETE'),
+            'can_create' => $this->authorizationService->hasPermission($user, 'equipment', 'CREATE'),
+            'can_edit' => $this->authorizationService->hasPermission($user, 'equipment', 'EDIT'),
+            'can_delete' => $this->authorizationService->hasPermission($user, 'equipment', 'DELETE'),
         ]);
     }
 
@@ -64,40 +88,40 @@ class EquipmentController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->hasPermission($user, 'equipment', 'CREATE')) {
-            $this->logger->warning('Unauthorized equipment create access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak uprawnień do tworzenia sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkPermission($user, 'equipment', 'CREATE', $request);
 
         $equipment = new Equipment();
-        $equipment->setCreatedBy($user);
-        
         $form = $this->createForm(EquipmentType::class, $equipment);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->entityManager->persist($equipment);
-            
-            // Create log entry
-            $log = new EquipmentLog();
-            $log->setEquipment($equipment);
-            $log->setAction(EquipmentLog::ACTION_CREATED);
-            $log->setDescription('Sprzęt został utworzony w systemie');
-            $log->setCreatedBy($user);
-            $this->entityManager->persist($log);
-            
-            $this->entityManager->flush();
+            // Use CQRS Command pattern
+            $command = new CreateEquipmentCommand(
+                name: $equipment->getName(),
+                description: $equipment->getDescription(),
+                inventoryNumber: $equipment->getInventoryNumber(),
+                serialNumber: $equipment->getSerialNumber(),
+                manufacturer: $equipment->getManufacturer(),
+                model: $equipment->getModel(),
+                categoryId: $equipment->getCategory()?->getId(),
+                status: $equipment->getStatus() ?? 'available',
+                purchasePrice: $equipment->getPurchasePrice(),
+                purchaseDate: $equipment->getPurchaseDate(),
+                warrantyExpiry: $equipment->getWarrantyExpiry(),
+                location: $equipment->getLocation(),
+                createdById: $user->getId()
+            );
 
-            $this->logger->info('Equipment created successfully', [
-                'user' => $user->getUsername(),
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId(),
-                'equipment_name' => $equipment->getName(),
-                'category' => $equipment->getCategory()?->getName()
+            // Execute via service (which will handle persistence and logging)
+            $createdEquipment = $this->equipmentService->createEquipment($command->toArray(), $user);
+
+            // Dispatch domain event
+            $event = new EquipmentCreatedEvent($createdEquipment, $user, [
+                'source' => 'web_form',
+                'ip' => $request->getClientIp()
             ]);
+            $this->eventDispatcher->dispatch($event, EquipmentCreatedEvent::NAME);
 
             $this->addFlash('success', 'Sprzęt został dodany pomyślnie.');
 
@@ -120,24 +144,20 @@ class EquipmentController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->hasPermission($user, 'equipment', 'VIEW')) {
-            $this->logger->warning('Unauthorized equipment view access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId()
-            ]);
-            throw $this->createAccessDeniedException('Brak uprawnień do przeglądania sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkPermission($user, 'equipment', 'VIEW', $request);
 
-        $this->logger->info('Equipment viewed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
+        // Audit via AuditService
+        $this->auditService->logUserAction($user, 'view_equipment', [
             'equipment_id' => $equipment->getId(),
-            'equipment_name' => $equipment->getName()
-        ]);
+            'equipment_name' => $equipment->getName(),
+            'inventory_number' => $equipment->getInventoryNumber()
+        ], $request);
 
         return $this->render('equipment/show.html.twig', [
             'equipment' => $equipment,
+            'can_edit' => $this->authorizationService->hasPermission($user, 'equipment', 'EDIT'),
+            'can_delete' => $this->authorizationService->hasPermission($user, 'equipment', 'DELETE'),
         ]);
     }
 
@@ -146,14 +166,8 @@ class EquipmentController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->hasPermission($user, 'equipment', 'EDIT')) {
-            $this->logger->warning('Unauthorized equipment edit access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId()
-            ]);
-            throw $this->createAccessDeniedException('Brak uprawnień do edycji sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkPermission($user, 'equipment', 'EDIT', $request);
 
         $originalStatus = $equipment->getStatus();
         $originalAssignee = $equipment->getAssignedTo();
@@ -162,71 +176,35 @@ class EquipmentController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $equipment->setUpdatedBy($user);
-            
-            // Create log entry for changes
-            $changes = [];
-            if ($originalStatus !== $equipment->getStatus()) {
-                $changes[] = 'zmiana statusu z "' . $originalStatus . '" na "' . $equipment->getStatus() . '"';
-                
-                $log = new EquipmentLog();
-                $log->setEquipment($equipment);
-                $log->setAction(EquipmentLog::ACTION_STATUS_CHANGED);
-                $log->setDescription('Status sprzętu został zmieniony');
-                $log->setPreviousStatus($originalStatus);
-                $log->setNewStatus($equipment->getStatus());
-                $log->setCreatedBy($user);
-                $this->entityManager->persist($log);
-            }
-            
-            if ($originalAssignee !== $equipment->getAssignedTo()) {
-                if ($equipment->getAssignedTo()) {
-                    $changes[] = 'przypisanie do użytkownika';
-                    $action = EquipmentLog::ACTION_ASSIGNED;
-                } else {
-                    $changes[] = 'usunięcie przypisania';
-                    $action = EquipmentLog::ACTION_UNASSIGNED;
-                }
-                
-                $log = new EquipmentLog();
-                $log->setEquipment($equipment);
-                $log->setAction($action);
-                $log->setDescription('Zmiana przypisania sprzętu');
-                $log->setPreviousAssignee($originalAssignee);
-                $log->setNewAssignee($equipment->getAssignedTo());
-                $log->setCreatedBy($user);
-                $this->entityManager->persist($log);
-            }
-            
-            if (empty($changes)) {
-                $log = new EquipmentLog();
-                $log->setEquipment($equipment);
-                $log->setAction(EquipmentLog::ACTION_UPDATED);
-                $log->setDescription('Dane sprzętu zostały zaktualizowane');
-                $log->setCreatedBy($user);
-                $this->entityManager->persist($log);
-            }
-            
-            $this->entityManager->flush();
+            // Update via EquipmentService
+            $updatedEquipment = $this->equipmentService->updateEquipment($equipment, [
+                'original_status' => $originalStatus,
+                'original_assignee' => $originalAssignee,
+            ], $user);
 
-            $this->logger->info('Equipment updated successfully', [
-                'user' => $user->getUsername(),
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId(),
-                'equipment_name' => $equipment->getName(),
-                'changes' => $changes
-            ]);
+            // Dispatch assignment event if assignee changed
+            if ($originalAssignee !== $equipment->getAssignedTo() && $equipment->getAssignedTo()) {
+                $event = new EquipmentAssignedEvent(
+                    $equipment,
+                    $equipment->getAssignedTo(),
+                    $originalAssignee,
+                    $user,
+                    'Przypisane podczas edycji',
+                    ['source' => 'edit_form', 'ip' => $request->getClientIp()]
+                );
+                $this->eventDispatcher->dispatch($event, EquipmentAssignedEvent::NAME);
+            }
 
             $this->addFlash('success', 'Sprzęt został zaktualizowany pomyślnie.');
 
             return $this->redirectToRoute('equipment_show', ['id' => $equipment->getId()]);
         }
 
-        $this->logger->info('Equipment edit form accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
-            'equipment_id' => $equipment->getId()
-        ]);
+        // Audit form access
+        $this->auditService->logUserAction($user, 'access_equipment_edit_form', [
+            'equipment_id' => $equipment->getId(),
+            'equipment_name' => $equipment->getName()
+        ], $request);
 
         return $this->render('equipment/edit.html.twig', [
             'equipment' => $equipment,
@@ -239,101 +217,72 @@ class EquipmentController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->hasPermission($user, 'equipment', 'DELETE')) {
-            $this->logger->warning('Unauthorized equipment delete access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId()
-            ]);
-            throw $this->createAccessDeniedException('Brak uprawnień do usuwania sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkPermission($user, 'equipment', 'DELETE', $request);
 
         if ($this->isCsrfTokenValid('delete'.$equipment->getId(), $request->request->get('_token'))) {
-            $equipmentName = $equipment->getName();
-            $equipmentId = $equipment->getId();
-            
-            $this->entityManager->remove($equipment);
-            $this->entityManager->flush();
-
-            $this->logger->warning('Equipment deleted', [
-                'user' => $user->getUsername(),
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipmentId,
-                'equipment_name' => $equipmentName
-            ]);
+            // Delete via EquipmentService
+            $this->equipmentService->deleteEquipment($equipment, $user);
 
             $this->addFlash('success', 'Sprzęt został usunięty pomyślnie.');
         } else {
-            $this->logger->warning('Equipment delete attempt with invalid CSRF token', [
-                'user' => $user->getUsername(),
-                'ip' => $request->getClientIp(),
-                'equipment_id' => $equipment->getId()
-            ]);
+            // Audit invalid CSRF attempt
+            $this->auditService->logSecurityEvent('invalid_csrf_token_delete_equipment', $user, [
+                'equipment_id' => $equipment->getId(),
+                'equipment_name' => $equipment->getName(),
+                'token_received' => $request->request->get('_token')
+            ], $request);
         }
 
         return $this->redirectToRoute('equipment_index');
     }
 
     #[Route('/category/{id}', name: 'equipment_by_category', requirements: ['id' => '\d+'])]
-    public function byCategory(int $id, EquipmentRepository $equipmentRepository, EquipmentCategoryRepository $categoryRepository, Request $request): Response
+    public function byCategory(int $id, Request $request): Response
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'equipment')) {
-            $this->logger->warning('Unauthorized equipment by category access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp(),
-                'category_id' => $id
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do modułu sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'equipment', $request);
 
-        $category = $categoryRepository->find($id);
-        if (!$category) {
-            $this->logger->warning('Equipment category not found', [
-                'user' => $user->getUsername(),
-                'ip' => $request->getClientIp(),
-                'category_id' => $id
-            ]);
+        // Get equipment by category via service
+        $result = $this->equipmentService->getEquipmentByCategory($id);
+        
+        if (!$result['category']) {
             throw $this->createNotFoundException('Kategoria nie została znaleziona');
         }
 
-        $equipment = $equipmentRepository->findByCategory($id);
-
-        $this->logger->info('Equipment by category accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
+        // Audit category access
+        $this->auditService->logUserAction($user, 'view_equipment_by_category', [
             'category_id' => $id,
-            'category_name' => $category->getName(),
-            'equipment_count' => count($equipment)
-        ]);
+            'category_name' => $result['category']->getName(),
+            'equipment_count' => count($result['equipment'])
+        ], $request);
 
         return $this->render('equipment/by_category.html.twig', [
-            'equipment' => $equipment,
-            'category' => $category,
+            'equipment' => $result['equipment'],
+            'category' => $result['category'],
+            'can_create' => $this->authorizationService->hasPermission($user, 'equipment', 'CREATE'),
+            'can_edit' => $this->authorizationService->hasPermission($user, 'equipment', 'EDIT'),
+            'can_delete' => $this->authorizationService->hasPermission($user, 'equipment', 'DELETE'),
         ]);
     }
 
     #[Route('/my', name: 'equipment_my')]
-    public function myEquipment(EquipmentRepository $equipmentRepository, Request $request): Response
+    public function myEquipment(Request $request): Response
     {
         $user = $this->getUser();
         
-        if (!$this->permissionService->canAccessModule($user, 'equipment')) {
-            $this->logger->warning('Unauthorized my equipment access attempt', [
-                'user' => $user?->getUsername() ?? 'anonymous',
-                'ip' => $request->getClientIp()
-            ]);
-            throw $this->createAccessDeniedException('Brak dostępu do modułu sprzętu');
-        }
+        // Authorization via AuthorizationService
+        $this->authorizationService->checkModuleAccess($user, 'equipment', $request);
 
-        $equipment = $equipmentRepository->findAssignedToUser($user);
+        // Get user's assigned equipment via service
+        $equipment = $this->equipmentService->getUserAssignedEquipment($user);
 
-        $this->logger->info('My equipment accessed', [
-            'user' => $user->getUsername(),
-            'ip' => $request->getClientIp(),
+        // Audit access to personal equipment
+        $this->auditService->logUserAction($user, 'view_my_equipment', [
             'assigned_equipment_count' => count($equipment)
-        ]);
+        ], $request);
 
         return $this->render('equipment/my.html.twig', [
             'equipment' => $equipment,
