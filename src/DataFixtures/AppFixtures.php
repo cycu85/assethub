@@ -257,6 +257,54 @@ class AppFixtures extends Fixture
                 ->setIcon('ri-user-line');
             $manager->persist($status);
         }
+
+        // Employee departments (działy pracowników)
+        $departments = [
+            ['name' => 'Dział IT', 'value' => 'it_department', 'description' => 'Dział informatyczny'],
+            ['name' => 'Dział HR', 'value' => 'hr_department', 'description' => 'Dział zasobów ludzkich'],
+            ['name' => 'Dział Księgowy', 'value' => 'accounting_department', 'description' => 'Dział księgowości'],
+            ['name' => 'Dział Sprzedaży', 'value' => 'sales_department', 'description' => 'Dział sprzedaży i marketingu'],
+            ['name' => 'Dział Operacyjny', 'value' => 'operations_department', 'description' => 'Dział operacji i logistyki'],
+        ];
+
+        foreach ($departments as $index => $departmentData) {
+            $department = new Dictionary();
+            $department->setType('employee_departments')
+                ->setName($departmentData['name'])
+                ->setValue($departmentData['value'])
+                ->setDescription($departmentData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor('#6f42c1')
+                ->setIcon('ri-team-line');
+            $manager->persist($department);
+        }
+
+        // Employee positions (stanowiska)
+        $positions = [
+            ['name' => 'Dyrektor', 'value' => 'director', 'description' => 'Dyrektor zarządzający'],
+            ['name' => 'Kierownik', 'value' => 'manager', 'description' => 'Kierownik działu'],
+            ['name' => 'Specjalista Senior', 'value' => 'senior_specialist', 'description' => 'Specjalista z doświadczeniem'],
+            ['name' => 'Specjalista', 'value' => 'specialist', 'description' => 'Specjalista podstawowy'],
+            ['name' => 'Młodszy Specjalista', 'value' => 'junior_specialist', 'description' => 'Początkujący specjalista'],
+            ['name' => 'Asystent', 'value' => 'assistant', 'description' => 'Asystent biurowy'],
+            ['name' => 'Stażysta', 'value' => 'intern', 'description' => 'Stażysta lub praktykant'],
+        ];
+
+        foreach ($positions as $index => $positionData) {
+            $position = new Dictionary();
+            $position->setType('employee_positions')
+                ->setName($positionData['name'])
+                ->setValue($positionData['value'])
+                ->setDescription($positionData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor('#20c997')
+                ->setIcon('ri-user-star-line');
+            $manager->persist($position);
+        }
     }
 
     private function updateUsersWithExampleData(ObjectManager $manager, User $adminUser, User $testUser, User $hrUser): void
