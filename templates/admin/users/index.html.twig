@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "{{ user.phoneNumber|default('—') }}",
             "{{ user.position|default('—') }}",
             "{{ user.supervisor ? user.supervisor.fullName : '—' }}",
-            "{{ user.department|default('—') }}",
+            "{{ user.department ? departments_map[user.department]|default(user.department) : '—' }}",
             "{{ user.branch ? branches_map[user.branch]|default(user.branch) : '—' }}",
             gridjs.html("{% if user.status %}<span class='badge bg-info-subtle text-info'>{{ statuses_map[user.status]|default(user.status) }}</span>{% else %}<span class='text-muted'>—</span>{% endif %}")
         ]{% if not loop.last %},{% endif %}

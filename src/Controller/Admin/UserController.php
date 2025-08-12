@@ -58,6 +58,23 @@ class UserController extends AbstractController
         // Pobierz słowniki przez UserService
         $dictionaries = $this->userService->getDictionariesForForms();
 
+        // Przygotuj mapowania słowników dla template (id => nazwa)
+        $branchesMap = [];
+        $departmentsMap = [];
+        $statusesMap = [];
+
+        foreach ($dictionaries['branches'] as $branch) {
+            $branchesMap[$branch->getValue()] = $branch->getDisplayName();
+        }
+
+        foreach ($dictionaries['departments'] as $department) {
+            $departmentsMap[$department->getValue()] = $department->getDisplayName();
+        }
+
+        foreach ($dictionaries['statuses'] as $status) {
+            $statusesMap[$status->getValue()] = $status->getDisplayName();
+        }
+
         // Loguj dostęp przez AuditService
         $this->auditService->logUserAction($user, 'view_users_index', [
             'page' => $page,
@@ -75,6 +92,9 @@ class UserController extends AbstractController
             'can_edit' => $canEdit,
             'can_edit_full' => $canEditFull,
             'dictionaries' => $dictionaries,
+            'branches_map' => $branchesMap,
+            'departments_map' => $departmentsMap,
+            'statuses_map' => $statusesMap,
             'statistics' => $this->userService->getUserStatistics()
         ]);
     }
