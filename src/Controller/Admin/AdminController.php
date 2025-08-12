@@ -377,8 +377,8 @@ class AdminController extends AbstractController
         // Authorization via AuthorizationService
         $this->authorizationService->checkModuleAccess($user, 'admin', $request);
 
-        // Get database info via AdminService
-        $databaseInfo = $this->adminService->getDatabaseInfo();
+        // Get database info via private method
+        $databaseInfo = $this->getDatabaseInfo();
         
         // Handle POST operations
         if ($request->isMethod('POST')) {
