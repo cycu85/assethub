@@ -59,7 +59,7 @@ class AuthorizationServiceTest extends TestCase
         $user = $this->createUserWithPermissions(['equipment' => ['VIEW']]);
         
         // Act & Assert
-        $this->assertTrue($this->authorizationService->hasAnyPermission($user, 'equipment', ['VIEW', 'DELETE']));
+        $this->assertTrue($this->authorizationService->checkAnyPermission($user, 'equipment', ['VIEW', 'DELETE']));
     }
 
     public function testHasAnyPermissionReturnsFalseWhenUserHasNoPermissions(): void
@@ -68,7 +68,7 @@ class AuthorizationServiceTest extends TestCase
         $user = $this->createUserWithPermissions(['equipment' => ['VIEW']]);
         
         // Act & Assert
-        $this->assertFalse($this->authorizationService->hasAnyPermission($user, 'equipment', ['DELETE', 'CREATE']));
+        $this->assertFalse($this->authorizationService->checkAnyPermission($user, 'equipment', ['DELETE', 'CREATE']));
     }
 
     public function testHasModuleAccessReturnsTrueWhenUserHasAnyPermissionInModule(): void

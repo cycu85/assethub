@@ -70,7 +70,7 @@ class SearchController extends AbstractController
             }
 
             // Wyszukiwanie sprzętu (jeśli ma uprawnienia)
-            if ($this->authorizationService->hasAnyPermission($user, 'equipment', ['VIEW'])) {
+            if ($this->authorizationService->checkAnyPermission($user, 'equipment', ['VIEW'])) {
                 $equipment = $this->searchEquipment($query);
                 foreach ($equipment as $item) {
                     $results[] = [

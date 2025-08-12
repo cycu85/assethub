@@ -90,6 +90,24 @@ class AuthorizationService
     }
 
     /**
+     * Sprawdza czy użytkownik ma jedną z wielu uprawnień (zwraca boolean)
+     */
+    public function checkAnyPermission(User $user, string $module, array $permissions): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($user, $module, $permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Sprawdza czy użytkownik ma jedną z wielu uprawnień
      */
     public function hasAnyPermission(User $user, string $module, array $permissions, Request $request): void

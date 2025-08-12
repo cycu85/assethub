@@ -56,7 +56,7 @@ class DashboardController extends AbstractController
         ];
         
         // Only get equipment stats if user has equipment access
-        if ($this->authorizationService->hasAnyPermission($user, 'equipment', ['VIEW', 'EDIT'])) {
+        if ($this->authorizationService->checkAnyPermission($user, 'equipment', ['VIEW', 'EDIT'])) {
             try {
                 $equipmentStats = $this->equipmentService->getEquipmentStatistics();
                 $stats = array_merge($stats, $equipmentStats);
