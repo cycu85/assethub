@@ -77,6 +77,19 @@ class AuthorizationService
     }
 
     /**
+     * Pobiera listę modułów dostępnych dla użytkownika (z cache)
+     */
+    public function getUserModules(User $user): array
+    {
+        $cacheKey = sprintf('user_modules_%d', $user->getId());
+
+        return $this->permissionsCache->get($cacheKey, function (ItemInterface $item) use ($user) {
+            $item->expiresAfter(1800); // 30 minut
+            return $this->permissionService->getUserModules($user);
+        });
+    }
+
+    /**
      * Sprawdza czy użytkownik ma jedną z wielu uprawnień
      */
     public function hasAnyPermission(User $user, string $module, array $permissions, Request $request): void
