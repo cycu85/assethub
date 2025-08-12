@@ -26,6 +26,7 @@ services:
     App\Service\SettingService:
         arguments:
             $settingsCache: '@cache.settings'
+            $publicDir: '%kernel.project_dir%/public'
             
     # Authorization service with permissions cache
     App\Service\AuthorizationService:

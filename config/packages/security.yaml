@@ -4,8 +4,7 @@ security:
         App\Entity\User:
             algorithm: 'argon2id'
             memory_cost: 65536      # 64 MB
-            time_cost: 4            # 4 iterations  
-            threads: 3              # 3 threads
+            time_cost: 4            # 4 iterations
 
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:

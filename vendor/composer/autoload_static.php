@@ -63,6 +63,7 @@ class ComposerStaticInit1a8ef39f6118381c98aad8a65fb3a03b
             'Symfony\\Component\\Mime\\' => 23,
             'Symfony\\Component\\Messenger\\' => 28,
             'Symfony\\Component\\Mailer\\' => 25,
+            'Symfony\\Component\\Lock\\' => 23,
             'Symfony\\Component\\Ldap\\' => 23,
             'Symfony\\Component\\HttpKernel\\' => 29,
             'Symfony\\Component\\HttpFoundation\\' => 33,
@@ -96,10 +97,12 @@ class ComposerStaticInit1a8ef39f6118381c98aad8a65fb3a03b
         'P' => 
         array (
             'Psr\\Log\\' => 8,
+            'Psr\\Http\\Message\\' => 17,
             'Psr\\EventDispatcher\\' => 20,
             'Psr\\Container\\' => 14,
             'Psr\\Clock\\' => 10,
             'Psr\\Cache\\' => 10,
+            'Predis\\' => 7,
             'PhpParser\\' => 10,
         ),
         'M' => 
@@ -280,6 +283,10 @@ class ComposerStaticInit1a8ef39f6118381c98aad8a65fb3a03b
         array (
             0 => __DIR__ . '/..' . '/symfony/mailer',
         ),
+        'Symfony\\Component\\Lock\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/lock',
+        ),
         'Symfony\\Component\\Ldap\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/ldap',
@@ -400,6 +407,10 @@ class ComposerStaticInit1a8ef39f6118381c98aad8a65fb3a03b
         array (
             0 => __DIR__ . '/..' . '/psr/log/src',
         ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
         'Psr\\EventDispatcher\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/event-dispatcher/src',
@@ -415,6 +426,10 @@ class ComposerStaticInit1a8ef39f6118381c98aad8a65fb3a03b
         'Psr\\Cache\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/cache/src',
+        ),
+        'Predis\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/predis/predis/src',
         ),
         'PhpParser\\' => 
         array (

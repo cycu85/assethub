@@ -3,7 +3,7 @@
         'name' => 'symfony/skeleton',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '40eb615e3f419ce3f11236f56338403301e06196',
+        'reference' => '67a7dfa2d1d5c302385aed192aed6a421de18749',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -289,6 +289,15 @@
             'aliases' => array(),
             'dev_requirement' => true,
         ),
+        'predis/predis' => array(
+            'pretty_version' => 'v3.2.0',
+            'version' => '3.2.0.0',
+            'reference' => '9e9deec4dfd3ebf65d32eb368f498c646ba2ecd8',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../predis/predis',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'psr/cache' => array(
             'pretty_version' => '3.0.0',
             'version' => '3.0.0.0',
@@ -348,6 +357,15 @@
             'provided' => array(
                 0 => '1.0',
             ),
+        ),
+        'psr/http-message' => array(
+            'pretty_version' => '2.0',
+            'version' => '2.0.0.0',
+            'reference' => '402d35bcb92c70c026d1a6a9883f06b2ead23d71',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../psr/http-message',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'psr/log' => array(
             'pretty_version' => '3.0.0',
@@ -752,6 +770,15 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'symfony/lock' => array(
+            'pretty_version' => 'v7.0.8',
+            'version' => '7.0.8.0',
+            'reference' => '665e2f4c14690d4b974ed59313e50efe18e8bce6',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/lock',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'symfony/mailer' => array(
             'pretty_version' => 'v7.0.9',
             'version' => '7.0.9.0',
@@ -1046,7 +1073,7 @@
         'symfony/skeleton' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '40eb615e3f419ce3f11236f56338403301e06196',
+            'reference' => '67a7dfa2d1d5c302385aed192aed6a421de18749',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
