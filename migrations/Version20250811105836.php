@@ -19,59 +19,118 @@ final class Version20250811105836 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Indeksy dla tabeli user - często wyszukiwane pola
-        $this->addSql('CREATE INDEX idx_user_email ON user (email)');
-        $this->addSql('CREATE INDEX idx_user_active ON user (is_active)');
-        $this->addSql('CREATE INDEX idx_user_ldap_dn ON user (ldap_dn)');
-        $this->addSql('CREATE INDEX idx_user_name_search ON user (last_name, first_name)');
+        // Sprawdź najpierw czy tabele istnieją, jeśli nie - pomiń tworzenie indeksów
         
-        // Indeksy dla tabeli equipment - często używane w wyszukiwaniach
-        $this->addSql('CREATE INDEX idx_equipment_status ON equipment (status)');
-        $this->addSql('CREATE INDEX idx_equipment_category ON equipment (category_id)');
-        $this->addSql('CREATE INDEX idx_equipment_assigned ON equipment (assigned_to_id)');
-        $this->addSql('CREATE INDEX idx_equipment_inventory ON equipment (inventory_number)');
-        $this->addSql('CREATE INDEX idx_equipment_serial ON equipment (serial_number)');
-        $this->addSql('CREATE INDEX idx_equipment_warranty ON equipment (warranty_expiry)');
+        // Indeksy dla tabeli users - jeśli tabela istnieje
+        $this->skipIf(!$schema->hasTable('users'), 'Tabela users nie istnieje');
+        if ($schema->hasTable('users')) {
+            $table = $schema->getTable('users');
+            
+            if (!$table->hasIndex('idx_user_email')) {
+                $this->addSql('CREATE INDEX idx_user_email ON users (email)');
+            }
+            if (!$table->hasIndex('idx_user_active')) {
+                $this->addSql('CREATE INDEX idx_user_active ON users (is_active)');
+            }
+            if (!$table->hasIndex('idx_user_ldap_dn')) {
+                $this->addSql('CREATE INDEX idx_user_ldap_dn ON users (ldap_dn)');
+            }
+            if (!$table->hasIndex('idx_user_name_search')) {
+                $this->addSql('CREATE INDEX idx_user_name_search ON users (last_name, first_name)');
+            }
+        }
         
-        // Indeksy dla tabeli equipment_log - logi są często sortowane po dacie
-        $this->addSql('CREATE INDEX idx_equipment_log_date ON equipment_log (log_date)');
-        $this->addSql('CREATE INDEX idx_equipment_log_equipment ON equipment_log (equipment_id)');
-        $this->addSql('CREATE INDEX idx_equipment_log_user ON equipment_log (user_id)');
+        // Indeksy dla tabeli equipment - jeśli tabela istnieje
+        if ($schema->hasTable('equipment')) {
+            $table = $schema->getTable('equipment');
+            
+            if (!$table->hasIndex('idx_equipment_status')) {
+                $this->addSql('CREATE INDEX idx_equipment_status ON equipment (status)');
+            }
+            if (!$table->hasIndex('idx_equipment_category')) {
+                $this->addSql('CREATE INDEX idx_equipment_category ON equipment (category_id)');
+            }
+            if (!$table->hasIndex('idx_equipment_assigned')) {
+                $this->addSql('CREATE INDEX idx_equipment_assigned ON equipment (assigned_to_id)');
+            }
+            if (!$table->hasIndex('idx_equipment_inventory')) {
+                $this->addSql('CREATE INDEX idx_equipment_inventory ON equipment (inventory_number)');
+            }
+            if (!$table->hasIndex('idx_equipment_serial')) {
+                $this->addSql('CREATE INDEX idx_equipment_serial ON equipment (serial_number)');
+            }
+            if (!$table->hasIndex('idx_equipment_warranty')) {
+                $this->addSql('CREATE INDEX idx_equipment_warranty ON equipment (warranty_expiry)');
+            }
+        }
         
-        // Indeksy dla tabeli setting - często używane do pobierania konfiguracji
-        $this->addSql('CREATE INDEX idx_setting_key ON setting (setting_key)');
-        $this->addSql('CREATE INDEX idx_setting_category ON setting (category)');
+        // Indeksy dla tabeli equipment_log - jeśli tabela istnieje
+        if ($schema->hasTable('equipment_log')) {
+            $table = $schema->getTable('equipment_log');
+            
+            if (!$table->hasIndex('idx_equipment_log_date')) {
+                $this->addSql('CREATE INDEX idx_equipment_log_date ON equipment_log (created_at)');
+            }
+            if (!$table->hasIndex('idx_equipment_log_equipment')) {
+                $this->addSql('CREATE INDEX idx_equipment_log_equipment ON equipment_log (equipment_id)');
+            }
+            if (!$table->hasIndex('idx_equipment_log_user')) {
+                $this->addSql('CREATE INDEX idx_equipment_log_user ON equipment_log (created_by_id)');
+            }
+        }
         
-        // Indeksy dla tabeli dictionary - hierarchiczne wyszukiwanie
-        $this->addSql('CREATE INDEX idx_dictionary_type ON dictionary (type)');
-        $this->addSql('CREATE INDEX idx_dictionary_parent ON dictionary (parent_id)');
-        $this->addSql('CREATE INDEX idx_dictionary_active ON dictionary (is_active)');
+        // Indeksy dla tabeli settings - jeśli tabela istnieje
+        if ($schema->hasTable('settings')) {
+            $table = $schema->getTable('settings');
+            
+            if (!$table->hasIndex('idx_setting_key')) {
+                $this->addSql('CREATE INDEX idx_setting_key ON settings (setting_key)');
+            }
+            if (!$table->hasIndex('idx_setting_category')) {
+                $this->addSql('CREATE INDEX idx_setting_category ON settings (category)');
+            }
+        }
+        
+        // Indeksy dla tabeli dictionaries - jeśli tabela istnieje
+        if ($schema->hasTable('dictionaries')) {
+            $table = $schema->getTable('dictionaries');
+            
+            if (!$table->hasIndex('idx_dictionary_type')) {
+                $this->addSql('CREATE INDEX idx_dictionary_type ON dictionaries (type)');
+            }
+            if (!$table->hasIndex('idx_dictionary_parent')) {
+                $this->addSql('CREATE INDEX idx_dictionary_parent ON dictionaries (parent_id)');
+            }
+            if (!$table->hasIndex('idx_dictionary_active')) {
+                $this->addSql('CREATE INDEX idx_dictionary_active ON dictionaries (is_active)');
+            }
+        }
     }
 
     public function down(Schema $schema): void
     {
         // Usuwanie indeksów w odwrotnej kolejności
-        $this->addSql('DROP INDEX idx_dictionary_active ON dictionary');
-        $this->addSql('DROP INDEX idx_dictionary_parent ON dictionary');
-        $this->addSql('DROP INDEX idx_dictionary_type ON dictionary');
+        $this->addSql('DROP INDEX IF EXISTS idx_dictionary_active ON dictionaries');
+        $this->addSql('DROP INDEX IF EXISTS idx_dictionary_parent ON dictionaries');
+        $this->addSql('DROP INDEX IF EXISTS idx_dictionary_type ON dictionaries');
         
-        $this->addSql('DROP INDEX idx_setting_category ON setting');
-        $this->addSql('DROP INDEX idx_setting_key ON setting');
+        $this->addSql('DROP INDEX IF EXISTS idx_setting_category ON settings');
+        $this->addSql('DROP INDEX IF EXISTS idx_setting_key ON settings');
         
-        $this->addSql('DROP INDEX idx_equipment_log_user ON equipment_log');
-        $this->addSql('DROP INDEX idx_equipment_log_equipment ON equipment_log');
-        $this->addSql('DROP INDEX idx_equipment_log_date ON equipment_log');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_log_user ON equipment_log');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_log_equipment ON equipment_log');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_log_date ON equipment_log');
         
-        $this->addSql('DROP INDEX idx_equipment_warranty ON equipment');
-        $this->addSql('DROP INDEX idx_equipment_serial ON equipment');
-        $this->addSql('DROP INDEX idx_equipment_inventory ON equipment');
-        $this->addSql('DROP INDEX idx_equipment_assigned ON equipment');
-        $this->addSql('DROP INDEX idx_equipment_category ON equipment');
-        $this->addSql('DROP INDEX idx_equipment_status ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_warranty ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_serial ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_inventory ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_assigned ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_category ON equipment');
+        $this->addSql('DROP INDEX IF EXISTS idx_equipment_status ON equipment');
         
-        $this->addSql('DROP INDEX idx_user_name_search ON user');
-        $this->addSql('DROP INDEX idx_user_ldap_dn ON user');
-        $this->addSql('DROP INDEX idx_user_active ON user');
-        $this->addSql('DROP INDEX idx_user_email ON user');
+        $this->addSql('DROP INDEX IF EXISTS idx_user_name_search ON users');
+        $this->addSql('DROP INDEX IF EXISTS idx_user_ldap_dn ON users');
+        $this->addSql('DROP INDEX IF EXISTS idx_user_active ON users');
+        $this->addSql('DROP INDEX IF EXISTS idx_user_email ON users');
     }
 }
