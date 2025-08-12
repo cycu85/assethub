@@ -348,19 +348,20 @@ class UserService
      */
     public function getUserStatistics(): array
     {
-        $qb = $this->userRepository->createQueryBuilder('u');
-        
-        $total = $qb->select('COUNT(u.id)')
+        $total = $this->userRepository->createQueryBuilder('u')
+                   ->select('COUNT(u.id)')
                    ->getQuery()
                    ->getSingleScalarResult();
 
-        $active = $qb->select('COUNT(u.id)')
+        $active = $this->userRepository->createQueryBuilder('u')
+                    ->select('COUNT(u.id)')
                     ->where('u.isActive = :active')
                     ->setParameter('active', true)
                     ->getQuery()
                     ->getSingleScalarResult();
 
-        $ldapUsers = $qb->select('COUNT(u.id)')
+        $ldapUsers = $this->userRepository->createQueryBuilder('u')
+                       ->select('COUNT(u.id)')
                        ->where('u.ldapDn IS NOT NULL')
                        ->getQuery()
                        ->getSingleScalarResult();
