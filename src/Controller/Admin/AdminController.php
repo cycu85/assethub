@@ -10,6 +10,7 @@ use App\Repository\ModuleRepository;
 use App\Service\AuthorizationService;
 use App\Service\AdminService;
 use App\Service\AuditService;
+use App\Service\PermissionService;
 use App\Service\SettingService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -30,6 +31,7 @@ class AdminController extends AbstractController
 {
     public function __construct(
         private AuthorizationService $authorizationService,
+        private PermissionService $permissionService,
         private AdminService $adminService,
         private AuditService $auditService,
         private ModuleRepository $moduleRepository,
