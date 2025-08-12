@@ -418,8 +418,9 @@ class AdminService
         $connection = $this->entityManager->getConnection();
         
         try {
+            $platform = $connection->getDatabasePlatform();
             $info = [
-                'platform' => $connection->getDatabasePlatform()->getName(),
+                'platform' => $this->getPlatformName($platform),
                 'version' => $connection->fetchOne('SELECT VERSION()'),
                 'database_name' => $connection->getDatabase()
             ];
@@ -558,10 +559,29 @@ class AdminService
     }
 
     /**
+     * Pobiera czytelną nazwę platformy bazy danych
+     */
+    private function getPlatformName($platform): string
+    {
+        $className = get_class($platform);
+        
+        // Mapowanie nazw klas na czytelne nazwy
+        $platformNames = [
+            'Doctrine\DBAL\Platforms\MySQLPlatform' => 'MySQL',
+            'Doctrine\DBAL\Platforms\PostgreSQLPlatform' => 'PostgreSQL',
+            'Doctrine\DBAL\Platforms\SqlitePlatform' => 'SQLite',
+            'Doctrine\DBAL\Platforms\SQLServerPlatform' => 'SQL Server',
+            'Doctrine\DBAL\Platforms\OraclePlatform' => 'Oracle',
+        ];
+        
+        return $platformNames[$className] ?? $className;
+    }
+
+    /**
      * Sprawdza czy platforma to MySQL
      */
     private function isMySQLPlatform($platform): bool
     {
-        return str_contains(strtolower($platform->getName()), 'mysql');
+        return str_contains(get_class($platform), 'MySQL');
     }
 }
