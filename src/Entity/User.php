@@ -227,6 +227,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function isLdapUser(): bool
+    {
+        return !empty($this->ldapDn);
+    }
+
     public function isActive(): bool
     {
         return $this->isActive;

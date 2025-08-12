@@ -361,8 +361,7 @@ class UserService
                     ->getSingleScalarResult();
 
         $ldapUsers = $qb->select('COUNT(u.id)')
-                       ->where('u.isLdapUser = :ldap')
-                       ->setParameter('ldap', true)
+                       ->where('u.ldapDn IS NOT NULL')
                        ->getQuery()
                        ->getSingleScalarResult();
 

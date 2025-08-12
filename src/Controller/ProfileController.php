@@ -119,7 +119,7 @@ class ProfileController extends AbstractController
             'user' => $user,
             'changePasswordForm' => $changePasswordForm?->createView(),
             'avatarUploadForm' => $avatarUploadForm->createView(),
-            'isLdapUser' => !empty($user->getLdapDn())
+            'isLdapUser' => $user->isLdapUser()
         ]);
     }
     
