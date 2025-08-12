@@ -413,7 +413,7 @@ class AdminService
     /**
      * Pobiera informacje o bazie danych
      */
-    private function getDatabaseInfo(): array
+    public function getDatabaseInfo(): array
     {
         $connection = $this->entityManager->getConnection();
         
