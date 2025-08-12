@@ -26,6 +26,7 @@ class UserController extends AbstractController
 {
     public function __construct(
         private AuthorizationService $authorizationService,
+        private PermissionService $permissionService,
         private UserService $userService,
         private AuditService $auditService,
         private EntityManagerInterface $entityManager,
