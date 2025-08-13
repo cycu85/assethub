@@ -2,8 +2,10 @@
 
 namespace App\Service;
 
+use App\Entity\Dictionary;
 use App\Entity\User;
 use App\Exception\LdapException;
+use App\Repository\DictionaryRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -17,6 +19,7 @@ class LdapService
 {
     public function __construct(
         private UserRepository $userRepository,
+        private DictionaryRepository $dictionaryRepository,
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $passwordHasher,
         private LoggerInterface $logger,
@@ -418,8 +421,14 @@ class LdapService
                     'last_name' => $user->setLastName($ldapValue),
                     'email' => $user->setEmail($ldapValue),
                     'position' => $user->setPosition($ldapValue),
-                    'department' => $user->setDepartment($ldapValue),
-                    'branch' => $user->setBranch($ldapValue),
+                    'department' => [
+                        $this->ensureDictionaryValue('employee_departments', $ldapValue),
+                        $user->setDepartment($ldapValue)
+                    ],
+                    'branch' => [
+                        $this->ensureDictionaryValue('employee_branches', $ldapValue),
+                        $user->setBranch($ldapValue)
+                    ],
                     'phone' => $user->setPhoneNumber($ldapValue)
                 };
                 $changes[$userField] = ['from' => $currentValue, 'to' => $ldapValue];
@@ -477,9 +486,11 @@ class LdapService
             $user->setPosition($position);
         }
         if ($department = $ldapUser->getAttribute($settings['ldap_map_department'] ?? 'department')[0] ?? '') {
+            $this->ensureDictionaryValue('employee_departments', $department);
             $user->setDepartment($department);
         }
         if ($branch = $ldapUser->getAttribute($settings['ldap_map_office'] ?? 'physicalDeliveryOfficeName')[0] ?? '') {
+            $this->ensureDictionaryValue('employee_branches', $branch);
             $user->setBranch($branch);
         }
         if ($phone = $ldapUser->getAttribute($settings['ldap_map_phone'] ?? 'telephoneNumber')[0] ?? '') {
@@ -498,5 +509,79 @@ class LdapService
         ]);
 
         return $user;
+    }
+
+    /**
+     * Zapewnia że wartość słownika istnieje, tworzy nową jeśli nie
+     */
+    private function ensureDictionaryValue(string $type, string $value): void
+    {
+        if (empty($value)) {
+            return;
+        }
+
+        // Sprawdź czy wartość już istnieje w słowniku
+        $existing = $this->dictionaryRepository
+            ->createQueryBuilder('d')
+            ->where('d.type = :type')
+            ->andWhere('d.value = :value')
+            ->setParameter('type', $type)
+            ->setParameter('value', $value)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$existing) {
+            // Utwórz nowy wpis słownika
+            $dictionary = new Dictionary();
+            $dictionary->setType($type);
+            $dictionary->setValue($value);
+            $dictionary->setName($value); // Użyj wartości jako nazwa tymczasowo
+            $dictionary->setDescription("Automatycznie utworzony podczas synchronizacji LDAP");
+            $dictionary->setIsActive(true);
+            $dictionary->setIsSystem(false);
+            
+            // Ustaw sortOrder jako następny w kolejności
+            $maxSort = $this->dictionaryRepository
+                ->createQueryBuilder('d')
+                ->select('MAX(d.sortOrder)')
+                ->where('d.type = :type')
+                ->setParameter('type', $type)
+                ->getQuery()
+                ->getSingleScalarResult();
+            
+            $dictionary->setSortOrder(($maxSort ?? 0) + 1);
+            
+            // Ustaw domyślne kolory i ikony w zależności od typu
+            switch ($type) {
+                case 'employee_branches':
+                    $dictionary->setColor('#6f42c1');
+                    $dictionary->setIcon('ri-building-2-line');
+                    break;
+                case 'employee_departments':
+                    $dictionary->setColor('#6f42c1');
+                    $dictionary->setIcon('ri-team-line');
+                    break;
+                case 'employee_positions':
+                    $dictionary->setColor('#20c997');
+                    $dictionary->setIcon('ri-user-star-line');
+                    break;
+                case 'employee_statuses':
+                    $dictionary->setColor('#28a745');
+                    $dictionary->setIcon('ri-user-line');
+                    break;
+                default:
+                    $dictionary->setColor('#6c757d');
+                    $dictionary->setIcon('ri-list-line');
+            }
+
+            $this->entityManager->persist($dictionary);
+            $this->entityManager->flush();
+
+            $this->logger->info('Auto-created dictionary entry during LDAP sync', [
+                'type' => $type,
+                'value' => $value,
+                'name' => $value
+            ]);
+        }
     }
 }
