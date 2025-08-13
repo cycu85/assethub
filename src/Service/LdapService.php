@@ -416,10 +416,18 @@ class LdapService
             };
 
             if ($ldapValue && $currentValue !== $ldapValue) {
+                $this->logger->info('LDAP value changed for user field', [
+                    'field' => $userField,
+                    'from' => $currentValue,
+                    'to' => $ldapValue
+                ]);
+                
                 // Zapewnij istnienie w słownikach przed przypisaniem
                 if ($userField === 'department') {
+                    $this->logger->info('Ensuring department dictionary value', ['value' => $ldapValue]);
                     $this->ensureDictionaryValue('employee_departments', $ldapValue);
                 } elseif ($userField === 'branch') {
+                    $this->logger->info('Ensuring branch dictionary value', ['value' => $ldapValue]);
                     $this->ensureDictionaryValue('employee_branches', $ldapValue);
                 }
                 
@@ -518,8 +526,11 @@ class LdapService
     private function ensureDictionaryValue(string $type, string $value): void
     {
         if (empty($value)) {
+            $this->logger->debug('Empty value for dictionary type', ['type' => $type]);
             return;
         }
+
+        $this->logger->info('Checking dictionary value', ['type' => $type, 'value' => $value]);
 
         // Sprawdź czy wartość już istnieje w słowniku
         $existing = $this->dictionaryRepository
@@ -532,6 +543,8 @@ class LdapService
             ->getOneOrNullResult();
 
         if (!$existing) {
+            $this->logger->warning('Dictionary value not found, creating new entry', ['type' => $type, 'value' => $value]);
+            
             // Utwórz nowy wpis słownika
             $dictionary = new Dictionary();
             $dictionary->setType($type);
@@ -583,6 +596,8 @@ class LdapService
                 'value' => $value,
                 'name' => $value
             ]);
+        } else {
+            $this->logger->debug('Dictionary value already exists', ['type' => $type, 'value' => $value]);
         }
     }
 }
