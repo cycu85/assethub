@@ -34,13 +34,6 @@ class DictionaryController extends AbstractController
         }
 
         $types = $this->dictionaryRepository->findAllTypes();
-        
-        // DEBUG: Flash message z typami
-        $this->addFlash('info', 'DEBUG: Znaleziono ' . count($types) . ' typów słowników: ' . implode(', ', $types));
-        
-        // DEBUG: Loguj wszystkie typy
-        $this->logger->info('Dictionary types found', ['types' => $types, 'count' => count($types)]);
-        
         $typeCounts = [];
         
         foreach ($types as $type) {
