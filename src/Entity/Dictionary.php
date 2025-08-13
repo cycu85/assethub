@@ -110,6 +110,14 @@ class Dictionary
         return $this;
     }
 
+    /**
+     * Get display name (alias for getName for compatibility)
+     */
+    public function getDisplayName(): ?string
+    {
+        return $this->getName();
+    }
+
     public function getValue(): ?string
     {
         return $this->value;
