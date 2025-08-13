@@ -416,19 +416,20 @@ class LdapService
             };
 
             if ($ldapValue && $currentValue !== $ldapValue) {
+                // Zapewnij istnienie w słownikach przed przypisaniem
+                if ($userField === 'department') {
+                    $this->ensureDictionaryValue('employee_departments', $ldapValue);
+                } elseif ($userField === 'branch') {
+                    $this->ensureDictionaryValue('employee_branches', $ldapValue);
+                }
+                
                 match ($userField) {
                     'first_name' => $user->setFirstName($ldapValue),
                     'last_name' => $user->setLastName($ldapValue),
                     'email' => $user->setEmail($ldapValue),
                     'position' => $user->setPosition($ldapValue),
-                    'department' => [
-                        $this->ensureDictionaryValue('employee_departments', $ldapValue),
-                        $user->setDepartment($ldapValue)
-                    ],
-                    'branch' => [
-                        $this->ensureDictionaryValue('employee_branches', $ldapValue),
-                        $user->setBranch($ldapValue)
-                    ],
+                    'department' => $user->setDepartment($ldapValue),
+                    'branch' => $user->setBranch($ldapValue),
                     'phone' => $user->setPhoneNumber($ldapValue)
                 };
                 $changes[$userField] = ['from' => $currentValue, 'to' => $ldapValue];
