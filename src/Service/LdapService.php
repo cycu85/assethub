@@ -113,7 +113,7 @@ class LdapService
 
             foreach ($ldapResults as $ldapUser) {
                 try {
-                    $username = $ldapUser->getAttribute($settings['ldap_username_attribute'])[0] ?? null;
+                    $username = $ldapUser->getAttribute($settings['ldap_map_username'])[0] ?? null;
                     if (!$username || !isset($usersMap[$username])) {
                         $skipped++;
                         continue;
@@ -183,7 +183,7 @@ class LdapService
 
             foreach ($ldapResults as $ldapUser) {
                 try {
-                    $username = $ldapUser->getAttribute($settings['ldap_username_attribute'])[0] ?? null;
+                    $username = $ldapUser->getAttribute($settings['ldap_map_username'])[0] ?? null;
                     if (!$username || in_array($username, $existingUsernames)) {
                         $skipped++;
                         continue;
@@ -318,7 +318,7 @@ class LdapService
 
                 $query = $ldap->query(
                     $settings['ldap_base_dn'],
-                    sprintf("({$settings['ldap_username_attribute']}=%s)", ldap_escape($username, '', LDAP_ESCAPE_FILTER))
+                    sprintf("({$settings['ldap_map_username']}=%s)", ldap_escape($username, '', LDAP_ESCAPE_FILTER))
                 );
 
                 $results = $query->execute();
@@ -390,12 +390,13 @@ class LdapService
 
         // Mapowanie atrybutów
         $attributeMap = [
-            'first_name' => $settings['ldap_firstname_attribute'] ?? 'givenName',
-            'last_name' => $settings['ldap_lastname_attribute'] ?? 'sn',
-            'email' => $settings['ldap_email_attribute'] ?? 'mail',
-            'position' => $settings['ldap_position_attribute'] ?? 'title',
-            'department' => $settings['ldap_department_attribute'] ?? 'department',
-            'phone' => $settings['ldap_phone_attribute'] ?? 'telephoneNumber'
+            'first_name' => $settings['ldap_map_firstname'] ?? 'givenName',
+            'last_name' => $settings['ldap_map_lastname'] ?? 'sn',
+            'email' => $settings['ldap_map_email'] ?? 'mail',
+            'position' => $settings['ldap_map_position'] ?? 'title',
+            'department' => $settings['ldap_map_department'] ?? 'department',
+            'branch' => $settings['ldap_map_office'] ?? 'physicalDeliveryOfficeName',
+            'phone' => $settings['ldap_map_phone'] ?? 'telephoneNumber'
         ];
 
         foreach ($attributeMap as $userField => $ldapAttribute) {
@@ -406,7 +407,8 @@ class LdapService
                 'email' => $user->getEmail(),
                 'position' => $user->getPosition(),
                 'department' => $user->getDepartment(),
-                'phone' => $user->getPhone(),
+                'branch' => $user->getBranch(),
+                'phone' => $user->getPhoneNumber(),
                 default => null
             };
 
@@ -417,7 +419,8 @@ class LdapService
                     'email' => $user->setEmail($ldapValue),
                     'position' => $user->setPosition($ldapValue),
                     'department' => $user->setDepartment($ldapValue),
-                    'phone' => $user->setPhone($ldapValue)
+                    'branch' => $user->setBranch($ldapValue),
+                    'phone' => $user->setPhoneNumber($ldapValue)
                 };
                 $changes[$userField] = ['from' => $currentValue, 'to' => $ldapValue];
                 $updated = true;
@@ -451,10 +454,10 @@ class LdapService
         $user = new User();
 
         // Podstawowe atrybuty
-        $username = $ldapUser->getAttribute($settings['ldap_username_attribute'])[0] ?? '';
-        $firstName = $ldapUser->getAttribute($settings['ldap_firstname_attribute'] ?? 'givenName')[0] ?? '';
-        $lastName = $ldapUser->getAttribute($settings['ldap_lastname_attribute'] ?? 'sn')[0] ?? '';
-        $email = $ldapUser->getAttribute($settings['ldap_email_attribute'] ?? 'mail')[0] ?? '';
+        $username = $ldapUser->getAttribute($settings['ldap_map_username'])[0] ?? '';
+        $firstName = $ldapUser->getAttribute($settings['ldap_map_firstname'] ?? 'givenName')[0] ?? '';
+        $lastName = $ldapUser->getAttribute($settings['ldap_map_lastname'] ?? 'sn')[0] ?? '';
+        $email = $ldapUser->getAttribute($settings['ldap_map_email'] ?? 'mail')[0] ?? '';
 
         if (!$username) {
             throw new \InvalidArgumentException('Nie można utworzyć użytkownika bez username');
@@ -470,14 +473,17 @@ class LdapService
         $user->setLdapSyncedAt(new \DateTime());
 
         // Dodatkowe atrybuty
-        if ($position = $ldapUser->getAttribute($settings['ldap_position_attribute'] ?? 'title')[0] ?? '') {
+        if ($position = $ldapUser->getAttribute($settings['ldap_map_position'] ?? 'title')[0] ?? '') {
             $user->setPosition($position);
         }
-        if ($department = $ldapUser->getAttribute($settings['ldap_department_attribute'] ?? 'department')[0] ?? '') {
+        if ($department = $ldapUser->getAttribute($settings['ldap_map_department'] ?? 'department')[0] ?? '') {
             $user->setDepartment($department);
         }
-        if ($phone = $ldapUser->getAttribute($settings['ldap_phone_attribute'] ?? 'telephoneNumber')[0] ?? '') {
-            $user->setPhone($phone);
+        if ($branch = $ldapUser->getAttribute($settings['ldap_map_office'] ?? 'physicalDeliveryOfficeName')[0] ?? '') {
+            $user->setBranch($branch);
+        }
+        if ($phone = $ldapUser->getAttribute($settings['ldap_map_phone'] ?? 'telephoneNumber')[0] ?? '') {
+            $user->setPhoneNumber($phone);
         }
 
         // Ustaw losowe hasło (będzie używana autentykacja LDAP)
