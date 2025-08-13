@@ -71,11 +71,12 @@ class DictionaryRepository extends ServiceEntityRepository
      */
     public function findAllTypes(): array
     {
-        return $this->createQueryBuilder('d')
-            ->select('DISTINCT d.type')
-            ->orderBy('d.type', 'ASC')
-            ->getQuery()
-            ->getSingleColumnResult();
+        // Use raw SQL to bypass potential ORM/cache issues
+        $connection = $this->getEntityManager()->getConnection();
+        $sql = 'SELECT DISTINCT type FROM dictionaries ORDER BY type ASC';
+        $result = $connection->executeQuery($sql);
+        
+        return $result->fetchFirstColumn();
     }
 
     /**
