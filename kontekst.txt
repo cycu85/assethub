@@ -893,4 +893,78 @@ try {
 - ✅ Business logic validation
 - ✅ Enterprise database management
 
+## MENU BOCZNE - ZACHOWANIE STANU ROZWINIĘCIA
+
+### Implementacja inteligentnego menu
+Menu boczne w `templates/partials/sidebar.html.twig` automatycznie zachowuje stan rozwinięcia podmenu:
+
+```twig
+{# Sprawdzenie aktualnej route i sekcji #}
+{% set current_route = app.request.get('_route') %}
+{% set is_admin_section = current_route starts with 'admin_' and not (current_route starts with 'admin_users') %}
+
+<li class="nav-item">
+    <a class="nav-link menu-link {{ is_admin_section ? 'active' : '' }}" 
+       href="#sidebarAdmin" 
+       data-bs-toggle="collapse" 
+       role="button" 
+       aria-expanded="{{ is_admin_section ? 'true' : 'false' }}" 
+       aria-controls="sidebarAdmin">
+        <i class="ri-settings-3-line"></i> <span>Panel administracyjny</span>
+    </a>
+    <div class="collapse menu-dropdown {{ is_admin_section ? 'show' : '' }}" id="sidebarAdmin">
+        <ul class="nav nav-sm flex-column">
+            <li class="nav-item">
+                <a href="{{ path('admin_dashboard') }}" class="nav-link {{ current_route == 'admin_dashboard' ? 'active' : '' }}">Panel główny</a>
+            </li>
+            <!-- inne pozycje menu -->
+        </ul>
+    </div>
+</li>
+```
+
+### WZORZEC dla nowych pozycji menu z podmenu
+
+Aby nowe pozycje menu z podmenu zachowywały stan rozwinięcia, użyj tego wzorca:
+
+```twig
+{% set current_route = app.request.get('_route') %}
+{% set is_module_section = current_route starts with 'module_prefix_' %}
+
+<li class="nav-item">
+    <a class="nav-link menu-link {{ is_module_section ? 'active' : '' }}" 
+       href="#sidebarModuleName" 
+       data-bs-toggle="collapse" 
+       role="button" 
+       aria-expanded="{{ is_module_section ? 'true' : 'false' }}" 
+       aria-controls="sidebarModuleName">
+        <i class="ri-icon-name"></i> <span>Nazwa Modułu</span>
+    </a>
+    <div class="collapse menu-dropdown {{ is_module_section ? 'show' : '' }}" id="sidebarModuleName">
+        <ul class="nav nav-sm flex-column">
+            <li class="nav-item">
+                <a href="{{ path('module_route1') }}" class="nav-link {{ current_route starts with 'module_route1' ? 'active' : '' }}">Pozycja 1</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ path('module_route2') }}" class="nav-link {{ current_route starts with 'module_route2' ? 'active' : '' }}">Pozycja 2</a>
+            </li>
+        </ul>
+    </div>
+</li>
+```
+
+**WAŻNE zasady:**
+- Zastąp `'module_prefix_'` prefiksem swoich route'ów  
+- Użyj unikalnego ID dla `sidebarModuleName`
+- Dodaj odpowiednie klasy `'active'` dla podmenu
+- Użyj `'starts with'` dla route'ów z wieloma akcjami (edit, create, show)
+- Użyj `'=='` dla pojedynczych route'ów
+
+### Funkcjonalność
+- ✅ Menu pozostaje rozwinięte przy przejściu między podstronami tej samej sekcji
+- ✅ Menu automatycznie się zwija przy przejściu do innej sekcji  
+- ✅ Podświetlanie aktywnych pozycji w menu i podmenu
+- ✅ Poprawne użycie Bootstrap collapse z `aria-expanded` i klasą `show`
+- ✅ Wzorzec gotowy do wykorzystania w nowych modułach
+
 System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!
