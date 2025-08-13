@@ -192,13 +192,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }).render(document.getElementById("table-gridjs"));
 });
 
+// Store CSRF tokens for each role
+const csrfTokens = {
+    {% for role in roles %}
+    {{ role.id }}: "{{ csrf_token('delete' ~ role.id) }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
 function confirmDelete(roleId, roleName) {
     // Set up the delete form
     const form = document.getElementById('delete-form');
     form.action = `/admin/roles/${roleId}/delete`;
     
-    // Generate CSRF token (in real app, you'd get this from Symfony)
-    document.getElementById('delete-token').value = 'delete_token_' + roleId;
+    // Use proper CSRF token from Symfony
+    document.getElementById('delete-token').value = csrfTokens[roleId];
     
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('deleteRecordModal'));
