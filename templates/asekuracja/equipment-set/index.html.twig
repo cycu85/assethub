@@ -273,7 +273,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item" href="{{ path('asekuracja_equipment_set_manage_equipment', {id: set.id}) }}">
+                                                <a class="dropdown-item" href="{{ path('asekuracja_equipment_set_add_equipment', {id: set.id}) }}">
                                                     <i class="ri-settings-3-line me-2"></i>Zarządzaj sprzętem
                                                 </a>
                                             </li>
@@ -281,19 +281,17 @@
                                             {% if can_assign %}
                                                 {% if set.isAssigned %}
                                                 <li>
-                                                    <form method="POST" action="{{ path('asekuracja_equipment_set_unassign', {id: set.id}) }}" 
-                                                          class="d-inline" onsubmit="return confirm('Czy na pewno cofnąć przypisanie zestawu?')">
-                                                        <input type="hidden" name="_token" value="{{ csrf_token('unassign_equipment_set_' ~ set.id) }}">
-                                                        <button type="submit" class="dropdown-item">
-                                                            <i class="ri-user-unfollow-line me-2"></i>Cofnij przypisanie
-                                                        </button>
-                                                    </form>
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="ri-user-unfollow-line me-2"></i>Cofnij przypisanie
+                                                        <small class="d-block">Funkcja w rozwoju</small>
+                                                    </span>
                                                 </li>
                                                 {% else %}
                                                 <li>
-                                                    <a class="dropdown-item" href="{{ path('asekuracja_equipment_set_assign', {id: set.id}) }}">
+                                                    <span class="dropdown-item text-muted">
                                                         <i class="ri-user-add-line me-2"></i>Przypisz
-                                                    </a>
+                                                        <small class="d-block">Funkcja w rozwoju</small>
+                                                    </span>
                                                 </li>
                                                 {% endif %}
                                             {% endif %}
