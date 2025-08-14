@@ -192,6 +192,18 @@ class AsekuracyjnyEquipmentType extends AbstractType
                 ]
             ])
             
+            ->add('status', ChoiceType::class, [
+                'label' => 'Status',
+                'choices' => $statusChoices,
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'Status jest wymagany']),
+                    new Assert\Choice(['choices' => array_values($statusChoices)])
+                ]
+            ])
+            
             ->add('notes', TextareaType::class, [
                 'label' => 'Uwagi',
                 'required' => false,
