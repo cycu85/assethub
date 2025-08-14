@@ -157,7 +157,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                {% if equipmentSets.items|length > 0 %}
+                {% if equipment_sets.items|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
@@ -172,7 +172,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for set in equipmentSets.items %}
+                            {% for set in equipment_sets.items %}
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -327,32 +327,32 @@
                 </div>
 
                 <!-- Paginacja -->
-                {% if equipmentSets.pages > 1 %}
+                {% if equipment_sets.pages > 1 %}
                 <div class="d-flex justify-content-between align-items-center mt-4">
                     <div class="text-muted">
-                        Wyświetlono {{ equipmentSets.items|length }} z {{ equipmentSets.total }} zestawów
+                        Wyświetlono {{ equipment_sets.items|length }} z {{ equipment_sets.total }} zestawów
                     </div>
                     <nav>
                         <ul class="pagination mb-0">
-                            {% if equipmentSets.page > 1 %}
+                            {% if equipment_sets.page > 1 %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ path('asekuracja_equipment_set_index', app.request.query.all|merge({page: equipmentSets.page - 1})) }}">
+                                <a class="page-link" href="{{ path('asekuracja_equipment_set_index', app.request.query.all|merge({page: equipment_sets.page - 1})) }}">
                                     <i class="ri-arrow-left-line"></i>
                                 </a>
                             </li>
                             {% endif %}
                             
-                            {% for i in range(max(1, equipmentSets.page - 2), min(equipmentSets.pages, equipmentSets.page + 2)) %}
-                            <li class="page-item {{ i == equipmentSets.page ? 'active' : '' }}">
+                            {% for i in range(max(1, equipment_sets.page - 2), min(equipment_sets.pages, equipment_sets.page + 2)) %}
+                            <li class="page-item {{ i == equipment_sets.page ? 'active' : '' }}">
                                 <a class="page-link" href="{{ path('asekuracja_equipment_set_index', app.request.query.all|merge({page: i})) }}">
                                     {{ i }}
                                 </a>
                             </li>
                             {% endfor %}
                             
-                            {% if equipmentSets.page < equipmentSets.pages %}
+                            {% if equipment_sets.page < equipment_sets.pages %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ path('asekuracja_equipment_set_index', app.request.query.all|merge({page: equipmentSets.page + 1})) }}">
+                                <a class="page-link" href="{{ path('asekuracja_equipment_set_index', app.request.query.all|merge({page: equipment_sets.page + 1})) }}">
                                     <i class="ri-arrow-right-line"></i>
                                 </a>
                             </li>
