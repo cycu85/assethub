@@ -82,7 +82,9 @@ class EquipmentSetController extends AbstractController
         $this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
         
         $equipmentSet = new AsekuracyjnyEquipmentSet();
-        $form = $this->createForm(AsekuracyjnyEquipmentSetType::class, $equipmentSet);
+        $form = $this->createForm(AsekuracyjnyEquipmentSetType::class, $equipmentSet, [
+            'include_submit' => false
+        ]);
         $form->handleRequest($request);
         
         if ($form->isSubmitted() && $form->isValid()) {
@@ -170,7 +172,9 @@ class EquipmentSetController extends AbstractController
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
         
-        $form = $this->createForm(AsekuracyjnyEquipmentSetType::class, $equipmentSet);
+        $form = $this->createForm(AsekuracyjnyEquipmentSetType::class, $equipmentSet, [
+            'include_submit' => false
+        ]);
         $form->handleRequest($request);
         
         if ($form->isSubmitted() && $form->isValid()) {

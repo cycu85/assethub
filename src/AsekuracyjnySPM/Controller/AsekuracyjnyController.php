@@ -81,7 +81,9 @@ class AsekuracyjnyController extends AbstractController
         $this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
         
         $equipment = new AsekuracyjnyEquipment();
-        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment);
+        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment, [
+            'include_submit' => false
+        ]);
         $form->handleRequest($request);
         
         if ($form->isSubmitted() && $form->isValid()) {
@@ -176,7 +178,9 @@ class AsekuracyjnyController extends AbstractController
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
         
-        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment);
+        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment, [
+            'include_submit' => false
+        ]);
         $form->handleRequest($request);
         
         if ($form->isSubmitted() && $form->isValid()) {
