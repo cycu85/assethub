@@ -30,7 +30,7 @@
                         <i class="ri-shield-line text-white fs-16"></i>
                     </div>
                     <div class="ms-3">
-                        <h5 class="mb-0">{{ my_equipment|length }}</h5>
+                        <h5 class="mb-0">{{ equipment|length }}</h5>
                         <p class="text-muted mb-0">Pojedynczy sprzęt</p>
                     </div>
                 </div>
@@ -45,7 +45,7 @@
                         <i class="ri-stack-line text-white fs-16"></i>
                     </div>
                     <div class="ms-3">
-                        <h5 class="mb-0">{{ my_equipment_sets|length }}</h5>
+                        <h5 class="mb-0">{{ equipment_sets|length }}</h5>
                         <p class="text-muted mb-0">Zestawy sprzętu</p>
                     </div>
                 </div>
@@ -61,12 +61,12 @@
                     </div>
                     <div class="ms-3">
                         {% set needing_review = 0 %}
-                        {% for item in my_equipment %}
+                        {% for item in equipment %}
                             {% if item.needsReview %}
                                 {% set needing_review = needing_review + 1 %}
                             {% endif %}
                         {% endfor %}
-                        {% for set in my_equipment_sets %}
+                        {% for set in equipment_sets %}
                             {% if set.needsReview %}
                                 {% set needing_review = needing_review + 1 %}
                             {% endif %}
@@ -86,7 +86,7 @@
                         <i class="ri-check-line text-white fs-16"></i>
                     </div>
                     <div class="ms-3">
-                        <h5 class="mb-0">{{ (my_equipment|length + my_equipment_sets|length) - needing_review }}</h5>
+                        <h5 class="mb-0">{{ (equipment|length + equipment_sets|length) - needing_review }}</h5>
                         <p class="text-muted mb-0">Aktualne przeglądy</p>
                     </div>
                 </div>
@@ -96,14 +96,14 @@
 </div>
 
 <!-- Pojedynczy sprzęt -->
-{% if my_equipment|length > 0 %}
+{% if equipment|length > 0 %}
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="ri-shield-line me-2"></i>
-                    Przypisany sprzęt ({{ my_equipment|length }})
+                    Przypisany sprzęt ({{ equipment|length }})
                 </h5>
             </div>
             <div class="card-body">
@@ -120,7 +120,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in my_equipment %}
+                            {% for item in equipment %}
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -190,14 +190,14 @@
 {% endif %}
 
 <!-- Zestawy sprzętu -->
-{% if my_equipment_sets|length > 0 %}
+{% if equipment_sets|length > 0 %}
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="ri-stack-line me-2"></i>
-                    Przypisane zestawy ({{ my_equipment_sets|length }})
+                    Przypisane zestawy ({{ equipment_sets|length }})
                 </h5>
             </div>
             <div class="card-body">
@@ -215,7 +215,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for set in my_equipment_sets %}
+                            {% for set in equipment_sets %}
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -305,7 +305,7 @@
 {% endif %}
 
 <!-- Brak przypisań -->
-{% if my_equipment|length == 0 and my_equipment_sets|length == 0 %}
+{% if equipment|length == 0 and equipment_sets|length == 0 %}
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -328,7 +328,7 @@
 {% endif %}
 
 <!-- Ważne informacje -->
-{% if my_equipment|length > 0 or my_equipment_sets|length > 0 %}
+{% if equipment|length > 0 or equipment_sets|length > 0 %}
 <div class="row mt-4">
     <div class="col-12">
         <div class="alert alert-info">
