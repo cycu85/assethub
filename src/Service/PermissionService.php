@@ -42,6 +42,17 @@ class PermissionService
                 'target_permission' => $permission
             ]);
             
+            // System admin ma pełne uprawnienia do wszystkich modułów
+            if ($roleName === 'system_admin') {
+                $this->logger->info('Permission granted - system admin override', [
+                    'user' => $user->getUsername(),
+                    'role' => $roleName,
+                    'module' => $module,
+                    'permission' => $permission
+                ]);
+                return true;
+            }
+            
             if ($roleModule === $module) {
                 if ($role->hasPermission($permission)) {
                     $this->logger->info('Permission granted', [
@@ -70,11 +81,49 @@ class PermissionService
         $moduleUserRoles = [];
         $seenModules = [];
         
+        // Sprawdź czy użytkownik jest system_admin
+        $isSystemAdmin = false;
         foreach ($userRoles as $userRole) {
-            $module = $userRole->getRole()->getModule();
-            if ($module->isEnabled() && !in_array($module->getId(), $seenModules, true)) {
-                $moduleUserRoles[] = $userRole;
-                $seenModules[] = $module->getId();
+            if ($userRole->getRole()->getName() === 'system_admin') {
+                $isSystemAdmin = true;
+                break;
+            }
+        }
+        
+        // Jeśli system_admin, zwróć wszystkie aktywne moduły
+        if ($isSystemAdmin) {
+            $allModules = $this->moduleRepository->findBy(['isEnabled' => true]);
+            foreach ($allModules as $module) {
+                // Znajdź pierwszą rolę dla tego modułu (potrzebne dla kompatybilności)
+                foreach ($userRoles as $userRole) {
+                    if ($userRole->getRole()->getModule()->getId() === $module->getId()) {
+                        if (!in_array($module->getId(), $seenModules, true)) {
+                            $moduleUserRoles[] = $userRole;
+                            $seenModules[] = $module->getId();
+                        }
+                        break;
+                    }
+                }
+                
+                // Jeśli nie ma roli dla modułu, utwórz "wirtualną" rolę system_admin dla tego modułu
+                if (!in_array($module->getId(), $seenModules, true)) {
+                    foreach ($userRoles as $userRole) {
+                        if ($userRole->getRole()->getName() === 'system_admin') {
+                            $moduleUserRoles[] = $userRole; // Użyj system_admin jako reprezentatywną rolę
+                            $seenModules[] = $module->getId();
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Standardowa logika dla innych użytkowników
+            foreach ($userRoles as $userRole) {
+                $module = $userRole->getRole()->getModule();
+                if ($module->isEnabled() && !in_array($module->getId(), $seenModules, true)) {
+                    $moduleUserRoles[] = $userRole;
+                    $seenModules[] = $module->getId();
+                }
             }
         }
         
@@ -102,6 +151,14 @@ class PermissionService
         
         if (!$module || !$module->isEnabled()) {
             return false;
+        }
+        
+        // System admin ma dostęp do wszystkich modułów
+        $userRoles = $this->userRoleRepository->findActiveByUser($user->getId());
+        foreach ($userRoles as $userRole) {
+            if ($userRole->getRole()->getName() === 'system_admin') {
+                return true;
+            }
         }
         
         $userModules = $this->getUserModules($user);
