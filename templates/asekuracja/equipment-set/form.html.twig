@@ -1,0 +1,238 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ equipment_set.id ? 'Edycja zestawu' : 'Nowy zestaw' }} - {{ app_name() }}{% endblock %}
+{% block page_title %}{{ equipment_set.id ? 'Edycja zestawu' : 'Nowy zestaw' }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_set_index') }}">Zestawy</a></li>
+                {% if equipment_set.id %}
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_set_show', {id: equipment_set.id}) }}">{{ equipment_set.name }}</a></li>
+                <li class="breadcrumb-item active">Edycja</li>
+                {% else %}
+                <li class="breadcrumb-item active">Nowy zestaw</li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-info rounded me-3">
+                <i class="ri-stack-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">{{ equipment_set.id ? 'Edycja zestawu: ' ~ equipment_set.name : 'Dodawanie nowego zestawu' }}</h4>
+                <p class="text-muted mb-0">
+                    {{ equipment_set.id ? 'Aktualizacja danych zestawu sprzętu asekuracyjnego' : 'Wprowadź dane nowego zestawu do systemu' }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ equipment_set.id ? path('asekuracja_equipment_set_show', {id: equipment_set.id}) : path('asekuracja_equipment_set_index') }}" 
+           class="btn btn-outline-secondary">
+            <i class="ri-arrow-left-line me-1"></i>Anuluj
+        </a>
+    </div>
+</div>
+
+<!-- Formularz -->
+<div class="row">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Dane zestawu
+                </h5>
+            </div>
+            <div class="card-body">
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                
+                <!-- Podstawowe informacje -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-info mb-3">
+                            <i class="ri-information-line me-2"></i>Podstawowe informacje
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.name, 'Nazwa zestawu', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(form.name, {'attr': {'class': 'form-control', 'placeholder': 'Wprowadź nazwę zestawu'}}) }}
+                            {{ form_errors(form.name) }}
+                            <div class="form-text">Nazwa identyfikująca zestaw sprzętu</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.setType, 'Typ zestawu', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.setType, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(form.setType) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(form.description, 'Opis zestawu', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Szczegółowy opis zestawu...'}}) }}
+                            {{ form_errors(form.description) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.location, 'Lokalizacja', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.location, {'attr': {'class': 'form-control', 'placeholder': 'Miejsce przechowywania'}}) }}
+                            {{ form_errors(form.location) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Harmonogram przeglądów -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-info mb-3">
+                            <i class="ri-calendar-check-line me-2"></i>Harmonogram przeglądów
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.reviewIntervalMonths, 'Okres między przeglądami (miesięcy)', {'label_attr': {'class': 'form-label'}}) }}
+                            <div class="input-group">
+                                {{ form_widget(form.reviewIntervalMonths, {'attr': {'class': 'form-control', 'min': '1', 'max': '60', 'placeholder': '12'}}) }}
+                                <span class="input-group-text">miesięcy</span>
+                            </div>
+                            {{ form_errors(form.reviewIntervalMonths) }}
+                            <div class="form-text">Standardowo 12 miesięcy dla zestawów asekuracyjnych</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.nextReviewDate, 'Data następnego przeglądu', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.nextReviewDate, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.nextReviewDate) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uwagi -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-info mb-3">
+                            <i class="ri-file-text-line me-2"></i>Dodatkowe informacje
+                        </h6>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(form.notes, 'Uwagi', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.notes, {'attr': {'class': 'form-control', 'rows': 4, 'placeholder': 'Dodatkowe uwagi dotyczące zestawu...'}}) }}
+                            {{ form_errors(form.notes) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Przycisk zapisu -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ equipment_set.id ? path('asekuracja_equipment_set_show', {id: equipment_set.id}) : path('asekuracja_equipment_set_index') }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="ri-arrow-left-line me-1"></i>Anuluj
+                    </a>
+                    
+                    <button type="submit" class="btn btn-info">
+                        <i class="ri-save-line me-1"></i>
+                        {{ equipment_set.id ? 'Aktualizuj zestaw' : 'Zapisz zestaw' }}
+                    </button>
+                </div>
+
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Wskazówki -->
+{% if not equipment_set.id %}
+<div class="row mt-4">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="ri-lightbulb-line me-2"></i>Wskazówki
+            </h6>
+            <ul class="mb-0">
+                <li>Wypełnij wszystkie wymagane pola oznaczone gwiazdką (*)</li>
+                <li>Po utworzeniu zestawu będziesz mógł dodać do niego konkretny sprzęt</li>
+                <li>Ustaw okres przeglądów zgodnie z wymaganiami dla danego typu zestawu</li>
+                <li>Zestaw może zawierać różne typy sprzętu asekuracyjnego</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mt-4">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="alert alert-warning">
+            <h6 class="alert-heading">
+                <i class="ri-information-line me-2"></i>Informacje o zestawie
+            </h6>
+            <ul class="mb-0">
+                <li><strong>Elementy zestawu:</strong> {{ equipment_set.equipmentItems|length }} elementów</li>
+                <li><strong>Status:</strong> {{ equipment_set.statusDisplayName }}</li>
+                {% if equipment_set.assignedTo %}
+                <li><strong>Przypisany do:</strong> {{ equipment_set.assignedTo.fullName }}</li>
+                {% endif %}
+                <li><strong>Ostatnia aktualizacja:</strong> {{ equipment_set.updatedAt|date('d.m.Y H:i') }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calculation of next review date
+    const reviewIntervalInput = document.querySelector('input[name="asekuracyjny_equipment_set[reviewIntervalMonths]"]');
+    const nextReviewDateInput = document.querySelector('input[name="asekuracyjny_equipment_set[nextReviewDate]"]');
+    
+    function calculateNextReviewDate() {
+        if (reviewIntervalInput.value && !nextReviewDateInput.value) {
+            const today = new Date();
+            const months = parseInt(reviewIntervalInput.value);
+            
+            today.setMonth(today.getMonth() + months);
+            nextReviewDateInput.value = today.toISOString().split('T')[0];
+        }
+    }
+    
+    if (reviewIntervalInput && nextReviewDateInput) {
+        reviewIntervalInput.addEventListener('change', calculateNextReviewDate);
+    }
+    
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}
