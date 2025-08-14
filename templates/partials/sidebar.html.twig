@@ -62,6 +62,40 @@
                                 <i class="ri-tools-line"></i> <span>{{ module.displayName }}</span>
                             </a>
                         </li>
+                        {% elseif module.name == 'asekuracja' %}
+                        {# Sprawdź czy użytkownik jest w sekcji asekuracja #}
+                        {% set current_route = app.request.get('_route') %}
+                        {% set is_asekuracja_section = current_route starts with 'asekuracja_' %}
+                        
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ is_asekuracja_section ? 'active' : '' }}" 
+                               href="#sidebarAsekuracja" 
+                               data-bs-toggle="collapse" 
+                               role="button" 
+                               aria-expanded="{{ is_asekuracja_section ? 'true' : 'false' }}" 
+                               aria-controls="sidebarAsekuracja">
+                                <i class="ri-shield-check-line"></i> <span>{{ module.displayName }}</span>
+                            </a>
+                            <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}" id="sidebarAsekuracja">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="{{ path('asekuracja_index') }}" class="nav-link {{ current_route starts with 'asekuracja_equipment' or current_route == 'asekuracja_index' ? 'active' : '' }}">
+                                            <i class="ri-shield-line me-2"></i>Sprzęt
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ path('asekuracja_equipment_set_index') }}" class="nav-link {{ current_route starts with 'asekuracja_equipment_set' ? 'active' : '' }}">
+                                            <i class="ri-stack-line me-2"></i>Zestawy
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ path('asekuracja_my_equipment') }}" class="nav-link {{ current_route == 'asekuracja_my_equipment' ? 'active' : '' }}">
+                                            <i class="ri-user-line me-2"></i>Moje przypisania
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
                         {% elseif module.name != 'admin' %}
                         {# Generic module handler - dla przyszłych modułów (pomijamy admin bo obsługujemy go osobno) #}
                         <li class="nav-item">

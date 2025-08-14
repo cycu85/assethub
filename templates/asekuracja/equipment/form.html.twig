@@ -1,0 +1,347 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ equipment.id ? 'Edycja sprzętu' : 'Nowy sprzęt' }} - {{ app_name() }}{% endblock %}
+{% block page_title %}{{ equipment.id ? 'Edycja sprzętu' : 'Nowy sprzęt' }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                {% if equipment.id %}
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_show', {id: equipment.id}) }}">{{ equipment.name }}</a></li>
+                <li class="breadcrumb-item active">Edycja</li>
+                {% else %}
+                <li class="breadcrumb-item active">Nowy sprzęt</li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-primary rounded me-3">
+                <i class="ri-shield-check-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">{{ equipment.id ? 'Edycja sprzętu: ' ~ equipment.name : 'Dodawanie nowego sprzętu' }}</h4>
+                <p class="text-muted mb-0">
+                    {{ equipment.id ? 'Aktualizacja danych sprzętu asekuracyjnego' : 'Wprowadź dane nowego sprzętu do systemu' }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ equipment.id ? path('asekuracja_equipment_show', {id: equipment.id}) : path('asekuracja_index') }}" 
+           class="btn btn-outline-secondary">
+            <i class="ri-arrow-left-line me-1"></i>Anuluj
+        </a>
+    </div>
+</div>
+
+<!-- Formularz -->
+<div class="row">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Dane sprzętu
+                </h5>
+            </div>
+            <div class="card-body">
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                
+                <!-- Podstawowe informacje -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-information-line me-2"></i>Podstawowe informacje
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.name, 'Nazwa sprzętu', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(form.name, {'attr': {'class': 'form-control', 'placeholder': 'Wprowadź nazwę sprzętu'}}) }}
+                            {{ form_errors(form.name) }}
+                            <div class="form-text">Nazwa identyfikująca sprzęt (np. Szelki Petzl Avao Bod)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.inventoryNumber, 'Numer inwentarzowy', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(form.inventoryNumber, {'attr': {'class': 'form-control', 'placeholder': 'Wprowadź numer inwentarzowy'}}) }}
+                            {{ form_errors(form.inventoryNumber) }}
+                            <div class="form-text">Unikalny numer identyfikacyjny w systemie</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.equipmentType, 'Typ sprzętu', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(form.equipmentType, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(form.equipmentType) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.status, 'Status', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(form.status, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(form.status) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(form.description, 'Opis', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Dodatkowy opis sprzętu...'}}) }}
+                            {{ form_errors(form.description) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dane techniczne -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-tools-line me-2"></i>Dane techniczne
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.manufacturer, 'Producent', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.manufacturer, {'attr': {'class': 'form-control', 'placeholder': 'Nazwa producenta'}}) }}
+                            {{ form_errors(form.manufacturer) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.model, 'Model', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.model, {'attr': {'class': 'form-control', 'placeholder': 'Model sprzętu'}}) }}
+                            {{ form_errors(form.model) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.serialNumber, 'Numer seryjny', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.serialNumber, {'attr': {'class': 'form-control', 'placeholder': 'Numer seryjny producenta'}}) }}
+                            {{ form_errors(form.serialNumber) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.manufacturingDate, 'Data produkcji', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.manufacturingDate, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.manufacturingDate) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.location, 'Lokalizacja', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.location, {'attr': {'class': 'form-control', 'placeholder': 'Miejsce przechowywania'}}) }}
+                            {{ form_errors(form.location) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.warrantyExpiry, 'Koniec gwarancji', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.warrantyExpiry, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.warrantyExpiry) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dane zakupowe -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-shopping-cart-line me-2"></i>Dane zakupowe
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.purchaseDate, 'Data zakupu', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.purchaseDate, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.purchaseDate) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.purchasePrice, 'Cena zakupu (PLN)', {'label_attr': {'class': 'form-label'}}) }}
+                            <div class="input-group">
+                                {{ form_widget(form.purchasePrice, {'attr': {'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}}) }}
+                                <span class="input-group-text">PLN</span>
+                            </div>
+                            {{ form_errors(form.purchasePrice) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.supplier, 'Dostawca', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.supplier, {'attr': {'class': 'form-control', 'placeholder': 'Nazwa dostawcy'}}) }}
+                            {{ form_errors(form.supplier) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.invoiceNumber, 'Numer faktury', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.invoiceNumber, {'attr': {'class': 'form-control', 'placeholder': 'Numer faktury zakupu'}}) }}
+                            {{ form_errors(form.invoiceNumber) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Przeglądy -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-calendar-check-line me-2"></i>Harmonogram przeglądów
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.reviewIntervalMonths, 'Okres między przeglądami (miesięcy)', {'label_attr': {'class': 'form-label'}}) }}
+                            <div class="input-group">
+                                {{ form_widget(form.reviewIntervalMonths, {'attr': {'class': 'form-control', 'min': '1', 'max': '60', 'placeholder': '12'}}) }}
+                                <span class="input-group-text">miesięcy</span>
+                            </div>
+                            {{ form_errors(form.reviewIntervalMonths) }}
+                            <div class="form-text">Standardowo 12 miesięcy dla sprzętu asekuracyjnego</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.nextReviewDate, 'Data następnego przeglądu', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.nextReviewDate, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.nextReviewDate) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uwagi -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-file-text-line me-2"></i>Dodatkowe informacje
+                        </h6>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(form.notes, 'Uwagi', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.notes, {'attr': {'class': 'form-control', 'rows': 4, 'placeholder': 'Dodatkowe uwagi dotyczące sprzętu...'}}) }}
+                            {{ form_errors(form.notes) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Przycisk zapisu -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ equipment.id ? path('asekuracja_equipment_show', {id: equipment.id}) : path('asekuracja_index') }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="ri-arrow-left-line me-1"></i>Anuluj
+                    </a>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-1"></i>
+                        {{ equipment.id ? 'Aktualizuj sprzęt' : 'Zapisz sprzęt' }}
+                    </button>
+                </div>
+
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Wskazówki -->
+{% if not equipment.id %}
+<div class="row mt-4">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="ri-lightbulb-line me-2"></i>Wskazówki
+            </h6>
+            <ul class="mb-0">
+                <li>Wypełnij wszystkie wymagane pola oznaczone gwiazdką (*)</li>
+                <li>Numer inwentarzowy musi być unikalny w systemie</li>
+                <li>Ustaw okres przeglądów zgodnie z wymaganiami producenta</li>
+                <li>Data następnego przeglądu zostanie automatycznie obliczona jeśli nie zostanie podana</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calculation of next review date
+    const purchaseDateInput = document.querySelector('input[name="asekuracyjny_equipment[purchaseDate]"]');
+    const reviewIntervalInput = document.querySelector('input[name="asekuracyjny_equipment[reviewIntervalMonths]"]');
+    const nextReviewDateInput = document.querySelector('input[name="asekuracyjny_equipment[nextReviewDate]"]');
+    
+    function calculateNextReviewDate() {
+        if (purchaseDateInput.value && reviewIntervalInput.value && !nextReviewDateInput.value) {
+            const purchaseDate = new Date(purchaseDateInput.value);
+            const months = parseInt(reviewIntervalInput.value);
+            
+            purchaseDate.setMonth(purchaseDate.getMonth() + months);
+            nextReviewDateInput.value = purchaseDate.toISOString().split('T')[0];
+        }
+    }
+    
+    if (purchaseDateInput && reviewIntervalInput && nextReviewDateInput) {
+        purchaseDateInput.addEventListener('change', calculateNextReviewDate);
+        reviewIntervalInput.addEventListener('change', calculateNextReviewDate);
+    }
+    
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Auto-generate inventory number suggestion
+    const nameInput = document.querySelector('input[name="asekuracyjny_equipment[name]"]');
+    const inventoryInput = document.querySelector('input[name="asekuracyjny_equipment[inventoryNumber]"]');
+    
+    if (nameInput && inventoryInput && !inventoryInput.value) {
+        nameInput.addEventListener('blur', function() {
+            if (!inventoryInput.value && nameInput.value) {
+                // Generate simple inventory number suggestion
+                const currentYear = new Date().getFullYear();
+                const namePrefix = nameInput.value.substring(0, 3).toUpperCase();
+                const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                inventoryInput.placeholder = `${namePrefix}-${currentYear}-${randomNum}`;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

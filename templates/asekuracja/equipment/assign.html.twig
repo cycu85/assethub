@@ -1,0 +1,288 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Przypisanie sprzętu: {{ equipment.name }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Przypisanie sprzętu{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_show', {id: equipment.id}) }}">{{ equipment.name }}</a></li>
+                <li class="breadcrumb-item active">Przypisanie</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-success rounded me-3">
+                <i class="ri-user-add-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">Przypisanie sprzętu do pracownika</h4>
+                <p class="text-muted mb-0">Wybierz pracownika i wprowadź szczegóły przypisania</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ path('asekuracja_equipment_show', {id: equipment.id}) }}" class="btn btn-outline-secondary">
+            <i class="ri-arrow-left-line me-1"></i>Powrót
+        </a>
+    </div>
+</div>
+
+<!-- Informacje o sprzęcie -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-info rounded me-3">
+                    <i class="ri-shield-line text-white fs-16"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">Przypisywany sprzęt: {{ equipment.name }}</h6>
+                    <p class="mb-0 text-muted">
+                        <strong>Numer inwentarzowy:</strong> {{ equipment.inventoryNumber }} |
+                        <strong>Typ:</strong> {{ equipment.equipmentType }} |
+                        <strong>Status:</strong> {{ equipment.statusDisplayName }}
+                    </p>
+                </div>
+                {% if equipment.needsReview %}
+                <div class="text-end">
+                    <span class="badge bg-warning">
+                        <i class="ri-time-line me-1"></i>Zbliża się przegląd
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formularz przypisania -->
+<div class="row">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-user-settings-line me-2"></i>Szczegóły przypisania
+                </h5>
+            </div>
+            <div class="card-body">
+                {{ form_start(assignForm, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                
+                <!-- Wybór pracownika -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-user-line me-2"></i>Pracownik
+                        </h6>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(assignForm.employee, 'Wybierz pracownika', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(assignForm.employee, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(assignForm.employee) }}
+                            <div class="form-text">Wybierz pracownika, któremu zostanie przypisany sprzęt</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Szczegóły przypisania -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-calendar-line me-2"></i>Szczegóły przypisania
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(assignForm.assignedDate, 'Data przypisania', {'label_attr': {'class': 'form-label required'}}) }}
+                            {{ form_widget(assignForm.assignedDate, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(assignForm.assignedDate) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(assignForm.purpose, 'Cel przypisania', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(assignForm.purpose, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(assignForm.purpose) }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="mb-3">
+                            {{ form_label(assignForm.notes, 'Uwagi do przypisania', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(assignForm.notes, {'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Dodatkowe informacje o przypisaniu...'}}) }}
+                            {{ form_errors(assignForm.notes) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opcje powiadomień -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="ri-notification-line me-2"></i>Powiadomienia
+                        </h6>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="form-check mb-2">
+                            {{ form_widget(assignForm.notifyEmployee, {'attr': {'class': 'form-check-input'}}) }}
+                            {{ form_label(assignForm.notifyEmployee, 'Powiadom pracownika e-mailem o przypisaniu', {'label_attr': {'class': 'form-check-label'}}) }}
+                        </div>
+                        
+                        <div class="form-check mb-2">
+                            {{ form_widget(assignForm.generateProtocol, {'attr': {'class': 'form-check-input'}}) }}
+                            {{ form_label(assignForm.generateProtocol, 'Wygeneruj protokół przekazania', {'label_attr': {'class': 'form-check-label'}}) }}
+                        </div>
+                        
+                        <div class="form-check">
+                            {{ form_widget(assignForm.scheduleReview, {'attr': {'class': 'form-check-input'}}) }}
+                            {{ form_label(assignForm.scheduleReview, 'Zaplanuj automatyczne przypomnienie o przeglądzie', {'label_attr': {'class': 'form-check-label'}}) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ostrzeżenia -->
+                {% if equipment.isReviewOverdue %}
+                <div class="alert alert-danger mb-4">
+                    <h6 class="alert-heading">
+                        <i class="ri-error-warning-line me-2"></i>Uwaga - Przeterminowany przegląd!
+                    </h6>
+                    <p class="mb-0">
+                        Ten sprzęt ma przeterminowany przegląd ({{ equipment.nextReviewDate|date('d.m.Y') }}). 
+                        Zaleca się przeprowadzenie przeglądu przed przypisaniem pracownikowi.
+                    </p>
+                </div>
+                {% elseif equipment.needsReview %}
+                <div class="alert alert-warning mb-4">
+                    <h6 class="alert-heading">
+                        <i class="ri-time-line me-2"></i>Zbliża się termin przeglądu
+                    </h6>
+                    <p class="mb-0">
+                        Planowany przegląd tego sprzętu: {{ equipment.nextReviewDate|date('d.m.Y') }}. 
+                        Upewnij się, że pracownik jest świadomy zbliżającego się terminu.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Przyciski akcji -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ path('asekuracja_equipment_show', {id: equipment.id}) }}" class="btn btn-outline-secondary">
+                        <i class="ri-arrow-left-line me-1"></i>Anuluj
+                    </a>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-user-add-line me-1"></i>Przypisz sprzęt
+                    </button>
+                </div>
+
+                {{ form_end(assignForm) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informacje pomocnicze -->
+<div class="row mt-4">
+    <div class="col-xl-8 offset-xl-2">
+        <div class="card border-primary">
+            <div class="card-body">
+                <h6 class="text-primary mb-3">
+                    <i class="ri-information-line me-2"></i>Informacje o przypisaniu
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled text-muted mb-0">
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Pracownik zostanie automatycznie powiadomiony
+                            </li>
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Status sprzętu zmieni się na "Przypisany"
+                            </li>
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Historia przypisań zostanie zapisana
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled text-muted mb-0">
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Protokół przekazania można wygenerować później
+                            </li>
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Przypomnienia o przeglądach będą wysyłane
+                            </li>
+                            <li class="mb-2">
+                                <i class="ri-check-line text-success me-2"></i>
+                                Możliwość śledzenia lokalizacji sprzętu
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current date as default
+    const assignedDateInput = document.querySelector('input[name="assign[assignedDate]"]');
+    if (assignedDateInput && !assignedDateInput.value) {
+        const today = new Date();
+        assignedDateInput.value = today.toISOString().split('T')[0];
+    }
+    
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Employee selection enhancement
+    const employeeSelect = document.querySelector('select[name="assign[employee]"]');
+    if (employeeSelect) {
+        employeeSelect.addEventListener('change', function() {
+            // You can add here additional logic when employee is selected
+            // For example, load employee's current assignments, etc.
+        });
+    }
+    
+    // Protocol generation toggle
+    const generateProtocolCheck = document.querySelector('input[name="assign[generateProtocol]"]');
+    const notifyEmployeeCheck = document.querySelector('input[name="assign[notifyEmployee]"]');
+    
+    if (generateProtocolCheck && notifyEmployeeCheck) {
+        generateProtocolCheck.addEventListener('change', function() {
+            if (this.checked) {
+                notifyEmployeeCheck.checked = true;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
