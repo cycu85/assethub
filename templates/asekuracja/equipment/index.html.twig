@@ -1,0 +1,361 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sprzęt asekuracyjny - {{ app_name() }}{% endblock %}
+{% block page_title %}Sprzęt asekuracyjny{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h4 class="mb-0">
+            <i class="ri-shield-check-line me-2 text-primary"></i>
+            Zarządzanie sprzętem asekuracyjnym
+        </h4>
+        <p class="text-muted mb-0">Przegląd i zarządzanie sprzętem bezpieczeństwa do pracy na wysokości</p>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_create %}
+        <a href="{{ path('asekuracja_equipment_new') }}" class="btn btn-primary">
+            <i class="ri-add-line me-1"></i>
+            Dodaj sprzęt
+        </a>
+        {% endif %}
+        <a href="{{ path('asekuracja_equipment_set_index') }}" class="btn btn-outline-secondary ms-2">
+            <i class="ri-stack-line me-1"></i>
+            Zestawy
+        </a>
+    </div>
+</div>
+
+<!-- Statystyki -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded">
+                        <i class="ri-shield-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.total }}</h5>
+                        <p class="text-muted mb-0">Łącznie sprzętu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-success rounded">
+                        <i class="ri-check-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.available }}</h5>
+                        <p class="text-muted mb-0">Dostępne</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-warning rounded">
+                        <i class="ri-user-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.assigned }}</h5>
+                        <p class="text-muted mb-0">Przypisane</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-danger rounded">
+                        <i class="ri-error-warning-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.needing_review + statistics.overdue_reviews }}</h5>
+                        <p class="text-muted mb-0">Wymagają przeglądu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtry -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Szukaj</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="ri-search-line"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Nazwa, numer inwentarzowy..." 
+                                   value="{{ filters.search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="available" {{ filters.status == 'available' ? 'selected' : '' }}>Dostępne</option>
+                            <option value="assigned" {{ filters.status == 'assigned' ? 'selected' : '' }}>Przypisane</option>
+                            <option value="in_review" {{ filters.status == 'in_review' ? 'selected' : '' }}>Na przeglądzie</option>
+                            <option value="damaged" {{ filters.status == 'damaged' ? 'selected' : '' }}>Uszkodzone</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Typ sprzętu</label>
+                        <select name="equipment_type" class="form-select">
+                            <option value="">Wszystkie typy</option>
+                            <option value="harness" {{ filters.equipment_type == 'harness' ? 'selected' : '' }}>Szelki</option>
+                            <option value="rope" {{ filters.equipment_type == 'rope' ? 'selected' : '' }}>Liny</option>
+                            <option value="helmet" {{ filters.equipment_type == 'helmet' ? 'selected' : '' }}>Kaski</option>
+                            <option value="ascender" {{ filters.equipment_type == 'ascender' ? 'selected' : '' }}>Zaciski</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Specjalne filtry</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="needs_review" 
+                                   {{ filters.needs_review ? 'checked' : '' }} id="needs_review">
+                            <label class="form-check-label" for="needs_review">
+                                Wymagają przeglądu (30 dni)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="overdue_review" 
+                                   {{ filters.overdue_review ? 'checked' : '' }} id="overdue_review">
+                            <label class="form-check-label" for="overdue_review">
+                                Przeterminowane przeglądy
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="ri-search-line me-1"></i>
+                            Filtruj
+                        </button>
+                        <a href="{{ path('asekuracja_index') }}" class="btn btn-outline-secondary">
+                            <i class="ri-refresh-line"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista sprzętu -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if equipment.items|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sprzęt</th>
+                                <th>Typ</th>
+                                <th>Status</th>
+                                <th>Przypisane do</th>
+                                <th>Następny przegląd</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in equipment.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-3">
+                                            <i class="ri-shield-line text-primary fs-16"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">
+                                                <a href="{{ path('asekuracja_equipment_show', {id: item.id}) }}" 
+                                                   class="text-dark text-decoration-none">
+                                                    {{ item.name }}
+                                                </a>
+                                            </h6>
+                                            <span class="text-muted small">{{ item.inventoryNumber }}</span>
+                                            {% if item.manufacturer and item.model %}
+                                            <br><span class="text-muted small">{{ item.manufacturer }} {{ item.model }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ item.equipmentType }}</span>
+                                </td>
+                                <td>
+                                    {% set status_class = item.status == 'available' ? 'success' : 
+                                                         (item.status == 'assigned' ? 'warning' : 
+                                                         (item.status == 'damaged' ? 'danger' : 'secondary')) %}
+                                    <span class="badge bg-{{ status_class }}">{{ item.statusDisplayName }}</span>
+                                </td>
+                                <td>
+                                    {% if item.assignedTo %}
+                                        <span class="text-dark">{{ item.assignedTo.fullName }}</span>
+                                        <br><small class="text-muted">{{ item.assignedDate|date('d.m.Y') }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Nieprzypisane</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.nextReviewDate %}
+                                        {% set days_to_review = date(item.nextReviewDate).diff(date()).days %}
+                                        {% if days_to_review < 0 %}
+                                            <span class="text-danger">
+                                                <i class="ri-error-warning-line me-1"></i>
+                                                {{ item.nextReviewDate|date('d.m.Y') }}
+                                                <br><small>Przeterminowany!</small>
+                                            </span>
+                                        {% elseif days_to_review <= 30 %}
+                                            <span class="text-warning">
+                                                <i class="ri-time-line me-1"></i>
+                                                {{ item.nextReviewDate|date('d.m.Y') }}
+                                                <br><small>Za {{ days_to_review }} dni</small>
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                {{ item.nextReviewDate|date('d.m.Y') }}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Nie określono</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" 
+                                                data-bs-toggle="dropdown">
+                                            Akcje
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('asekuracja_equipment_show', {id: item.id}) }}">
+                                                    <i class="ri-eye-line me-2"></i>Szczegóły
+                                                </a>
+                                            </li>
+                                            {% if can_edit %}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('asekuracja_equipment_edit', {id: item.id}) }}">
+                                                    <i class="ri-edit-line me-2"></i>Edytuj
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            {% if can_assign %}
+                                                {% if item.isAssigned %}
+                                                <li>
+                                                    <form method="POST" action="{{ path('asekuracja_equipment_unassign', {id: item.id}) }}" 
+                                                          class="d-inline" onsubmit="return confirm('Czy na pewno cofnąć przypisanie?')">
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('unassign_equipment_' ~ item.id) }}">
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="ri-user-unfollow-line me-2"></i>Cofnij przypisanie
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                {% else %}
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ path('asekuracja_equipment_assign', {id: item.id}) }}">
+                                                        <i class="ri-user-add-line me-2"></i>Przypisz
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if can_delete and not item.isAssigned %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="POST" action="{{ path('asekuracja_equipment_delete', {id: item.id}) }}" 
+                                                      class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten sprzęt?')">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_equipment_' ~ item.id) }}">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="ri-delete-bin-line me-2"></i>Usuń
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginacja -->
+                {% if equipment.pages > 1 %}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted">
+                        Wyświetlono {{ equipment.items|length }} z {{ equipment.total }} elementów
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            {% if equipment.page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('asekuracja_index', app.request.query.all|merge({page: equipment.page - 1})) }}">
+                                    <i class="ri-arrow-left-line"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in range(max(1, equipment.page - 2), min(equipment.pages, equipment.page + 2)) %}
+                            <li class="page-item {{ i == equipment.page ? 'active' : '' }}">
+                                <a class="page-link" href="{{ path('asekuracja_index', app.request.query.all|merge({page: i})) }}">
+                                    {{ i }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            
+                            {% if equipment.page < equipment.pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('asekuracja_index', app.request.query.all|merge({page: equipment.page + 1})) }}">
+                                    <i class="ri-arrow-right-line"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-shield-line text-muted fs-48"></i>
+                    <h5 class="mt-3">Brak sprzętu asekuracyjnego</h5>
+                    <p class="text-muted">
+                        {% if filters.search or filters.status or filters.equipment_type %}
+                            Nie znaleziono sprzętu odpowiadającego wybranym filtrom.
+                        {% else %}
+                            Nie dodano jeszcze żadnego sprzętu asekuracyjnego.
+                        {% endif %}
+                    </p>
+                    {% if can_create and not filters.search and not filters.status and not filters.equipment_type %}
+                    <a href="{{ path('asekuracja_equipment_new') }}" class="btn btn-primary">
+                        <i class="ri-add-line me-1"></i>
+                        Dodaj pierwszy sprzęt
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

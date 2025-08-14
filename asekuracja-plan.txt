@@ -161,27 +161,20 @@ INSERT INTO dictionaries (type, name, value, description, is_active, is_system, 
 - [✅] **Rejestracja modułu w systemie (modules, roles)**
 - [✅] **Utworzenie encji głównych (Equipment, EquipmentSet, Review, Transfer)**
 - [✅] **Implementacja repozytoriów dla wszystkich encji**
-- [✅] **AsekuracyjnyService - główna logika biznesowa**
+- [✅] **Serwisy biznesowe (AsekuracyjnyService, ReviewService, TransferService)**
+- [✅] **Kontrolery z pełną autoryzacją i audytem**
+- [✅] **Formularze Symfony dla wszystkich operacji CRUD**
+- [✅] **Słowniki modułu w panelu administracyjnym**
 
 ### 🔄 DO ZAIMPLEMENTOWANIA:
 
-#### Serwisy biznesowe:
-- [ ] **ReviewService** - zarządzanie przeglądami z workflow
-- [ ] **TransferService** - przekazania pracownikom z generowaniem PDF
+#### Kontrolery przeglądów i przekazań:
+- [ ] **ReviewController** - system przeglądów (częściowo)
+- [ ] **TransferController** - przekazania pracownikom (częściowo)
+
+#### Serwisy specjalistyczne:
 - [ ] **NotificationService** - powiadomienia email i w aplikacji
-
-#### Kontrolery z autoryzacją:
-- [ ] **AsekuracyjnyController** - główny kontroler sprzętu
-- [ ] **EquipmentSetController** - zarządzanie zestawami
-- [ ] **ReviewController** - system przeglądów
-- [ ] **TransferController** - przekazania pracownikom
-
-#### Formularze Symfony:
-- [ ] **AsekuracyjnyEquipmentType** - formularz sprzętu
-- [ ] **AsekuracyjnyEquipmentSetType** - formularz zestawu
-- [ ] **AsekuracyjnyReviewType** - formularz przeglądu
-- [ ] **AsekuracyjnyTransferType** - formularz przekazania
-- [ ] **EquipmentSelectionType** - wybór sprzętu do zestawu (modal)
+- [ ] **PdfGeneratorService** - generowanie protokołów PDF
 
 #### Szablony Twig z Bootstrap:
 - [ ] **equipment/index.html.twig** - lista sprzętu
