@@ -121,7 +121,7 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
             ->andWhere('e.nextReviewDate <= :warningDate')
             ->andWhere('e.status != :inReviewStatus')
             ->setParameter('warningDate', $warningDate)
-            ->setParameter('inReviewStatus', AsekuracijnyEquipment::STATUS_IN_REVIEW)
+            ->setParameter('inReviewStatus', AsekuracyjnyEquipment::STATUS_IN_REVIEW)
             ->orderBy('e.nextReviewDate', 'ASC')
             ->getQuery()
             ->getResult();
