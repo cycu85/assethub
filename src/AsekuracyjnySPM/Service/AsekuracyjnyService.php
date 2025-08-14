@@ -363,6 +363,18 @@ class AsekuracyjnyService
         ];
     }
 
+    // === REPOSITORY GETTERS ===
+
+    public function getEquipmentRepository(): AsekuracyjnyEquipmentRepository
+    {
+        return $this->equipmentRepository;
+    }
+
+    public function getEquipmentSetRepository(): AsekuracyjnyEquipmentSetRepository
+    {
+        return $this->equipmentSetRepository;
+    }
+
     // === PRIVATE HELPER METHODS ===
 
     private function validateEquipmentData(array $data, ?int $excludeId = null): void
