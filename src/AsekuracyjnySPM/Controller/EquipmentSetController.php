@@ -393,7 +393,7 @@ class EquipmentSetController extends AbstractController
     private function canUserViewEquipmentSet(User $user, AsekuracyjnyEquipmentSet $equipmentSet): bool
     {
         // Admini i edytorzy mogą widzieć wszystko
-        if ($this->authorizationService->hasAnyPermission($user, 'asekuracja', ['EDIT', 'DELETE', 'ASSIGN'])) {
+        if ($this->authorizationService->checkAnyPermission($user, 'asekuracja', ['EDIT', 'DELETE', 'ASSIGN'])) {
             return true;
         }
         
