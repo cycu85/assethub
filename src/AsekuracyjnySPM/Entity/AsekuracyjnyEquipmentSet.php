@@ -254,6 +254,15 @@ class AsekuracyjnyEquipmentSet
         return $this->equipment;
     }
 
+    /**
+     * Alias for getEquipment() - for template compatibility
+     * @return Collection<int, AsekuracyjnyEquipment>
+     */
+    public function getEquipmentItems(): Collection
+    {
+        return $this->equipment;
+    }
+
     public function addEquipment(AsekuracyjnyEquipment $equipment): self
     {
         if (!$this->equipment->contains($equipment)) {
@@ -428,6 +437,14 @@ class AsekuracyjnyEquipmentSet
     public function hasAllEquipmentAvailable(): bool
     {
         return $this->getEquipmentCount() === $this->getAvailableEquipmentCount();
+    }
+
+    /**
+     * Alias for hasAllEquipmentAvailable() - for template compatibility
+     */
+    public function isComplete(): bool
+    {
+        return $this->hasAllEquipmentAvailable() && $this->getEquipmentCount() > 0;
     }
 
     public function getLastReview(): ?AsekuracyjnyReview
