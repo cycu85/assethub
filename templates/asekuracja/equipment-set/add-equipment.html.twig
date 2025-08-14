@@ -1,0 +1,379 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Zarządzanie sprzętem - {{ equipment_set.name }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Zarządzanie sprzętem zestawu{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_set_index') }}">Zestawy</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_equipment_set_show', {id: equipment_set.id}) }}">{{ equipment_set.name }}</a></li>
+                <li class="breadcrumb-item active">Zarządzanie sprzętem</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-primary rounded me-3">
+                <i class="ri-settings-3-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">Zarządzanie sprzętem</h4>
+                <p class="text-muted mb-0">
+                    Zestaw: <strong>{{ equipment_set.name }}</strong>
+                    <span class="ms-2 badge bg-info">{{ equipment_set.equipmentItems|length }} elementów</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+            <i class="ri-add-line me-1"></i>Dodaj sprzęt
+        </button>
+        <a href="{{ path('asekuracja_equipment_set_show', {id: equipment_set.id}) }}" 
+           class="btn btn-outline-secondary ms-2">
+            <i class="ri-arrow-left-line me-1"></i>Powrót
+        </a>
+    </div>
+</div>
+
+<!-- Aktualny sprzęt w zestawie -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-list-check-2 me-2"></i>Aktualny sprzęt w zestawie ({{ equipment_set.equipmentItems|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.equipmentItems|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sprzęt</th>
+                                <th>Typ</th>
+                                <th>Producent/Model</th>
+                                <th>Status</th>
+                                <th>Lokalizacja</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in equipment_set.equipmentItems %}
+                            {% set equipment = item.equipment is defined ? item.equipment : item %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-3">
+                                            <i class="ri-shield-line text-primary fs-16"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ equipment.name }}</h6>
+                                            <span class="text-muted small">{{ equipment.inventoryNumber }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ equipment.equipmentType }}</span>
+                                </td>
+                                <td>
+                                    {{ equipment.manufacturer ?? '-' }}
+                                    {% if equipment.model %}
+                                    <br><small class="text-muted">{{ equipment.model }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set status_class = equipment.status == 'available' ? 'success' : 
+                                                          (equipment.status == 'assigned' ? 'warning' : 
+                                                          (equipment.status == 'damaged' ? 'danger' : 'secondary')) %}
+                                    <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                                </td>
+                                <td>{{ equipment.location ?? '-' }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <a href="{{ path('asekuracja_equipment_show', {id: equipment.id}) }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="ri-eye-line"></i>
+                                        </a>
+                                        <form method="POST" action="{{ path('asekuracja_equipment_set_remove_equipment', {id: equipment_set.id, equipmentId: equipment.id}) }}" 
+                                              class="d-inline" onsubmit="return confirm('Czy na pewno usunąć {{ equipment.name }} z zestawu?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('remove_equipment_' ~ equipment_set.id ~ '_' ~ equipment.id) }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="ri-inbox-line text-muted fs-48"></i>
+                    <h5 class="mt-3">Brak sprzętu w zestawie</h5>
+                    <p class="text-muted">Kliknij "Dodaj sprzęt" aby dodać pierwszy element do zestawu.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania sprzętu -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEquipmentModalLabel">
+                    <i class="ri-add-line me-2"></i>Dodaj sprzęt do zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="addEquipmentForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Szukaj sprzętu</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="ri-search-line"></i>
+                            </span>
+                            <input type="text" class="form-control" id="equipmentSearch" 
+                                   placeholder="Wpisz nazwę, numer inwentarzowy lub producenta...">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Filtruj według typu</label>
+                        <select class="form-select" id="equipmentTypeFilter">
+                            <option value="">Wszystkie typy</option>
+                            <option value="harness">Szelki</option>
+                            <option value="rope">Liny</option>
+                            <option value="helmet">Kaski</option>
+                            <option value="ascender">Zaciski</option>
+                            <option value="stopper">Blokady</option>
+                        </select>
+                    </div>
+                    
+                    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                        <div id="equipmentListLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Ładowanie...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Ładowanie dostępnego sprzętu...</p>
+                        </div>
+                        
+                        <div id="equipmentList" style="display: none;">
+                            <!-- Lista będzie załadowana przez JavaScript -->
+                        </div>
+                        
+                        <div id="equipmentListEmpty" class="text-center py-4" style="display: none;">
+                            <i class="ri-inbox-line text-muted fs-48"></i>
+                            <h5 class="mt-3">Brak dostępnego sprzętu</h5>
+                            <p class="text-muted">Nie znaleziono sprzętu odpowiadającego kryteriom wyszukiwania.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                            <label class="form-check-label fw-medium" for="selectAll">
+                                Zaznacz/Odznacz wszystkie
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="ri-close-line me-1"></i>Anuluj
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-line me-1"></i>Dodaj wybrany sprzęt (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const equipmentModal = new bootstrap.Modal(document.getElementById('addEquipmentModal'));
+    const equipmentSearch = document.getElementById('equipmentSearch');
+    const equipmentTypeFilter = document.getElementById('equipmentTypeFilter');
+    const equipmentList = document.getElementById('equipmentList');
+    const equipmentListLoading = document.getElementById('equipmentListLoading');
+    const equipmentListEmpty = document.getElementById('equipmentListEmpty');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const addEquipmentForm = document.getElementById('addEquipmentForm');
+    
+    let availableEquipment = [];
+    let filteredEquipment = [];
+    
+    // Załaduj dostępny sprzęt przy otwarciu modala
+    document.getElementById('addEquipmentModal').addEventListener('show.bs.modal', function() {
+        loadAvailableEquipment();
+    });
+    
+    // Funkcja ładowania dostępnego sprzętu
+    async function loadAvailableEquipment() {
+        try {
+            equipmentListLoading.style.display = 'block';
+            equipmentList.style.display = 'none';
+            equipmentListEmpty.style.display = 'none';
+            
+            const response = await fetch('{{ path("asekuracja_available_equipment_modal") }}');
+            const data = await response.json();
+            
+            availableEquipment = data.equipment || [];
+            filteredEquipment = [...availableEquipment];
+            
+            equipmentListLoading.style.display = 'none';
+            
+            if (availableEquipment.length === 0) {
+                equipmentListEmpty.style.display = 'block';
+            } else {
+                renderEquipmentList();
+            }
+        } catch (error) {
+            console.error('Błąd ładowania sprzętu:', error);
+            equipmentListLoading.style.display = 'none';
+            equipmentListEmpty.style.display = 'block';
+        }
+    }
+    
+    // Funkcja renderowania listy sprzętu
+    function renderEquipmentList() {
+        if (filteredEquipment.length === 0) {
+            equipmentList.style.display = 'none';
+            equipmentListEmpty.style.display = 'block';
+            return;
+        }
+        
+        equipmentListEmpty.style.display = 'none';
+        
+        const html = filteredEquipment.map(equipment => `
+            <div class="form-check border-bottom py-3">
+                <input class="form-check-input equipment-checkbox" type="checkbox" 
+                       value="${equipment.id}" id="equipment_${equipment.id}">
+                <label class="form-check-label w-100" for="equipment_${equipment.id}">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-light rounded me-3">
+                            <i class="ri-shield-line text-primary fs-16"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${equipment.name}</h6>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-secondary me-2">${equipment.equipment_type}</span>
+                                <small class="text-muted me-2">${equipment.inventory_number}</small>
+                                ${equipment.manufacturer ? `<small class="text-muted">${equipment.manufacturer} ${equipment.model || ''}</small>` : ''}
+                            </div>
+                            <div class="mt-1">
+                                <span class="badge bg-success">${equipment.status}</span>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `).join('');
+        
+        equipmentList.innerHTML = html;
+        equipmentList.style.display = 'block';
+        
+        // Dodaj event listenery dla checkboxów
+        document.querySelectorAll('.equipment-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedCount);
+        });
+        
+        updateSelectedCount();
+    }
+    
+    // Funkcja aktualizacji liczby wybranych elementów
+    function updateSelectedCount() {
+        const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
+        selectedCountSpan.textContent = selectedCheckboxes.length;
+    }
+    
+    // Filtrowanie po wyszukiwaniu
+    equipmentSearch.addEventListener('input', function() {
+        filterEquipment();
+    });
+    
+    // Filtrowanie po typie
+    equipmentTypeFilter.addEventListener('change', function() {
+        filterEquipment();
+    });
+    
+    // Funkcja filtrowania
+    function filterEquipment() {
+        const searchTerm = equipmentSearch.value.toLowerCase();
+        const selectedType = equipmentTypeFilter.value;
+        
+        filteredEquipment = availableEquipment.filter(equipment => {
+            const matchesSearch = !searchTerm || 
+                equipment.name.toLowerCase().includes(searchTerm) ||
+                equipment.inventory_number.toLowerCase().includes(searchTerm) ||
+                (equipment.manufacturer && equipment.manufacturer.toLowerCase().includes(searchTerm));
+                
+            const matchesType = !selectedType || equipment.equipment_type === selectedType;
+            
+            return matchesSearch && matchesType;
+        });
+        
+        renderEquipmentList();
+        selectAllCheckbox.checked = false;
+    }
+    
+    // Zaznacz/odznacz wszystkie
+    selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.equipment-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        updateSelectedCount();
+    });
+    
+    // Obsługa formularza
+    addEquipmentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedEquipment = document.querySelectorAll('.equipment-checkbox:checked');
+        if (selectedEquipment.length === 0) {
+            alert('Wybierz co najmniej jeden element sprzętu.');
+            return;
+        }
+        
+        // Utwórz formularz z wybranymi elementami
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path("asekuracja_equipment_set_add_equipment", {id: equipment_set.id}) }}';
+        
+        selectedEquipment.forEach(checkbox => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'equipment_ids[]';
+            input.value = checkbox.value;
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
+});
+</script>
+{% endblock %}
