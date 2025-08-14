@@ -3,3 +3,10 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+# Moduł Asekuracja
+asekuracja:
+    resource:
+        path: ../src/AsekuracyjnySPM/Controller/
+        namespace: App\AsekuracyjnySPM\Controller
+    type: attribute
