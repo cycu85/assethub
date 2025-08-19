@@ -302,6 +302,16 @@ class AsekuracyjnyService
 
     // === QUERY METHODS ===
 
+    public function getEquipment(int $id): ?AsekuracyjnyEquipment
+    {
+        return $this->equipmentRepository->find($id);
+    }
+
+    public function getEquipmentSet(int $id): ?AsekuracyjnyEquipmentSet
+    {
+        return $this->equipmentSetRepository->find($id);
+    }
+
     public function getEquipmentWithPagination(int $page = 1, int $limit = 25, array $filters = []): array
     {
         return $this->equipmentRepository->findWithPagination($page, $limit, $filters);
