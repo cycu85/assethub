@@ -144,23 +144,29 @@
                                 </td>
                                 <td>
                                     {% if item.nextReviewDate %}
-                                        {% set days_to_review = date(item.nextReviewDate).diff(date()).days %}
-                                        {% if days_to_review < 0 %}
+                                        {% set review_date = item.nextReviewDate|date('Y-m-d') %}
+                                        {% set today_date = 'now'|date('Y-m-d') %}
+                                        {% if review_date < today_date %}
+                                            {% set days_overdue = date().diff(date(item.nextReviewDate)).days %}
                                             <span class="text-danger">
                                                 <i class="ri-error-warning-line me-1"></i>
                                                 {{ item.nextReviewDate|date('d.m.Y') }}
-                                                <br><small>Przeterminowany!</small>
-                                            </span>
-                                        {% elseif days_to_review <= 30 %}
-                                            <span class="text-warning">
-                                                <i class="ri-time-line me-1"></i>
-                                                {{ item.nextReviewDate|date('d.m.Y') }}
-                                                <br><small>Za {{ days_to_review }} dni</small>
+                                                <br><small>Przeterminowany o {{ days_overdue }} dni!</small>
                                             </span>
                                         {% else %}
-                                            <span class="text-muted">
-                                                {{ item.nextReviewDate|date('d.m.Y') }}
-                                            </span>
+                                            {% set days_to_review = date(item.nextReviewDate).diff(date()).days %}
+                                            {% if days_to_review <= 30 %}
+                                                <span class="text-warning">
+                                                    <i class="ri-time-line me-1"></i>
+                                                    {{ item.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    {{ item.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% endif %}
                                         {% endif %}
                                     {% else %}
                                         <span class="text-muted">Nie określono</span>
@@ -259,23 +265,29 @@
                                 </td>
                                 <td>
                                     {% if set.nextReviewDate %}
-                                        {% set days_to_review = date(set.nextReviewDate).diff(date()).days %}
-                                        {% if days_to_review < 0 %}
+                                        {% set review_date = set.nextReviewDate|date('Y-m-d') %}
+                                        {% set today_date = 'now'|date('Y-m-d') %}
+                                        {% if review_date < today_date %}
+                                            {% set days_overdue = date().diff(date(set.nextReviewDate)).days %}
                                             <span class="text-danger">
                                                 <i class="ri-error-warning-line me-1"></i>
                                                 {{ set.nextReviewDate|date('d.m.Y') }}
-                                                <br><small>Przeterminowany!</small>
-                                            </span>
-                                        {% elseif days_to_review <= 30 %}
-                                            <span class="text-warning">
-                                                <i class="ri-time-line me-1"></i>
-                                                {{ set.nextReviewDate|date('d.m.Y') }}
-                                                <br><small>Za {{ days_to_review }} dni</small>
+                                                <br><small>Przeterminowany o {{ days_overdue }} dni!</small>
                                             </span>
                                         {% else %}
-                                            <span class="text-muted">
-                                                {{ set.nextReviewDate|date('d.m.Y') }}
-                                            </span>
+                                            {% set days_to_review = date(set.nextReviewDate).diff(date()).days %}
+                                            {% if days_to_review <= 30 %}
+                                                <span class="text-warning">
+                                                    <i class="ri-time-line me-1"></i>
+                                                    {{ set.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    {{ set.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% endif %}
                                         {% endif %}
                                     {% else %}
                                         <span class="text-muted">Nie określono</span>
