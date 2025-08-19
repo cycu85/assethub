@@ -7,10 +7,9 @@ use App\Entity\Module;
 use App\Entity\Role;
 use App\Entity\User;
 use App\Entity\UserRole;
-use App\AsekuracyjnySPM\Entity\AsekuracijnyEquipment;
-use App\AsekuracyjnySPM\Entity\AsekuracijnyEquipmentSet;
-use App\AsekuracyjnySPM\Entity\AsekuracijnyEquipmentSetItem;
-use App\AsekuracyjnySPM\Entity\AsekuracijnyReview;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -497,10 +496,10 @@ class AppFixtures extends Fixture
         }
     }
 
-    private function createAsekuracijnyExampleData(ObjectManager $manager, User $createdBy): void
+    private function createAsekuracyjnyExampleData(ObjectManager $manager, User $createdBy): void
     {
         // Check if example equipment already exists
-        $equipmentRepository = $manager->getRepository(AsekuracijnyEquipment::class);
+        $equipmentRepository = $manager->getRepository(AsekuracyjnyEquipment::class);
         if ($equipmentRepository->findOneBy(['inventoryNumber' => 'ASK-001-2024'])) {
             return; // Skip if example data already exists
         }
@@ -571,7 +570,7 @@ class AppFixtures extends Fixture
 
         $equipment = [];
         foreach ($equipmentData as $data) {
-            $eq = new AsekuracijnyEquipment();
+            $eq = new AsekuracyjnyEquipment();
             $eq->setInventoryNumber($data['inventory_number'])
                ->setName($data['name'])
                ->setDescription($data['description'])
@@ -597,7 +596,7 @@ class AppFixtures extends Fixture
         }
 
         // Create example equipment set
-        $equipmentSet = new AsekuracijnyEquipmentSet();
+        $equipmentSet = new AsekuracyjnyEquipmentSet();
         $equipmentSet->setName('Zestaw podstawowy do prac na wysokości')
             ->setDescription('Kompletny zestaw do bezpiecznych prac na wysokości')
             ->setSetType('basic')
@@ -608,14 +607,8 @@ class AppFixtures extends Fixture
         $manager->persist($equipmentSet);
 
         // Add equipment to set
-        foreach ($equipment as $index => $eq) {
-            $setItem = new AsekuracijnyEquipmentSetItem();
-            $setItem->setEquipmentSet($equipmentSet)
-                ->setEquipment($eq)
-                ->setQuantity(1)
-                ->setSortOrder($index + 1);
-            
-            $manager->persist($setItem);
+        foreach ($equipment as $eq) {
+            $equipmentSet->addEquipment($eq);
         }
     }
 }
