@@ -95,6 +95,7 @@ class ReviewController extends AbstractController
                 $reviewNumber = $this->generateReviewNumber();
                 $review->setReviewNumber($reviewNumber);
                 $review->setCreatedBy($user);
+                $review->setPreparedBy($user);
                 
                 $this->entityManager->persist($review);
                 $this->entityManager->flush();
@@ -240,6 +241,7 @@ class ReviewController extends AbstractController
                 $reviewNumber = $this->generateReviewNumber();
                 $review->setReviewNumber($reviewNumber);
                 $review->setCreatedBy($user);
+                $review->setPreparedBy($user);
                 
                 $this->entityManager->persist($review);
                 $this->entityManager->flush();
@@ -295,6 +297,7 @@ class ReviewController extends AbstractController
                 $reviewNumber = $this->generateReviewNumber();
                 $review->setReviewNumber($reviewNumber);
                 $review->setCreatedBy($user);
+                $review->setPreparedBy($user);
                 
                 $this->entityManager->persist($review);
                 $this->entityManager->flush();
