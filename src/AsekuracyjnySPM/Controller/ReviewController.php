@@ -124,7 +124,9 @@ class ReviewController extends AbstractController
         return $this->render('asekuracja/review/form.html.twig', [
             'review' => $review,
             'form' => $form,
-            'page_title' => 'Nowy przegląd'
+            'page_title' => 'Nowy przegląd',
+            'can_edit' => true,
+            'can_delete' => false
         ]);
     }
 
@@ -171,6 +173,9 @@ class ReviewController extends AbstractController
             throw $this->createNotFoundException('Przegląd nie został znaleziony');
         }
         
+        // Sprawdzenie uprawnień
+        $canDelete = $this->authorizationService->hasPermission($user, 'asekuracja', 'DELETE');
+        
         $form = $this->createForm(AsekuracyjnyReviewType::class, $review);
         
         $form->handleRequest($request);
@@ -201,7 +206,9 @@ class ReviewController extends AbstractController
         return $this->render('asekuracja/review/form.html.twig', [
             'review' => $review,
             'form' => $form,
-            'page_title' => 'Edycja przeglądu'
+            'page_title' => 'Edycja przeglądu',
+            'can_edit' => true,
+            'can_delete' => $canDelete
         ]);
     }
 
@@ -254,7 +261,9 @@ class ReviewController extends AbstractController
             'review' => $review,
             'form' => $form,
             'equipment' => $equipment,
-            'page_title' => 'Nowy przegląd - ' . $equipment->getName()
+            'page_title' => 'Nowy przegląd - ' . $equipment->getName(),
+            'can_edit' => true,
+            'can_delete' => false
         ]);
     }
 
@@ -307,7 +316,9 @@ class ReviewController extends AbstractController
             'review' => $review,
             'form' => $form,
             'equipment_set' => $equipmentSet,
-            'page_title' => 'Nowy przegląd - ' . $equipmentSet->getName()
+            'page_title' => 'Nowy przegląd - ' . $equipmentSet->getName(),
+            'can_edit' => true,
+            'can_delete' => false
         ]);
     }
 
