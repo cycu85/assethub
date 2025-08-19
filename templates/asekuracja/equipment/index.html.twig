@@ -324,6 +324,14 @@
                                                 </li>
                                                 {% endif %}
                                             {% endif %}
+                                            {% if can_review %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('asekuracja_review_new_for_equipment', {id: item.id}) }}">
+                                                    <i class="ri-search-eye-line me-2"></i>Nowy przegląd
+                                                </a>
+                                            </li>
+                                            {% endif %}
                                             {% if can_delete and not item.isAssigned %}
                                             <li><hr class="dropdown-divider"></li>
                                             <li>

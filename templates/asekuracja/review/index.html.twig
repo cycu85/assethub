@@ -1,0 +1,391 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Przeglądy sprzętu asekuracyjnego - {{ app_name() }}{% endblock %}
+{% block page_title %}Przeglądy sprzętu{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h4 class="mb-0">
+            <i class="ri-search-eye-line me-2 text-primary"></i>
+            Przeglądy sprzętu asekuracyjnego
+        </h4>
+        <p class="text-muted mb-0">Zarządzanie przeglądami okresowymi i kontrolami sprzętu</p>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_create %}
+        <a href="{{ path('asekuracja_review_new') }}" class="btn btn-primary">
+            <i class="ri-add-line me-1"></i>
+            Nowy przegląd
+        </a>
+        {% endif %}
+        <a href="{{ path('asekuracja_index') }}" class="btn btn-outline-secondary ms-2">
+            <i class="ri-shield-line me-1"></i>
+            Sprzęt
+        </a>
+    </div>
+</div>
+
+<!-- Statystyki przeglądów -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded">
+                        <i class="ri-file-list-3-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.total }}</h5>
+                        <p class="text-muted mb-0">Łącznie przeglądów</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-warning rounded">
+                        <i class="ri-draft-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.preparation }}</h5>
+                        <p class="text-muted mb-0">W przygotowaniu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-info rounded">
+                        <i class="ri-send-plane-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.sent }}</h5>
+                        <p class="text-muted mb-0">Wysłane</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-success rounded">
+                        <i class="ri-check-double-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.completed }}</h5>
+                        <p class="text-muted mb-0">Zakończone</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtry -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Szukaj</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="ri-search-line"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Numer przeglądu, firma..." 
+                                   value="{{ filters.search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="preparation" {{ filters.status == 'preparation' ? 'selected' : '' }}>Przygotowanie</option>
+                            <option value="sent" {{ filters.status == 'sent' ? 'selected' : '' }}>Wysłane</option>
+                            <option value="completed" {{ filters.status == 'completed' ? 'selected' : '' }}>Zakończone</option>
+                            <option value="cancelled" {{ filters.status == 'cancelled' ? 'selected' : '' }}>Anulowane</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Typ przeglądu</label>
+                        <select name="review_type" class="form-select">
+                            <option value="">Wszystkie typy</option>
+                            <option value="periodic" {{ filters.review_type == 'periodic' ? 'selected' : '' }}>Okresowy</option>
+                            <option value="damage_control" {{ filters.review_type == 'damage_control' ? 'selected' : '' }}>Po uszkodzeniu</option>
+                            <option value="post_repair" {{ filters.review_type == 'post_repair' ? 'selected' : '' }}>Po naprawie</option>
+                            <option value="initial" {{ filters.review_type == 'initial' ? 'selected' : '' }}>Początkowy</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Wynik</label>
+                        <select name="result" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="passed" {{ filters.result == 'passed' ? 'selected' : '' }}>Pozytywny</option>
+                            <option value="failed" {{ filters.result == 'failed' ? 'selected' : '' }}>Negatywny</option>
+                            <option value="conditionally_passed" {{ filters.result == 'conditionally_passed' ? 'selected' : '' }}>Warunkowo pozytywny</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="ri-search-line me-1"></i>
+                            Filtruj
+                        </button>
+                        <a href="{{ path('asekuracja_review_index') }}" class="btn btn-outline-secondary">
+                            <i class="ri-refresh-line"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista przeglądów -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if reviews.items|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <a href="{{ path('asekuracja_review_index', app.request.query.all|merge({sort_by: 'review_number', sort_dir: filters.sort_by == 'review_number' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Nr przeglądu
+                                        {% if filters.sort_by == 'review_number' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>Przedmiot przeglądu</th>
+                                <th>
+                                    <a href="{{ path('asekuracja_review_index', app.request.query.all|merge({sort_by: 'review_type', sort_dir: filters.sort_by == 'review_type' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Typ
+                                        {% if filters.sort_by == 'review_type' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_review_index', app.request.query.all|merge({sort_by: 'status', sort_dir: filters.sort_by == 'status' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Status
+                                        {% if filters.sort_by == 'status' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_review_index', app.request.query.all|merge({sort_by: 'planned_date', sort_dir: filters.sort_by == 'planned_date' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Data planowana
+                                        {% if filters.sort_by == 'planned_date' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_review_index', app.request.query.all|merge({sort_by: 'result', sort_dir: filters.sort_by == 'result' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Wynik
+                                        {% if filters.sort_by == 'result' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for review in reviews.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-3">
+                                            <i class="ri-file-list-3-line text-primary fs-16"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">
+                                                <a href="{{ path('asekuracja_review_show', {id: review.id}) }}" 
+                                                   class="text-dark text-decoration-none">
+                                                    {{ review.reviewNumber }}
+                                                </a>
+                                            </h6>
+                                            <small class="text-muted">{{ review.createdAt|date('d.m.Y') }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if review.equipment %}
+                                        <div>
+                                            <strong>{{ review.equipment.name }}</strong>
+                                            <br><small class="text-muted">{{ review.equipment.inventoryNumber }}</small>
+                                        </div>
+                                    {% elseif review.equipmentSet %}
+                                        <div>
+                                            <strong>{{ review.equipmentSet.name }}</strong>
+                                            <br><small class="text-muted">Zestaw ({{ review.equipmentSet.equipmentItems|length }} elementów)</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Nie określono</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set type_class = review.reviewType == 'periodic' ? 'primary' : 
+                                                       (review.reviewType == 'damage_control' ? 'warning' : 
+                                                       (review.reviewType == 'post_repair' ? 'info' : 'secondary')) %}
+                                    <span class="badge bg-{{ type_class }}">
+                                        {% if review.reviewType == 'periodic' %}Okresowy
+                                        {% elseif review.reviewType == 'damage_control' %}Po uszkodzeniu
+                                        {% elseif review.reviewType == 'post_repair' %}Po naprawie
+                                        {% elseif review.reviewType == 'initial' %}Początkowy
+                                        {% else %}{{ review.reviewType }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% set status_class = review.status == 'preparation' ? 'secondary' : 
+                                                         (review.status == 'sent' ? 'warning' : 
+                                                         (review.status == 'completed' ? 'success' : 'danger')) %}
+                                    <span class="badge bg-{{ status_class }}">
+                                        {% if review.status == 'preparation' %}Przygotowanie
+                                        {% elseif review.status == 'sent' %}Wysłane
+                                        {% elseif review.status == 'completed' %}Zakończone
+                                        {% elseif review.status == 'cancelled' %}Anulowane
+                                        {% else %}{{ review.status }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ review.plannedDate|date('d.m.Y') }}
+                                    {% if review.reviewCompany %}
+                                        <br><small class="text-muted">{{ review.reviewCompany }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if review.result %}
+                                        {% set result_class = review.result == 'passed' ? 'success' : 
+                                                             (review.result == 'failed' ? 'danger' : 
+                                                             (review.result == 'conditionally_passed' ? 'warning' : 'secondary')) %}
+                                        <span class="badge bg-{{ result_class }}">
+                                            {% if review.result == 'passed' %}Pozytywny
+                                            {% elseif review.result == 'failed' %}Negatywny
+                                            {% elseif review.result == 'conditionally_passed' %}Warunkowo pozytywny
+                                            {% else %}{{ review.result }}{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" 
+                                                data-bs-toggle="dropdown">
+                                            Akcje
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('asekuracja_review_show', {id: review.id}) }}">
+                                                    <i class="ri-eye-line me-2"></i>Szczegóły
+                                                </a>
+                                            </li>
+                                            {% if can_edit %}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('asekuracja_review_edit', {id: review.id}) }}">
+                                                    <i class="ri-edit-line me-2"></i>Edytuj
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            {% if can_delete and review.status == 'preparation' %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="POST" action="#" 
+                                                      class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten przegląd?')">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_review_' ~ review.id) }}">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="ri-delete-bin-line me-2"></i>Usuń
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginacja -->
+                {% if reviews.pages > 1 %}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted">
+                        Wyświetlono {{ reviews.items|length }} z {{ reviews.total }} przeglądów
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            {% if reviews.page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('asekuracja_review_index', app.request.query.all|merge({page: reviews.page - 1})) }}">
+                                    <i class="ri-arrow-left-line"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in range(max(1, reviews.page - 2), min(reviews.pages, reviews.page + 2)) %}
+                            <li class="page-item {{ i == reviews.page ? 'active' : '' }}">
+                                <a class="page-link" href="{{ path('asekuracja_review_index', app.request.query.all|merge({page: i})) }}">
+                                    {{ i }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            
+                            {% if reviews.page < reviews.pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('asekuracja_review_index', app.request.query.all|merge({page: reviews.page + 1})) }}">
+                                    <i class="ri-arrow-right-line"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-search-eye-line text-muted fs-48"></i>
+                    <h5 class="mt-3">Brak przeglądów</h5>
+                    <p class="text-muted">
+                        {% if filters.search or filters.status or filters.review_type %}
+                            Nie znaleziono przeglądów odpowiadających wybranym filtrom.
+                        {% else %}
+                            Nie utworzono jeszcze żadnego przeglądu sprzętu.
+                        {% endif %}
+                    </p>
+                    {% if can_create and not filters.search and not filters.status and not filters.review_type %}
+                    <a href="{{ path('asekuracja_review_new') }}" class="btn btn-primary">
+                        <i class="ri-add-line me-1"></i>
+                        Utwórz pierwszy przegląd
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -89,6 +89,11 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
+                                        <a href="{{ path('asekuracja_review_index') }}" class="nav-link {{ current_route starts with 'asekuracja_review' ? 'active' : '' }}">
+                                            <i class="ri-search-eye-line me-2"></i>Przeglądy
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
                                         <a href="{{ path('asekuracja_my_equipment') }}" class="nav-link {{ current_route == 'asekuracja_my_equipment' ? 'active' : '' }}">
                                             <i class="ri-user-line me-2"></i>Moje przypisania
                                         </a>

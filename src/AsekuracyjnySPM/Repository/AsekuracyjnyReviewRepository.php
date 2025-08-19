@@ -50,8 +50,27 @@ class AsekuracyjnyReviewRepository extends ServiceEntityRepository
             ->addSelect('es')
             ->addSelect('pb')
             ->addSelect('sb')
-            ->addSelect('cb')
-            ->orderBy('r.createdAt', 'DESC');
+            ->addSelect('cb');
+
+        // Sortowanie
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_dir'] ?? 'DESC';
+        
+        $validSortFields = [
+            'review_number' => 'r.reviewNumber',
+            'planned_date' => 'r.plannedDate',
+            'status' => 'r.status',
+            'review_type' => 'r.reviewType',
+            'result' => 'r.result',
+            'created_at' => 'r.createdAt',
+            'completed_date' => 'r.completedDate'
+        ];
+        
+        if (isset($validSortFields[$sortBy])) {
+            $qb->orderBy($validSortFields[$sortBy], strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC');
+        } else {
+            $qb->orderBy('r.createdAt', 'DESC');
+        }
 
         $this->applyFilters($qb, $filters);
 

@@ -4,8 +4,10 @@ namespace App\AsekuracyjnySPM\Service;
 
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Repository\AsekuracyjnyEquipmentRepository;
 use App\AsekuracyjnySPM\Repository\AsekuracyjnyEquipmentSetRepository;
+use App\AsekuracyjnySPM\Repository\AsekuracyjnyReviewRepository;
 use App\Entity\User;
 use App\Service\AuditService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,6 +21,7 @@ class AsekuracyjnyService
     public function __construct(
         private AsekuracyjnyEquipmentRepository $equipmentRepository,
         private AsekuracyjnyEquipmentSetRepository $equipmentSetRepository,
+        private AsekuracyjnyReviewRepository $reviewRepository,
         private EntityManagerInterface $entityManager,
         private AuditService $auditService,
         private LoggerInterface $logger,
@@ -500,6 +503,188 @@ class AsekuracyjnyService
             'description' => $equipmentSet->getDescription(),
             'set_type' => $equipmentSet->getSetType(),
             'status' => $equipmentSet->getStatus()
+        ];
+    }
+
+    // === REVIEW MANAGEMENT ===
+
+    public function getReviewsWithPagination(int $page = 1, int $limit = 25, array $filters = []): array
+    {
+        return $this->reviewRepository->findWithPagination($page, $limit, $filters);
+    }
+
+    public function getReview(int $id): ?AsekuracyjnyReview
+    {
+        return $this->reviewRepository->find($id);
+    }
+
+    public function getReviewStatistics(): array
+    {
+        return $this->reviewRepository->getStatistics();
+    }
+
+    public function createReview(array $data, User $user): AsekuracyjnyReview
+    {
+        $review = new AsekuracyjnyReview();
+        
+        $this->updateReviewFromData($review, $data);
+        $review->setCreatedBy($user);
+        
+        $errors = $this->validator->validate($review);
+        if (count($errors) > 0) {
+            throw new ValidationException('Validation failed', $errors);
+        }
+        
+        $this->entityManager->persist($review);
+        $this->entityManager->flush();
+        
+        $this->auditService->logAction('create_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber()
+        ], $user);
+        
+        return $review;
+    }
+
+    public function updateReview(AsekuracyjnyReview $review, array $data, User $user): AsekuracyjnyReview
+    {
+        $oldData = $this->getReviewDataArray($review);
+        
+        $this->updateReviewFromData($review, $data);
+        $review->setUpdatedBy($user);
+        
+        $errors = $this->validator->validate($review);
+        if (count($errors) > 0) {
+            throw new ValidationException('Validation failed', $errors);
+        }
+        
+        $this->entityManager->flush();
+        
+        $this->auditService->logAction('update_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber(),
+            'changes' => array_diff_assoc($this->getReviewDataArray($review), $oldData)
+        ], $user);
+        
+        return $review;
+    }
+
+    public function deleteReview(AsekuracyjnyReview $review, User $user): void
+    {
+        if ($review->getStatus() === AsekuracyjnyReview::STATUS_COMPLETED) {
+            throw new BusinessLogicException('Nie można usunąć zakończonego przeglądu');
+        }
+        
+        $this->auditService->logAction('delete_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber()
+        ], $user);
+        
+        $this->entityManager->remove($review);
+        $this->entityManager->flush();
+    }
+
+    public function sendReview(AsekuracyjnyReview $review, User $user): AsekuracyjnyReview
+    {
+        if ($review->getStatus() !== AsekuracyjnyReview::STATUS_PREPARATION) {
+            throw new BusinessLogicException('Przegląd można wysłać tylko ze statusu "Przygotowanie"');
+        }
+        
+        $review->setStatus(AsekuracyjnyReview::STATUS_SENT);
+        $review->setSentDate(new \DateTime());
+        $review->setSentBy($user);
+        $review->setUpdatedBy($user);
+        
+        $this->entityManager->flush();
+        
+        $this->auditService->logAction('send_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber()
+        ], $user);
+        
+        return $review;
+    }
+
+    public function completeReview(AsekuracyjnyReview $review, array $data, User $user): AsekuracyjnyReview
+    {
+        if ($review->getStatus() !== AsekuracyjnyReview::STATUS_SENT) {
+            throw new BusinessLogicException('Przegląd można zakończyć tylko ze statusu "Wysłane"');
+        }
+        
+        $review->setStatus(AsekuracyjnyReview::STATUS_COMPLETED);
+        $review->setCompletedDate($data['completed_date'] ?? new \DateTime());
+        $review->setCompletedBy($user);
+        $review->setUpdatedBy($user);
+        
+        // Aktualizacja wyników przeglądu
+        if (isset($data['result'])) {
+            $review->setResult($data['result']);
+        }
+        if (isset($data['certificate_number'])) {
+            $review->setCertificateNumber($data['certificate_number']);
+        }
+        if (isset($data['findings'])) {
+            $review->setFindings($data['findings']);
+        }
+        if (isset($data['recommendations'])) {
+            $review->setRecommendations($data['recommendations']);
+        }
+        if (isset($data['cost'])) {
+            $review->setCost($data['cost']);
+        }
+        if (isset($data['next_review_date'])) {
+            $review->setNextReviewDate($data['next_review_date']);
+            
+            // Aktualizacja daty następnego przeglądu w sprzęcie/zestawie
+            if ($review->getEquipment()) {
+                $review->getEquipment()->setNextReviewDate($data['next_review_date']);
+            }
+            if ($review->getEquipmentSet()) {
+                $review->getEquipmentSet()->setNextReviewDate($data['next_review_date']);
+            }
+        }
+        
+        $this->entityManager->flush();
+        
+        $this->auditService->logAction('complete_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber(),
+            'result' => $review->getResult()
+        ], $user);
+        
+        return $review;
+    }
+
+    private function updateReviewFromData(AsekuracyjnyReview $review, array $data): void
+    {
+        if (isset($data['planned_date'])) {
+            $review->setPlannedDate($data['planned_date']);
+        }
+        if (isset($data['review_type'])) {
+            $review->setReviewType($data['review_type']);
+        }
+        if (isset($data['review_company'])) {
+            $review->setReviewCompany($data['review_company']);
+        }
+        if (isset($data['notes'])) {
+            $review->setNotes($data['notes']);
+        }
+        if (isset($data['equipment'])) {
+            $review->setEquipment($data['equipment']);
+        }
+        if (isset($data['equipment_set'])) {
+            $review->setEquipmentSet($data['equipment_set']);
+        }
+    }
+
+    private function getReviewDataArray(AsekuracyjnyReview $review): array
+    {
+        return [
+            'planned_date' => $review->getPlannedDate()?->format('Y-m-d'),
+            'review_type' => $review->getReviewType(),
+            'review_company' => $review->getReviewCompany(),
+            'notes' => $review->getNotes(),
+            'status' => $review->getStatus()
         ];
     }
 }

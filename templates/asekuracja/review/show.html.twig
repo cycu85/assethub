@@ -1,0 +1,425 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Przegląd {{ review.reviewNumber }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Przegląd {{ review.reviewNumber }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_review_index') }}">Przeglądy</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ review.reviewNumber }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Nagłówek -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">
+                            <i class="ri-search-eye-line me-2"></i>
+                            Przegląd {{ review.reviewNumber }}
+                        </h5>
+                    </div>
+                    <div>
+                        {% set status_class = review.status == 'preparation' ? 'secondary' : 
+                                             (review.status == 'sent' ? 'warning' : 
+                                             (review.status == 'completed' ? 'success' : 'danger')) %}
+                        <span class="badge bg-{{ status_class }} fs-6">
+                            {% if review.status == 'preparation' %}Przygotowanie
+                            {% elseif review.status == 'sent' %}Wysłane
+                            {% elseif review.status == 'completed' %}Zakończone
+                            {% elseif review.status == 'cancelled' %}Anulowane
+                            {% else %}{{ review.status }}{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Podstawowe informacje</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Numer przeglądu:</td>
+                                <td><strong>{{ review.reviewNumber }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Typ przeglądu:</td>
+                                <td>
+                                    {% set type_class = review.reviewType == 'periodic' ? 'primary' : 'secondary' %}
+                                    <span class="badge bg-{{ type_class }}">
+                                        {% if review.reviewType == 'periodic' %}Okresowy
+                                        {% elseif review.reviewType == 'damage_control' %}Po uszkodzeniu
+                                        {% elseif review.reviewType == 'post_repair' %}Po naprawie
+                                        {% elseif review.reviewType == 'initial' %}Początkowy
+                                        {% else %}{{ review.reviewType }}{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Data planowana:</td>
+                                <td><strong>{{ review.plannedDate|date('d.m.Y') }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Data utworzenia:</td>
+                                <td>{{ review.createdAt|date('d.m.Y H:i') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Odpowiedzialni</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Przygotował:</td>
+                                <td>{{ review.preparedBy ? review.preparedBy.fullName : review.createdBy.fullName }}</td>
+                            </tr>
+                            {% if review.sentBy %}
+                            <tr>
+                                <td class="text-muted">Wysłał:</td>
+                                <td>{{ review.sentBy.fullName }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.completedBy %}
+                            <tr>
+                                <td class="text-muted">Zakończył:</td>
+                                <td>{{ review.completedBy.fullName }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.reviewCompany %}
+                            <tr>
+                                <td class="text-muted">Firma kontrolująca:</td>
+                                <td><strong>{{ review.reviewCompany }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                {% if review.notes %}
+                <div class="mt-3">
+                    <h6>Uwagi</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.notes|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Przedmiot przeglądu -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-tools-line me-2"></i>Przedmiot przeglądu
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if review.equipment %}
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded me-3">
+                        <i class="ri-shield-line text-white fs-16"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <a href="{{ path('asekuracja_equipment_show', {id: review.equipment.id}) }}" 
+                               class="text-decoration-none">
+                                {{ review.equipment.name }}
+                            </a>
+                        </h6>
+                        <div class="text-muted small">
+                            <span class="me-3">{{ review.equipment.inventoryNumber }}</span>
+                            <span class="me-3">{{ review.equipment.equipmentType }}</span>
+                            {% if review.equipment.manufacturer and review.equipment.model %}
+                                <span>{{ review.equipment.manufacturer }} {{ review.equipment.model }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        {% set status_class = review.equipment.status == 'available' ? 'success' : 'warning' %}
+                        <span class="badge bg-{{ status_class }}">{{ review.equipment.statusDisplayName }}</span>
+                    </div>
+                </div>
+                {% elseif review.equipmentSet %}
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-info rounded me-3">
+                        <i class="ri-stack-line text-white fs-16"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <a href="{{ path('asekuracja_equipment_set_show', {id: review.equipmentSet.id}) }}" 
+                               class="text-decoration-none">
+                                {{ review.equipmentSet.name }}
+                            </a>
+                        </h6>
+                        <div class="text-muted small">
+                            <span class="me-3">Zestaw {{ review.equipmentSet.setType }}</span>
+                            <span>{{ review.equipmentSet.equipmentItems|length }} elementów</span>
+                        </div>
+                    </div>
+                    <div>
+                        {% set status_class = review.equipmentSet.status == 'available' ? 'success' : 'warning' %}
+                        <span class="badge bg-{{ status_class }}">{{ review.equipmentSet.statusDisplayName }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="ri-alert-line fs-24"></i>
+                    <p class="mb-0">Nie określono przedmiotu przeglądu</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Wyniki przeglądu -->
+        {% if review.status == 'completed' %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-check-double-line me-2"></i>Wyniki przeglądu
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            {% if review.sentDate %}
+                            <tr>
+                                <td class="text-muted">Data wysłania:</td>
+                                <td>{{ review.sentDate|date('d.m.Y') }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.completedDate %}
+                            <tr>
+                                <td class="text-muted">Data zakończenia:</td>
+                                <td>{{ review.completedDate|date('d.m.Y') }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.certificateNumber %}
+                            <tr>
+                                <td class="text-muted">Nr certyfikatu:</td>
+                                <td><strong>{{ review.certificateNumber }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            {% if review.result %}
+                            <tr>
+                                <td class="text-muted">Wynik:</td>
+                                <td>
+                                    {% set result_class = review.result == 'passed' ? 'success' : 
+                                                         (review.result == 'failed' ? 'danger' : 'warning') %}
+                                    <span class="badge bg-{{ result_class }}">
+                                        {% if review.result == 'passed' %}Pozytywny
+                                        {% elseif review.result == 'failed' %}Negatywny
+                                        {% elseif review.result == 'conditionally_passed' %}Warunkowo pozytywny
+                                        {% else %}{{ review.result }}{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if review.cost %}
+                            <tr>
+                                <td class="text-muted">Koszt:</td>
+                                <td><strong>{{ review.cost }} PLN</strong></td>
+                            </tr>
+                            {% endif %}
+                            {% if review.nextReviewDate %}
+                            <tr>
+                                <td class="text-muted">Następny przegląd:</td>
+                                <td><strong>{{ review.nextReviewDate|date('d.m.Y') }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                {% if review.findings %}
+                <div class="mt-3">
+                    <h6>Stwierdzone usterki/uwagi</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.findings|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if review.recommendations %}
+                <div class="mt-3">
+                    <h6>Zalecenia</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.recommendations|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar z akcjami -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Akcje</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if can_edit %}
+                    <a href="{{ path('asekuracja_review_edit', {id: review.id}) }}" 
+                       class="btn btn-primary">
+                        <i class="ri-edit-line me-1"></i>Edytuj przegląd
+                    </a>
+                    {% endif %}
+
+                    {% if review.status == 'preparation' and can_edit %}
+                    <form method="POST" action="#" class="d-inline">
+                        <input type="hidden" name="_token" value="{{ csrf_token('send_review_' ~ review.id) }}">
+                        <button type="submit" class="btn btn-warning w-100" 
+                                onclick="return confirm('Czy na pewno wysłać przegląd?')">
+                            <i class="ri-send-plane-line me-1"></i>Wyślij na przegląd
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if review.status == 'sent' and can_edit %}
+                    <a href="{{ path('asekuracja_review_edit', {id: review.id}) }}?mode=completion" 
+                       class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ przegląd
+                    </a>
+                    {% endif %}
+
+                    {% if can_delete and review.status == 'preparation' %}
+                    <form method="POST" action="#" class="d-inline">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_review_' ~ review.id) }}">
+                        <button type="submit" class="btn btn-outline-danger w-100" 
+                                onclick="return confirm('Czy na pewno usunąć ten przegląd?')">
+                            <i class="ri-delete-bin-line me-1"></i>Usuń przegląd
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <a href="{{ path('asekuracja_review_index') }}" class="btn btn-outline-secondary">
+                        <i class="ri-arrow-left-line me-1"></i>Powrót do listy
+                    </a>
+
+                    {% if review.equipment %}
+                        <a href="{{ path('asekuracja_equipment_show', {id: review.equipment.id}) }}" 
+                           class="btn btn-outline-info">
+                            <i class="ri-shield-line me-1"></i>Zobacz sprzęt
+                        </a>
+                    {% elseif review.equipmentSet %}
+                        <a href="{{ path('asekuracja_equipment_set_show', {id: review.equipmentSet.id}) }}" 
+                           class="btn btn-outline-info">
+                            <i class="ri-stack-line me-1"></i>Zobacz zestaw
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Historia przeglądu -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Historia przeglądu</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Utworzenie przeglądu</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.createdAt|date('d.m.Y H:i') }}<br>
+                                przez {{ review.createdBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if review.sentDate %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Wysłanie na przegląd</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.sentDate|date('d.m.Y H:i') }}<br>
+                                przez {{ review.sentBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if review.completedDate %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Zakończenie przeglądu</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.completedDate|date('d.m.Y H:i') }}<br>
+                                przez {{ review.completedBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 3px solid #dee2e6;
+}
+
+.timeline-content h6 {
+    font-size: 14px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

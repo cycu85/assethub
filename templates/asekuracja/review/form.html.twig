@@ -1,0 +1,267 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title }} - {{ app_name() }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('asekuracja_review_index') }}">Przeglądy</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-search-eye-line me-2"></i>
+                    {{ page_title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment is defined %}
+                <!-- Informacje o sprzęcie -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Przegląd dla sprzętu
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Nazwa:</strong> {{ equipment.name }}<br>
+                            <strong>Numer inwentarzowy:</strong> {{ equipment.inventoryNumber }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Typ:</strong> {{ equipment.equipmentType }}<br>
+                            <strong>Status:</strong> 
+                            {% set status_class = equipment.status == 'available' ? 'success' : 'warning' %}
+                            <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% elseif equipment_set is defined %}
+                <!-- Informacje o zestawie -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Przegląd dla zestawu
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Nazwa:</strong> {{ equipment_set.name }}<br>
+                            <strong>Typ zestawu:</strong> {{ equipment_set.setType }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Liczba elementów:</strong> {{ equipment_set.equipmentItems|length }}<br>
+                            <strong>Status:</strong> 
+                            {% set status_class = equipment_set.status == 'available' ? 'success' : 'warning' %}
+                            <span class="badge bg-{{ status_class }}">{{ equipment_set.statusDisplayName }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.plannedDate) }}
+                            {{ form_widget(form.plannedDate) }}
+                            {{ form_errors(form.plannedDate) }}
+                            <div class="form-text">Data planowanego rozpoczęcia przeglądu</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.reviewType) }}
+                            {{ form_widget(form.reviewType) }}
+                            {{ form_errors(form.reviewType) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wybór sprzętu/zestawu tylko jeśli nie został już określony -->
+                {% if equipment is not defined and equipment_set is not defined %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.equipment) }}
+                            {{ form_widget(form.equipment) }}
+                            {{ form_errors(form.equipment) }}
+                            <div class="form-text">Wybierz sprzęt lub zestaw sprzętu do przeglądu</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.equipmentSet) }}
+                            {{ form_widget(form.equipmentSet) }}
+                            {{ form_errors(form.equipmentSet) }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    {{ form_label(form.reviewCompany) }}
+                    {{ form_widget(form.reviewCompany) }}
+                    {{ form_errors(form.reviewCompany) }}
+                    <div class="form-text">Firma lub osoba przeprowadzająca przegląd</div>
+                </div>
+
+                <div class="mb-4">
+                    {{ form_label(form.notes) }}
+                    {{ form_widget(form.notes) }}
+                    {{ form_errors(form.notes) }}
+                </div>
+
+                <!-- Pola dla zakończonych przeglądów -->
+                {% if review.status == 'completed' %}
+                <hr class="my-4">
+                <h6 class="mb-3">
+                    <i class="ri-check-double-line me-2"></i>Wyniki przeglądu
+                </h6>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.sentDate) }}
+                            {{ form_widget(form.sentDate) }}
+                            {{ form_errors(form.sentDate) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.completedDate) }}
+                            {{ form_widget(form.completedDate) }}
+                            {{ form_errors(form.completedDate) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.result) }}
+                            {{ form_widget(form.result) }}
+                            {{ form_errors(form.result) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.certificateNumber) }}
+                            {{ form_widget(form.certificateNumber) }}
+                            {{ form_errors(form.certificateNumber) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form_label(form.findings) }}
+                    {{ form_widget(form.findings) }}
+                    {{ form_errors(form.findings) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_label(form.recommendations) }}
+                    {{ form_widget(form.recommendations) }}
+                    {{ form_errors(form.recommendations) }}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.cost) }}
+                            {{ form_widget(form.cost) }}
+                            {{ form_errors(form.cost) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.nextReviewDate) }}
+                            {{ form_widget(form.nextReviewDate) }}
+                            {{ form_errors(form.nextReviewDate) }}
+                            <div class="form-text">Data kolejnego zalecanego przeglądu</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <a href="{{ review.id ? path('asekuracja_review_show', {id: review.id}) : path('asekuracja_review_index') }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="ri-arrow-left-line me-1"></i>
+                            Anuluj
+                        </a>
+                    </div>
+                    <div>
+                        {{ form_widget(form.save) }}
+                    </div>
+                </div>
+
+                {{ form_end(form) }}
+            </div>
+        </div>
+
+        <!-- Instrukcje -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Instrukcje
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Typy przeglądów:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Okresowy</strong> - standardowy przegląd planowy</li>
+                            <li><strong>Po uszkodzeniu</strong> - kontrola po wykryciu usterki</li>
+                            <li><strong>Po naprawie</strong> - weryfikacja po wykonanej naprawie</li>
+                            <li><strong>Początkowy</strong> - pierwszy przegląd nowego sprzętu</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Przepływ procesu:</h6>
+                        <ol>
+                            <li>Przygotowanie przeglądu</li>
+                            <li>Wysłanie sprzętu na przegląd</li>
+                            <li>Zakończenie i wprowadzenie wyników</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
+    const equipmentField = document.getElementById('{{ form.equipment.vars.id }}');
+    const equipmentSetField = document.getElementById('{{ form.equipmentSet.vars.id }}');
+    
+    if (equipmentField && equipmentSetField) {
+        equipmentField.addEventListener('change', function() {
+            if (this.value) {
+                equipmentSetField.value = '';
+            }
+        });
+        
+        equipmentSetField.addEventListener('change', function() {
+            if (this.value) {
+                equipmentField.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
