@@ -49,6 +49,18 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 - Historia użytkowania i napraw
 - Zarządzanie dokumentacją i certyfikatami
 
+### 🛡️ Moduł Asekuracja (Sprzęt Wysokościowy)
+- **Zarządzanie sprzętem asekuracyjnym** - szelki, liny, kaski, zaciski, blokady z pełnymi metadanymi
+- **System przeglądów i certyfikacji** - okresowe, po uszkodzeniu, po naprawie, początkowe
+- **Zestawy sprzętu** - tworzenie kompletnych zestawów z wielokrotnym wyborem elementów
+- **Modal zakończenia przeglądu** - upload załączników (PDF, DOC, JPG, XLS), wyniki, certyfikaty
+- **Automatyczne statusy** - sprzęt/zestaw automatycznie zmienia status podczas procesu przeglądu
+- **Historia przeglądów** - odnośniki do zakończonych przeglądów w widoku sprzętu i zestawów
+- **System uprawnień** - granularne role (ADMIN, EDITOR, VIEWER, LIST) z pełną kontrolą dostępu
+- **Załączniki przeglądów** - bezpieczne przechowywanie i pobieranie dokumentów z audytem
+- **Dashboard z metrykami** - karty sprzętu, statystyki przeglądów, alerty terminów
+- **Słowniki konfiguracyjne** - typy sprzętu, statusy, typy zestawów i przeglądów
+
 ### 🛡️ Moduł Środków Ochrony Osobistej (ŚOP)
 - Kontrola wydawania ŚOP zgodnie z normami
 - Śledzenie dat ważności certyfikatów
@@ -104,6 +116,7 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 ### Service Layer Pattern
 Wszystkie operacje biznesowe realizowane przez dedykowane serwisy:
 - **EquipmentService** - Zarządzanie sprzętem z pełną logiką biznesową
+- **AsekuracyjnyService** - Kompletne zarządzanie sprzętem asekuracyjnym, zestawami i przeglądami
 - **AuthorizationService** - Centralizowana autoryzacja zastępująca stary PermissionService
 - **AuditService** - Kompleksowy system audytu z wielopoziomowym logowaniem
 - **AdminService** - Operacje administracyjne, backup, maintenance
@@ -243,9 +256,10 @@ System zdarzeń domenowych z subskrybentami:
    
    # Tworzenie katalogów dla uploads i backupów
    sudo -u www-data mkdir -p public/uploads/avatars
+   sudo -u www-data mkdir -p public/uploads/reviews
    sudo -u www-data mkdir -p var/backups
-   sudo chmod 755 public/uploads/avatars var/backups
-   sudo chown -R www-data:www-data public/uploads/avatars var/backups
+   sudo chmod 755 public/uploads/avatars public/uploads/reviews var/backups
+   sudo chown -R www-data:www-data public/uploads var/backups
    ```
 
 5. **Konfiguracja Apache**
@@ -366,8 +380,8 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    sudo chown -R www-data:www-data var/
    
    # Tworzenie katalogów
-   sudo -u www-data mkdir -p var/log public/uploads/avatars var/backups
-   sudo chmod 755 public/uploads/avatars var/backups
+   sudo -u www-data mkdir -p var/log public/uploads/avatars public/uploads/reviews var/backups
+   sudo chmod 755 public/uploads/avatars public/uploads/reviews var/backups
    ```
 
 5. **Konfiguracja Apache dla Ubuntu 24.04**
@@ -443,7 +457,13 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    php bin/console doctrine:fixtures:load --no-interaction
    ```
 
-4. **Utworzenie Użytkownika Administratora**
+4. **Załadowanie Przykładowych Danych (opcjonalne)**
+   ```bash
+   # Załaduj kompletne dane przykładowe z modułem Asekuracja
+   php bin/console doctrine:fixtures:load --no-interaction
+   ```
+
+5. **Utworzenie Użytkownika Administratora** (jeśli nie używasz fixtures)
    ```bash
    php bin/console app:create-admin
    ```
@@ -528,11 +548,16 @@ MAILER_DSN=gmail://username:password@default
 
 1. **Logowanie do Systemu**
    - Przejdź do głównej strony aplikacji
-   - Zaloguj się używając danych administratora utworzonych podczas instalacji
+   - Zaloguj się używając danych administratora:
+   
+   **👤 Domyślne konta (po załadowaniu fixtures):**
+   - `admin`/`admin123` - Administrator (wszystkie moduły + Asekuracja)
+   - `user`/`user123` - Użytkownik podstawowy
+   - `hr`/`hr123` - Użytkownik HR
 
 2. **Konfiguracja Modułów**
    - Przejdź do Panel Administracyjny → Moduły
-   - Aktywuj potrzebne moduły (domyślnie: Admin i Sprzęt)
+   - Aktywuj potrzebne moduły (domyślnie: Admin, Sprzęt, Asekuracja)
 
 3. **Dodawanie Użytkowników**
    - Panel Administracyjny → Użytkownicy → Dodaj użytkownika
@@ -565,7 +590,25 @@ MAILER_DSN=gmail://username:password@default
    - **Reset do domyślnych** - przycisk przywracający wszystkie ustawienia z modalem potwierdzenia:
      - AssetHub, #405189, #2a3042, #ffffff, #405189, logo domyślne
 
-7. **🔗 Integracja LDAP/Active Directory**
+7. **🛡️ Testowanie modułu Asekuracja**
+   Po zalogowaniu jako `admin` sprawdź następujące funkcjonalności:
+   
+   - **`/asekuracja/`** - Dashboard modułu z kartami sprzętu i statystykami przeglądów
+   - **`/asekuracja/equipment/`** - Lista sprzętu asekuracyjnego (3 przykładowe elementy)
+     - Szelki robocze Petzl AVAO (ASK-001-2024)
+     - Lina dynamiczna Edelrid Boa (ASK-002-2024)  
+     - Kask Black Diamond Vector (ASK-003-2024)
+   - **`/asekuracja/equipment-sets/`** - Zestawy sprzętu (1 przykładowy zestaw podstawowy)
+   - **`/asekuracja/reviews/`** - System przeglądów z modalami zakończenia
+   - **`/asekuracja/reviews/new`** - Tworzenie nowego przeglądu z wyborem sprzętu/zestawu
+   
+   **🔧 Testowanie funkcjonalności:**
+   - Utwórz nowy przegląd dla sprzętu
+   - Wyślij przegląd (zmiana statusu na "in_review") 
+   - Zakończ przegląd przez modal z załącznikami
+   - Sprawdź odnośniki w widoku sprzętu do historii przeglądów
+
+8. **🔗 Integracja LDAP/Active Directory**
    - Panel Administracyjny → Ustawienia → LDAP
    - **Konfiguracja serwera** - host, port, szyfrowanie (SSL/TLS/StartTLS)
    - **Uwierzytelnianie** - Bind DN użytkownika serwisowego i hasło
