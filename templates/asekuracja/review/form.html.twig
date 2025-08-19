@@ -89,7 +89,7 @@
                 </div>
 
                 <!-- Wybór sprzętu/zestawu tylko jeśli nie został już określony -->
-                {% if equipment is not defined and equipment_set is not defined %}
+                {% if equipment is not defined and equipment_set is not defined and form.equipment is defined and form.equipmentSet is defined %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -129,6 +129,7 @@
                     <i class="ri-check-double-line me-2"></i>Wyniki przeglądu
                 </h6>
 
+                {% if form.sentDate is defined and form.completedDate is defined %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -145,7 +146,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if form.result is defined and form.certificateNumber is defined %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -162,19 +165,25 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if form.findings is defined %}
                 <div class="mb-3">
                     {{ form_label(form.findings) }}
                     {{ form_widget(form.findings) }}
                     {{ form_errors(form.findings) }}
                 </div>
+                {% endif %}
 
+                {% if form.recommendations is defined %}
                 <div class="mb-3">
                     {{ form_label(form.recommendations) }}
                     {{ form_widget(form.recommendations) }}
                     {{ form_errors(form.recommendations) }}
                 </div>
+                {% endif %}
 
+                {% if form.cost is defined and form.nextReviewDate is defined %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -193,6 +202,7 @@
                     </div>
                 </div>
                 {% endif %}
+                {% endif %}
 
                 <div class="d-flex justify-content-between">
                     <div>
@@ -203,7 +213,14 @@
                         </a>
                     </div>
                     <div>
-                        {{ form_widget(form.save) }}
+                        {% if form.submit is defined %}
+                            {{ form_widget(form.submit) }}
+                        {% else %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-line me-1"></i>
+                                Zapisz
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -246,6 +263,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
+    {% if form.equipment is defined and form.equipmentSet is defined %}
     const equipmentField = document.getElementById('{{ form.equipment.vars.id }}');
     const equipmentSetField = document.getElementById('{{ form.equipmentSet.vars.id }}');
     
@@ -262,6 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    {% endif %}
 });
 </script>
 {% endblock %}
