@@ -56,6 +56,7 @@ class AsekuracyjnyController extends AbstractController
         $canEdit = $this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT');
         $canDelete = $this->authorizationService->hasPermission($user, 'asekuracja', 'DELETE');
         $canAssign = $this->authorizationService->hasPermission($user, 'asekuracja', 'ASSIGN');
+        $canReview = $this->authorizationService->hasPermission($user, 'asekuracja', 'REVIEW');
 
         // Audit
         $this->auditService->logUserAction($user, 'view_asekuracja_equipment_index', [
@@ -72,6 +73,7 @@ class AsekuracyjnyController extends AbstractController
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,
             'can_assign' => $canAssign,
+            'can_review' => $canReview,
         ]);
     }
 
