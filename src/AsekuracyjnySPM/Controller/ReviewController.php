@@ -349,6 +349,75 @@ class ReviewController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/send', name: 'asekuracja_review_send', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function sendReview(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
+        
+        $review = $this->asekuracyjnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('send_review_' . $review->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            $this->asekuracyjnyService->sendReview($review, $user);
+            $this->addFlash('success', 'Przegląd został wysłany pomyślnie.');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Error sending review', [
+                'error' => $e->getMessage(),
+                'review_id' => $id,
+                'user_id' => $user->getId()
+            ]);
+            $this->addFlash('error', 'Wystąpił błąd podczas wysyłania przeglądu.');
+        }
+        
+        return $this->redirectToRoute('asekuracja_review_show', ['id' => $review->getId()]);
+    }
+
+    #[Route('/{id}/delete', name: 'asekuracja_review_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function deleteReview(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'DELETE', $request);
+        
+        $review = $this->asekuracyjnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('delete_review_' . $review->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            $reviewNumber = $review->getReviewNumber();
+            $this->asekuracyjnyService->deleteReview($review, $user);
+            $this->addFlash('success', sprintf('Przegląd "%s" został usunięty pomyślnie.', $reviewNumber));
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Error deleting review', [
+                'error' => $e->getMessage(),
+                'review_id' => $id,
+                'user_id' => $user->getId()
+            ]);
+            $this->addFlash('error', 'Wystąpił błąd podczas usuwania przeglądu.');
+        }
+        
+        return $this->redirectToRoute('asekuracja_review_index');
+    }
+
     private function generateReviewNumber(): string
     {
         $year = date('Y');
