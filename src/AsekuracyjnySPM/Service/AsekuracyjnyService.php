@@ -605,6 +605,28 @@ class AsekuracyjnyService
         $review->setSentBy($user);
         $review->setUpdatedBy($user);
         
+        // Zmiana statusu sprzętu lub zestawu na "w trakcie przeglądu"
+        if ($review->getEquipment()) {
+            // Przegląd pojedynczego sprzętu
+            $equipment = $review->getEquipment();
+            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+            $equipment->setUpdatedBy($user);
+        } elseif ($review->getEquipmentSet()) {
+            // Przegląd zestawu - zmiana statusu zestawu i wszystkich jego elementów
+            $equipmentSet = $review->getEquipmentSet();
+            $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW);
+            $equipmentSet->setUpdatedBy($user);
+            
+            // Zmiana statusu wszystkich elementów zestawu
+            foreach ($equipmentSet->getEquipmentItems() as $item) {
+                $equipment = $item->getEquipment();
+                if ($equipment) {
+                    $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+                    $equipment->setUpdatedBy($user);
+                }
+            }
+        }
+        
         $this->entityManager->flush();
         
         $this->auditService->logUserAction($user, 'send_asekuracja_review', [
@@ -651,6 +673,28 @@ class AsekuracyjnyService
             }
             if ($review->getEquipmentSet()) {
                 $review->getEquipmentSet()->setNextReviewDate($data['next_review_date']);
+            }
+        }
+        
+        // Przywrócenie statusu sprzętu lub zestawu po zakończeniu przeglądu
+        if ($review->getEquipment()) {
+            // Przegląd pojedynczego sprzętu - przywrócenie statusu na "available"
+            $equipment = $review->getEquipment();
+            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
+            $equipment->setUpdatedBy($user);
+        } elseif ($review->getEquipmentSet()) {
+            // Przegląd zestawu - przywrócenie statusu zestawu i wszystkich jego elementów
+            $equipmentSet = $review->getEquipmentSet();
+            $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_AVAILABLE);
+            $equipmentSet->setUpdatedBy($user);
+            
+            // Przywrócenie statusu wszystkich elementów zestawu
+            foreach ($equipmentSet->getEquipmentItems() as $item) {
+                $equipment = $item->getEquipment();
+                if ($equipment) {
+                    $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
+                    $equipment->setUpdatedBy($user);
+                }
             }
         }
         
