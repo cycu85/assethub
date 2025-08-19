@@ -418,6 +418,165 @@ class ReviewController extends AbstractController
         return $this->redirectToRoute('asekuracja_review_index');
     }
 
+    #[Route('/{id}/complete', name: 'asekuracja_review_complete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function completeReview(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
+        
+        $review = $this->asekuracijnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('complete_review_' . $review->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            // Przygotowanie danych z formularza
+            $completionData = [
+                'completed_date' => $request->request->get('completed_date') ? 
+                    new \DateTime($request->request->get('completed_date')) : new \DateTime(),
+                'result' => $request->request->get('result'),
+                'certificate_number' => $request->request->get('certificate_number'),
+                'cost' => $request->request->get('cost'),
+                'findings' => $request->request->get('findings'),
+                'recommendations' => $request->request->get('recommendations'),
+                'next_review_date' => $request->request->get('next_review_date') ? 
+                    new \DateTime($request->request->get('next_review_date')) : null
+            ];
+
+            // Walidacja wymaganego pola 'result'
+            if (empty($completionData['result'])) {
+                $this->addFlash('error', 'Wynik przeglądu jest wymagany.');
+                return $this->redirectToRoute('asekuracja_review_show', ['id' => $review->getId()]);
+            }
+
+            // Obsługa załączników
+            $attachments = $request->files->get('attachments', []);
+            if (!empty($attachments)) {
+                $uploadedFiles = $this->handleFileUploads($attachments, $review, $user);
+                $completionData['attachments'] = $uploadedFiles;
+            }
+
+            // Zakończenie przeglądu
+            $this->asekuracyjnyService->completeReview($review, $completionData, $user);
+            
+            $this->addFlash('success', sprintf('Przegląd "%s" został zakończony pomyślnie.', $review->getReviewNumber()));
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Error completing review', [
+                'error' => $e->getMessage(),
+                'review_id' => $id,
+                'user_id' => $user->getId()
+            ]);
+            $this->addFlash('error', 'Wystąpił błąd podczas zakończenia przeglądu: ' . $e->getMessage());
+        }
+        
+        return $this->redirectToRoute('asekuracja_review_show', ['id' => $review->getId()]);
+    }
+
+    #[Route('/{id}/attachment/{filename}', name: 'asekuracja_review_attachment_download', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function downloadAttachment(int $id, string $filename, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
+        
+        $review = $this->asekuracyjnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // Sprawdzenie czy załącznik istnieje w przglądzie
+        $attachments = $review->getAttachments();
+        $attachment = null;
+        
+        foreach ($attachments as $att) {
+            if ($att['filename'] === $filename) {
+                $attachment = $att;
+                break;
+            }
+        }
+        
+        if (!$attachment) {
+            throw $this->createNotFoundException('Załącznik nie został znaleziony');
+        }
+        
+        $filePath = $this->getParameter('kernel.project_dir') . '/public/uploads/reviews/' . $review->getId() . '/' . $filename;
+        
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Plik nie został znaleziony na serwerze');
+        }
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'download_asekuracja_review_attachment', [
+            'review_id' => $review->getId(),
+            'filename' => $filename,
+            'original_name' => $attachment['original_name']
+        ], $request);
+        
+        return $this->file($filePath, $attachment['original_name']);
+    }
+
+    private function handleFileUploads(array $files, AsekuracyjnyReview $review, User $user): array
+    {
+        $uploadedFiles = [];
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/reviews/' . $review->getId();
+        
+        // Tworzenie katalogu jeśli nie istnieje
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        foreach ($files as $file) {
+            if ($file && $file->isValid()) {
+                // Sprawdzenie rozmiaru pliku (max 10MB)
+                if ($file->getSize() > 10 * 1024 * 1024) {
+                    throw new \Exception('Plik "' . $file->getClientOriginalName() . '" jest za duży (max 10MB).');
+                }
+                
+                // Sprawdzenie typu pliku
+                $allowedMimeTypes = [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'image/jpeg',
+                    'image/png',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                ];
+                
+                if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
+                    throw new \Exception('Nieprawidłowy format pliku: ' . $file->getClientOriginalName());
+                }
+                
+                // Generowanie unikalnej nazwy pliku
+                $originalName = $file->getClientOriginalName();
+                $extension = $file->guessExtension();
+                $fileName = uniqid() . '_' . time() . '.' . $extension;
+                
+                // Przeniesienie pliku
+                $file->move($uploadDir, $fileName);
+                
+                $uploadedFiles[] = [
+                    'filename' => $fileName,
+                    'original_name' => $originalName,
+                    'uploaded_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                    'uploaded_by' => $user->getId(),
+                    'size' => filesize($uploadDir . '/' . $fileName)
+                ];
+            }
+        }
+        
+        return $uploadedFiles;
+    }
+
     private function generateReviewNumber(): string
     {
         $year = date('Y');

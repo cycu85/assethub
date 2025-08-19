@@ -265,6 +265,54 @@
             </div>
         </div>
         {% endif %}
+        
+        <!-- Załączniki -->
+        {% if review.attachments is not empty %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-attachment-line me-2"></i>Załączniki z przeglądu
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for attachment in review.attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="avatar-sm bg-light rounded me-3">
+                                {% if attachment.filename|split('.')|last in ['pdf'] %}
+                                    <i class="ri-file-pdf-line text-danger fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['doc', 'docx'] %}
+                                    <i class="ri-file-word-line text-primary fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['jpg', 'jpeg', 'png'] %}
+                                    <i class="ri-image-line text-success fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['xls', 'xlsx'] %}
+                                    <i class="ri-file-excel-line text-success fs-16"></i>
+                                {% else %}
+                                    <i class="ri-file-line text-muted fs-16"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14">{{ attachment.original_name }}</h6>
+                                <div class="text-muted small">
+                                    <span>{{ (attachment.size / 1024)|number_format(0) }} KB</span>
+                                    <span class="mx-1">•</span>
+                                    <span>{{ attachment.uploaded_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="{{ path('asekuracja_review_attachment_download', {id: review.id, filename: attachment.filename}) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="ri-download-line"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar z akcjami -->
@@ -293,10 +341,10 @@
                     {% endif %}
 
                     {% if review.status == 'sent' and can_edit %}
-                    <a href="{{ path('asekuracja_review_edit', {id: review.id}) }}?mode=completion" 
-                       class="btn btn-success">
+                    <button type="button" class="btn btn-success w-100" 
+                            data-bs-toggle="modal" data-bs-target="#completeReviewModal">
                         <i class="ri-check-double-line me-1"></i>Zakończ przegląd
-                    </a>
+                    </button>
                     {% endif %}
 
                     {% if can_delete and review.status == 'preparation' %}
@@ -422,4 +470,104 @@
     font-weight: 600;
 }
 </style>
+
+<!-- Modal zakończenia przeglądu -->
+{% if review.status == 'sent' and can_edit %}
+<div class="modal fade" id="completeReviewModal" tabindex="-1" aria-labelledby="completeReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completeReviewModalLabel">
+                    <i class="ri-check-double-line me-2"></i>Zakończenie przeglądu {{ review.reviewNumber }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ path('asekuracja_review_complete', {id: review.id}) }}" enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token('complete_review_' ~ review.id) }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="completedDate" class="form-label">Data zakończenia przeglądu <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="completedDate" name="completed_date" 
+                                       value="{{ 'now'|date('Y-m-d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="result" class="form-label">Wynik przeglądu <span class="text-danger">*</span></label>
+                                <select class="form-select" id="result" name="result" required>
+                                    <option value="">Wybierz wynik</option>
+                                    <option value="passed">Pozytywny</option>
+                                    <option value="failed">Negatywny</option>
+                                    <option value="conditionally_passed">Warunkowo pozytywny</option>
+                                    <option value="not_applicable">Nie dotyczy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="certificateNumber" class="form-label">Numer certyfikatu/protokołu</label>
+                                <input type="text" class="form-control" id="certificateNumber" name="certificate_number" 
+                                       placeholder="Numer dokumentu potwierdzającego przegląd">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cost" class="form-label">Koszt przeglądu (PLN)</label>
+                                <input type="number" class="form-control" id="cost" name="cost" step="0.01" min="0"
+                                       placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="nextReviewDate" class="form-label">Data następnego przeglądu</label>
+                        <input type="date" class="form-control" id="nextReviewDate" name="next_review_date"
+                               min="{{ 'now'|date('Y-m-d') }}">
+                        <div class="form-text">Zalecana data kolejnego przeglądu</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="findings" class="form-label">Stwierdzone usterki/uwagi</label>
+                        <textarea class="form-control" id="findings" name="findings" rows="3"
+                                  placeholder="Opis stwierdzonych usterek, wad, obserwacji..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="recommendations" class="form-label">Zalecenia</label>
+                        <textarea class="form-control" id="recommendations" name="recommendations" rows="3"
+                                  placeholder="Zalecenia dotyczące dalszego użytkowania, napraw, wymiany..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="attachments" class="form-label">Załączniki z przeglądu</label>
+                        <input type="file" class="form-control" id="attachments" name="attachments[]" multiple
+                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls">
+                        <div class="form-text">
+                            Dozwolone formaty: PDF, DOC, DOCX, JPG, PNG, XLSX, XLS. Maksymalny rozmiar: 10MB na plik.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Informacja
+                        </h6>
+                        <p class="mb-0">Po zakończeniu przeglądu status sprzętu/zestawu zostanie automatycznie zmieniony na "Dostępny". W historii przeglądu zostanie zapisany odnośnik do tego przeglądu.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ przegląd
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

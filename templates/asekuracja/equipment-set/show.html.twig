@@ -135,6 +135,23 @@
                             </p>
                         </div>
                         {% endif %}
+                        
+                        {% set lastReview = equipment_set.lastReview %}
+                        {% if lastReview %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Ostatni przegląd</label>
+                            <p class="mb-0">
+                                <a href="{{ path('asekuracja_review_show', {id: lastReview.id}) }}" class="text-decoration-none">
+                                    {{ lastReview.completedDate|date('d.m.Y') }}
+                                    <i class="ri-external-link-line ms-1 small"></i>
+                                </a>
+                                <br><small class="text-muted">{{ lastReview.resultDisplayName }}</small>
+                                {% if lastReview.certificateNumber %}
+                                    <br><small class="text-muted">Cert: {{ lastReview.certificateNumber }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 

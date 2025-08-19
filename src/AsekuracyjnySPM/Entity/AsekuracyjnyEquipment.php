@@ -568,7 +568,7 @@ class AsekuracyjnyEquipment
         }
 
         usort($reviews, function($a, $b) {
-            return $b->getCompletedAt() <=> $a->getCompletedAt();
+            return $b->getCompletedDate() <=> $a->getCompletedDate();
         });
 
         return $reviews[0] ?? null;

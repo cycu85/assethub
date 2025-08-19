@@ -455,7 +455,7 @@ class AsekuracyjnyEquipmentSet
         }
 
         usort($reviews, function($a, $b) {
-            return $b->getCompletedAt() <=> $a->getCompletedAt();
+            return $b->getCompletedDate() <=> $a->getCompletedDate();
         });
 
         return $reviews[0] ?? null;
@@ -468,7 +468,7 @@ class AsekuracyjnyEquipmentSet
         }
 
         $lastReview = $this->getLastReview();
-        $baseDate = $lastReview?->getCompletedAt() ?? $this->createdAt;
+        $baseDate = $lastReview?->getCompletedDate() ?? $this->createdAt;
         
         if (!$baseDate) {
             return null;

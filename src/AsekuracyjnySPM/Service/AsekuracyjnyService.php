@@ -664,6 +664,12 @@ class AsekuracyjnyService
         if (isset($data['cost'])) {
             $review->setCost($data['cost']);
         }
+        if (isset($data['attachments'])) {
+            // Dodanie nowych załączników do istniejących
+            $existingAttachments = $review->getAttachments();
+            $newAttachments = array_merge($existingAttachments, $data['attachments']);
+            $review->setAttachments($newAttachments);
+        }
         if (isset($data['next_review_date'])) {
             $review->setNextReviewDate($data['next_review_date']);
             
