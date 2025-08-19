@@ -480,6 +480,40 @@ class AsekuracyjnyEquipmentSet
         return $nextDate;
     }
 
+    public function hasElementsNeedingReview(): bool
+    {
+        foreach ($this->equipment as $equipment) {
+            if ($equipment->needsReview()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function hasElementsOverdueReview(): bool
+    {
+        foreach ($this->equipment as $equipment) {
+            if ($equipment->isReviewOverdue()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function getElementsNeedingReviewCount(): int
+    {
+        return $this->equipment->filter(function(AsekuracyjnyEquipment $equipment) {
+            return $equipment->needsReview();
+        })->count();
+    }
+
+    public function getElementsOverdueReviewCount(): int
+    {
+        return $this->equipment->filter(function(AsekuracyjnyEquipment $equipment) {
+            return $equipment->isReviewOverdue();
+        })->count();
+    }
+
     public function __toString(): string
     {
         return $this->name ?? '';

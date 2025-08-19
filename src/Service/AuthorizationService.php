@@ -130,7 +130,7 @@ class AuthorizationService
     /**
      * Sprawdza czy użytkownik jest właścicielem zasobu lub ma uprawnienia administracyjne
      */
-    public function checkResourceOwnership(?User $user, $resource, string $ownerProperty = 'user', string $adminPermission = 'ADMIN', Request $request): void
+    public function checkResourceOwnership(?User $user, $resource, Request $request, string $ownerProperty = 'user', string $adminPermission = 'ADMIN'): void
     {
         if (!$user) {
             $this->logUnauthorizedAccess(null, "No user authenticated for resource access", $request);
@@ -201,9 +201,9 @@ class AuthorizationService
                 'resource_ownership' => $this->checkResourceOwnership(
                     $user, 
                     $condition['resource'], 
+                    $request,
                     $condition['owner_property'] ?? 'user',
-                    $condition['admin_permission'] ?? 'ADMIN',
-                    $request
+                    $condition['admin_permission'] ?? 'ADMIN'
                 ),
                 default => throw new \InvalidArgumentException("Unknown condition type: {$condition['type']}")
             };
