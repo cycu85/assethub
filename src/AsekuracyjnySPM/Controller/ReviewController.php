@@ -91,6 +91,30 @@ class ReviewController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             try {
+                // Sprawdzenie czy wybrano sprzęt lub zestaw
+                if (!$review->getEquipment() && !$review->getEquipmentSet()) {
+                    $this->addFlash('error', 'Musisz wybrać sprzęt lub zestaw sprzętu do przeglądu.');
+                    return $this->render('asekuracja/review/form.html.twig', [
+                        'review' => $review,
+                        'form' => $form,
+                        'page_title' => 'Nowy przegląd',
+                        'can_edit' => true,
+                        'can_delete' => false
+                    ]);
+                }
+
+                // Sprawdzenie czy nie wybrano obu naraz
+                if ($review->getEquipment() && $review->getEquipmentSet()) {
+                    $this->addFlash('error', 'Możesz wybrać albo sprzęt, albo zestaw sprzętu, ale nie oba naraz.');
+                    return $this->render('asekuracja/review/form.html.twig', [
+                        'review' => $review,
+                        'form' => $form,
+                        'page_title' => 'Nowy przegląd',
+                        'can_edit' => true,
+                        'can_delete' => false
+                    ]);
+                }
+
                 // Generowanie numeru przeglądu
                 $reviewNumber = $this->generateReviewNumber();
                 $review->setReviewNumber($reviewNumber);

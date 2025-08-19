@@ -96,7 +96,7 @@
                             {{ form_label(form.equipment) }}
                             {{ form_widget(form.equipment) }}
                             {{ form_errors(form.equipment) }}
-                            <div class="form-text">Wybierz sprzęt lub zestaw sprzętu do przeglądu</div>
+                            <div class="form-text">Wybierz sprzęt do przeglądu (wykluczające się z zestawem)</div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -104,8 +104,16 @@
                             {{ form_label(form.equipmentSet) }}
                             {{ form_widget(form.equipmentSet) }}
                             {{ form_errors(form.equipmentSet) }}
+                            <div class="form-text">Wybierz zestaw sprzętu do przeglądu (wykluczające się ze sprzętem)</div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Informacja
+                    </h6>
+                    <p class="mb-0">Możesz wybrać albo pojedynczy sprzęt, albo cały zestaw sprzętu do przeglądu. Pola wykluczają się wzajemnie.</p>
                 </div>
                 {% endif %}
 

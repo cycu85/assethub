@@ -3,7 +3,10 @@
 namespace App\AsekuracyjnySPM\Form;
 
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\Repository\DictionaryRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -68,6 +71,50 @@ class AsekuracyjnyReviewType extends AbstractType
                     'placeholder' => 'Szczególne wymagania, obszary do sprawdzenia, historia problemów...'
                 ]
             ]);
+
+        // Dodanie pól wyboru sprzętu/zestawu tylko jeśli nie są określone w opcjach
+        if (!$options['equipment'] && !$options['equipment_set']) {
+            $builder
+                ->add('equipment', EntityType::class, [
+                    'class' => AsekuracyjnyEquipment::class,
+                    'choice_label' => function(AsekuracyjnyEquipment $equipment) {
+                        return $equipment->getName() . ' (' . $equipment->getInventoryNumber() . ')';
+                    },
+                    'label' => 'Sprzęt do przeglądu',
+                    'required' => false,
+                    'placeholder' => 'Wybierz sprzęt',
+                    'attr' => [
+                        'class' => 'form-select',
+                        'data-toggle' => 'equipment-select'
+                    ],
+                    'query_builder' => function($repository) {
+                        return $repository->createQueryBuilder('e')
+                            ->where('e.status IN (:statuses)')
+                            ->setParameter('statuses', ['available', 'assigned'])
+                            ->orderBy('e.name', 'ASC');
+                    }
+                ])
+                
+                ->add('equipmentSet', EntityType::class, [
+                    'class' => AsekuracyjnyEquipmentSet::class,
+                    'choice_label' => function(AsekuracyjnyEquipmentSet $equipmentSet) {
+                        return $equipmentSet->getName() . ' (' . $equipmentSet->getEquipmentItems()->count() . ' elementów)';
+                    },
+                    'label' => 'Zestaw sprzętu do przeglądu',
+                    'required' => false,
+                    'placeholder' => 'Wybierz zestaw',
+                    'attr' => [
+                        'class' => 'form-select',
+                        'data-toggle' => 'equipment-set-select'
+                    ],
+                    'query_builder' => function($repository) {
+                        return $repository->createQueryBuilder('es')
+                            ->where('es.status IN (:statuses)')
+                            ->setParameter('statuses', ['available', 'assigned'])
+                            ->orderBy('es.name', 'ASC');
+                    }
+                ]);
+        }
 
         // Pola do wypełnienia po zakończeniu przeglądu (tylko w trybie edycji)
         if ($options['mode'] === 'completion') {
