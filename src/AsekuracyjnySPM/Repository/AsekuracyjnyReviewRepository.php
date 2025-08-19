@@ -296,7 +296,7 @@ class AsekuracyjnyReviewRepository extends ServiceEntityRepository
         $cancelled = $this->createQueryBuilder('r')
             ->select('COUNT(r.id)')
             ->where('r.status = :status')
-            ->setParameter('status', AsekuracijnyReview::STATUS_CANCELLED)
+            ->setParameter('status', AsekuracyjnyReview::STATUS_CANCELLED)
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -331,7 +331,7 @@ class AsekuracyjnyReviewRepository extends ServiceEntityRepository
             ->setParameter('equipment', $equipment)
             ->setParameter('activeStatuses', [
                 AsekuracyjnyReview::STATUS_PREPARATION,
-                AsekuracijnyReview::STATUS_SENT
+                AsekuracyjnyReview::STATUS_SENT
             ])
             ->orderBy('r.createdAt', 'DESC')
             ->getQuery()
