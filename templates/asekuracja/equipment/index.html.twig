@@ -169,11 +169,51 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Sprzęt</th>
-                                <th>Typ</th>
-                                <th>Status</th>
-                                <th>Przypisane do</th>
-                                <th>Następny przegląd</th>
+                                <th>
+                                    <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'name', sort_dir: filters.sort_by == 'name' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Sprzęt
+                                        {% if filters.sort_by == 'name' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'equipment_type', sort_dir: filters.sort_by == 'equipment_type' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Typ
+                                        {% if filters.sort_by == 'equipment_type' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'status', sort_dir: filters.sort_by == 'status' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Status
+                                        {% if filters.sort_by == 'status' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'assigned_to', sort_dir: filters.sort_by == 'assigned_to' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Przypisane do
+                                        {% if filters.sort_by == 'assigned_to' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'next_review_date', sort_dir: filters.sort_by == 'next_review_date' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
+                                       class="text-decoration-none text-dark">
+                                        Następny przegląd
+                                        {% if filters.sort_by == 'next_review_date' %}
+                                            <i class="ri-arrow-{{ filters.sort_dir == 'ASC' ? 'up' : 'down' }}-s-line"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
                                 <th class="text-end">Akcje</th>
                             </tr>
                         </thead>

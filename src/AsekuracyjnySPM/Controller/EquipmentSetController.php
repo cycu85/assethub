@@ -44,7 +44,9 @@ class EquipmentSetController extends AbstractController
             'set_type' => $request->query->get('set_type'),
             'assigned_to' => $request->query->get('assigned_to'),
             'needs_review' => $request->query->getBoolean('needs_review'),
-            'overdue_review' => $request->query->getBoolean('overdue_review')
+            'overdue_review' => $request->query->getBoolean('overdue_review'),
+            'sort_by' => $request->query->get('sort_by'),
+            'sort_dir' => $request->query->get('sort_dir')
         ];
 
         $equipmentSetsPagination = $this->asekuracyjnyService->getEquipmentSetsWithPagination($page, 25, $filters);

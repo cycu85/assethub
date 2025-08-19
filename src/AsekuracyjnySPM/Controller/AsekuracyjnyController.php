@@ -43,7 +43,9 @@ class AsekuracyjnyController extends AbstractController
             'equipment_type' => $request->query->get('equipment_type'),
             'assigned_to' => $request->query->get('assigned_to'),
             'needs_review' => $request->query->getBoolean('needs_review'),
-            'overdue_review' => $request->query->getBoolean('overdue_review')
+            'overdue_review' => $request->query->getBoolean('overdue_review'),
+            'sort_by' => $request->query->get('sort_by'),
+            'sort_dir' => $request->query->get('sort_dir')
         ];
 
         $equipmentPagination = $this->asekuracyjnyService->getEquipmentWithPagination($page, 25, $filters);

@@ -40,8 +40,27 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('e')
             ->leftJoin('e.assignedTo', 'u')
-            ->addSelect('u')
-            ->orderBy('e.name', 'ASC');
+            ->addSelect('u');
+
+        // Sortowanie
+        $sortBy = $filters['sort_by'] ?? 'name';
+        $sortDir = $filters['sort_dir'] ?? 'ASC';
+        
+        $validSortFields = [
+            'name' => 'e.name',
+            'inventory_number' => 'e.inventoryNumber', 
+            'equipment_type' => 'e.equipmentType',
+            'status' => 'e.status',
+            'assigned_to' => 'u.username',
+            'next_review_date' => 'e.nextReviewDate',
+            'created_at' => 'e.createdAt'
+        ];
+        
+        if (isset($validSortFields[$sortBy])) {
+            $qb->orderBy($validSortFields[$sortBy], strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC');
+        } else {
+            $qb->orderBy('e.name', 'ASC');
+        }
 
         $this->applyFilters($qb, $filters);
 
