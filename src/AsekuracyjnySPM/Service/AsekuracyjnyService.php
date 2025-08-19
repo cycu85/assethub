@@ -548,10 +548,10 @@ class AsekuracyjnyService
         $this->entityManager->persist($review);
         $this->entityManager->flush();
         
-        $this->auditService->logAction('create_review', [
+        $this->auditService->logUserAction($user, 'create_asekuracja_review', [
             'review_id' => $review->getId(),
             'review_number' => $review->getReviewNumber()
-        ], $user);
+        ]);
         
         return $review;
     }
@@ -570,11 +570,11 @@ class AsekuracyjnyService
         
         $this->entityManager->flush();
         
-        $this->auditService->logAction('update_review', [
+        $this->auditService->logUserAction($user, 'update_asekuracja_review', [
             'review_id' => $review->getId(),
             'review_number' => $review->getReviewNumber(),
             'changes' => array_diff_assoc($this->getReviewDataArray($review), $oldData)
-        ], $user);
+        ]);
         
         return $review;
     }
@@ -585,10 +585,10 @@ class AsekuracyjnyService
             throw new BusinessLogicException('Nie można usunąć zakończonego przeglądu');
         }
         
-        $this->auditService->logAction('delete_review', [
+        $this->auditService->logUserAction($user, 'delete_asekuracja_review', [
             'review_id' => $review->getId(),
             'review_number' => $review->getReviewNumber()
-        ], $user);
+        ]);
         
         $this->entityManager->remove($review);
         $this->entityManager->flush();
@@ -607,10 +607,10 @@ class AsekuracyjnyService
         
         $this->entityManager->flush();
         
-        $this->auditService->logAction('send_review', [
+        $this->auditService->logUserAction($user, 'send_asekuracja_review', [
             'review_id' => $review->getId(),
             'review_number' => $review->getReviewNumber()
-        ], $user);
+        ]);
         
         return $review;
     }
@@ -656,11 +656,11 @@ class AsekuracyjnyService
         
         $this->entityManager->flush();
         
-        $this->auditService->logAction('complete_review', [
+        $this->auditService->logUserAction($user, 'complete_asekuracja_review', [
             'review_id' => $review->getId(),
             'review_number' => $review->getReviewNumber(),
             'result' => $review->getResult()
-        ], $user);
+        ]);
         
         return $review;
     }
