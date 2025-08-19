@@ -156,8 +156,13 @@ class AsekuracyjnyReviewType extends AbstractType
         $resolver->setDefaults([
             'data_class' => AsekuracyjnyReview::class,
             'include_submit' => true,
-            'mode' => 'create' // create, edit, completion
+            'mode' => 'create', // create, edit, completion
+            'equipment' => null,
+            'equipment_set' => null,
         ]);
+
+        $resolver->setAllowedTypes('equipment', ['null', 'App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment']);
+        $resolver->setAllowedTypes('equipment_set', ['null', 'App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet']);
     }
 
     private function getReviewTypeChoices(): array
