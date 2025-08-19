@@ -283,7 +283,7 @@
                     {% endif %}
 
                     {% if review.status == 'preparation' and can_edit %}
-                    <form method="POST" action="#" class="d-inline">
+                    <form method="POST" action="{{ path('asekuracja_review_send', {id: review.id}) }}" class="d-inline">
                         <input type="hidden" name="_token" value="{{ csrf_token('send_review_' ~ review.id) }}">
                         <button type="submit" class="btn btn-warning w-100" 
                                 onclick="return confirm('Czy na pewno wysłać przegląd?')">
@@ -300,7 +300,7 @@
                     {% endif %}
 
                     {% if can_delete and review.status == 'preparation' %}
-                    <form method="POST" action="#" class="d-inline">
+                    <form method="POST" action="{{ path('asekuracja_review_delete', {id: review.id}) }}" class="d-inline">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete_review_' ~ review.id) }}">
                         <button type="submit" class="btn btn-outline-danger w-100" 
                                 onclick="return confirm('Czy na pewno usunąć ten przegląd?')">
