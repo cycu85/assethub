@@ -3,6 +3,7 @@
 namespace App\AsekuracyjnySPM\Controller;
 
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Service\AsekuracyjnyService;
 use App\AsekuracyjnySPM\Form\AsekuracyjnyEquipmentType;
 use App\Entity\User;
@@ -159,6 +160,15 @@ class AsekuracyjnyController extends AbstractController
         $canReview = $this->authorizationService->hasPermission($user, 'asekuracja', 'REVIEW');
         $canTransfer = $this->authorizationService->hasPermission($user, 'asekuracja', 'TRANSFER');
 
+        // Pobierz przeglądy posortowane chronologicznie (najnowsze pierwsze)
+        $reviews = $this->entityManager->getRepository(AsekuracyjnyReview::class)
+            ->createQueryBuilder('r')
+            ->where('r.equipment = :equipment')
+            ->setParameter('equipment', $equipment)
+            ->orderBy('r.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
         // Audit
         $this->auditService->logUserAction($user, 'view_asekuracja_equipment', [
             'equipment_id' => $equipment->getId(),
@@ -167,6 +177,7 @@ class AsekuracyjnyController extends AbstractController
         
         return $this->render('asekuracja/equipment/show.html.twig', [
             'equipment' => $equipment,
+            'reviews' => $reviews,
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,
             'can_assign' => $canAssign,
