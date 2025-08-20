@@ -222,10 +222,9 @@
                 {% endif %}
                 
                 {% if can_review %}
-                <button class="btn btn-outline-info w-100 mb-2" disabled>
+                <a href="{{ path('asekuracja_review_new_for_set', {id: equipment_set.id}) }}" class="btn btn-outline-info w-100 mb-2">
                     <i class="ri-search-eye-line me-1"></i>Nowy przegląd
-                    <small class="d-block">W rozwoju</small>
-                </button>
+                </a>
                 {% endif %}
                 
                 {% if can_transfer %}
