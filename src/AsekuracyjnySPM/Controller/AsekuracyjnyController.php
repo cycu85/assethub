@@ -11,6 +11,7 @@ use App\Service\AuthorizationService;
 use App\Service\AuditService;
 use App\Exception\ValidationException;
 use App\Exception\BusinessLogicException;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ class AsekuracyjnyController extends AbstractController
         private AuthorizationService $authorizationService,
         private AuditService $auditService,
         private AsekuracyjnyService $asekuracyjnyService,
+        private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {}
 
