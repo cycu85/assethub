@@ -309,7 +309,7 @@ class AsekuracyjnyReview
 
     public function getResultDisplayName(): string
     {
-        return self::RESULTS[$this->result] ?? $this->result;
+        return self::RESULTS[$this->result] ?? $this->result ?? '';
     }
 
     public function getFindings(): ?string
