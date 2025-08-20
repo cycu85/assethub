@@ -6,6 +6,7 @@ use App\Entity\Equipment;
 use App\Entity\EquipmentCategory;
 use App\Entity\EquipmentLog;
 use App\Entity\User;
+use App\DataFixtures\AppFixtures;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -18,6 +19,11 @@ class SampleDataService
 
     public function loadSampleData(): void
     {
+        // First load all fixtures (including asekuracja module data)
+        $fixtures = new AppFixtures($this->passwordHasher);
+        $fixtures->load($this->entityManager);
+        
+        // Then load additional sample data
         $this->createSampleUsers();
         $this->createSampleEquipment();
         $this->entityManager->flush();

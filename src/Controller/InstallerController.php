@@ -319,6 +319,7 @@ class InstallerController extends AbstractController
         $modules = [
             ['name' => 'admin', 'display_name' => 'Panel Administracyjny', 'description' => 'Zarządzanie systemem', 'is_enabled' => true],
             ['name' => 'equipment', 'display_name' => 'Sprzęt', 'description' => 'Zarządzanie sprzętem i narzędziami', 'is_enabled' => true],
+            ['name' => 'asekuracja', 'display_name' => 'Asekuracja', 'description' => 'Zarządzanie sprzętem asekuracyjnym/wysokościowym', 'is_enabled' => true],
             ['name' => 'safety', 'display_name' => 'Sprzęt Ochronny', 'description' => 'Zarządzanie środkami ochrony osobistej', 'is_enabled' => false],
             ['name' => 'it', 'display_name' => 'Sprzęt IT', 'description' => 'Zarządzanie sprzętem informatycznym', 'is_enabled' => false],
             ['name' => 'vehicles', 'display_name' => 'Flota Pojazdów', 'description' => 'Zarządzanie flotą pojazdów', 'is_enabled' => false],
@@ -341,6 +342,7 @@ class InstallerController extends AbstractController
         // Create basic roles
         $adminModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'admin']);
         $equipmentModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'equipment']);
+        $asekuracijaModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'asekuracja']);
 
         $roles = [
             [
@@ -384,6 +386,35 @@ class InstallerController extends AbstractController
                 'module' => $adminModule,
                 'permissions' => ['EMPLOYEES_VIEW', 'EMPLOYEES_EDIT_BASIC', 'EMPLOYEES_EDIT_FULL'],
                 'is_system' => true
+            ],
+            // Asekuracja roles
+            [
+                'name' => 'ASSEK_ADMIN',
+                'description' => 'Administrator Asekuracji - pełne prawa do modułu',
+                'module' => $asekuracijaModule,
+                'permissions' => ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER'],
+                'is_system' => false
+            ],
+            [
+                'name' => 'ASSEK_EDITOR',
+                'description' => 'Edytor Asekuracji - bez uprawnień do usuwania',
+                'module' => $asekuracijaModule,
+                'permissions' => ['VIEW', 'CREATE', 'EDIT', 'ASSIGN', 'REVIEW', 'TRANSFER'],
+                'is_system' => false
+            ],
+            [
+                'name' => 'ASSEK_VIEWER',
+                'description' => 'Przeglądający Asekuracji - tylko podgląd',
+                'module' => $asekuracijaModule,
+                'permissions' => ['VIEW'],
+                'is_system' => false
+            ],
+            [
+                'name' => 'ASSEK_LIST',
+                'description' => 'Lista Asekuracji - tylko lista zestawów i elementów',
+                'module' => $asekuracijaModule,
+                'permissions' => ['VIEW_LIST'],
+                'is_system' => false
             ]
         ];
 
@@ -468,6 +499,17 @@ class InstallerController extends AbstractController
             $userRole = new UserRole();
             $userRole->setUser($user);
             $userRole->setRole($adminRole);
+            $userRole->setAssignedBy($user);
+            $userRole->setIsActive(true);
+            $this->entityManager->persist($userRole);
+        }
+
+        // Assign asekuracja admin role
+        $assekAdminRole = $this->entityManager->getRepository(Role::class)->findOneBy(['name' => 'ASSEK_ADMIN']);
+        if ($assekAdminRole) {
+            $userRole = new UserRole();
+            $userRole->setUser($user);
+            $userRole->setRole($assekAdminRole);
             $userRole->setAssignedBy($user);
             $userRole->setIsActive(true);
             $this->entityManager->persist($userRole);
