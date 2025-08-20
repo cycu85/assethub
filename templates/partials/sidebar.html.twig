@@ -79,7 +79,7 @@
                             <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}" id="sidebarAsekuracja">
                                 <ul class="nav nav-sm flex-column">
                                     <li class="nav-item">
-                                        <a href="{{ path('asekuracja_index') }}" class="nav-link {{ current_route starts with 'asekuracja_equipment' or current_route == 'asekuracja_index' ? 'active' : '' }}">
+                                        <a href="{{ path('asekuracja_index') }}" class="nav-link {{ (current_route starts with 'asekuracja_equipment' and not current_route starts with 'asekuracja_equipment_set') or current_route == 'asekuracja_index' ? 'active' : '' }}">
                                             <i class="ri-shield-line me-2"></i>Sprzęt
                                         </a>
                                     </li>
