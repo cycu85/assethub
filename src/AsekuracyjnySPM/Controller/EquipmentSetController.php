@@ -291,8 +291,8 @@ class EquipmentSetController extends AbstractController
             }
         }
         
-        // Pobranie dostępnego sprzętu (nie przypisanego do żadnego zestawu lub dostępnego)
-        $availableEquipment = $this->asekuracyjnyService->getAvailableEquipment();
+        // Pobranie dostępnego sprzętu (nie przypisanego do żadnego zestawu)
+        $availableEquipment = $this->asekuracyjnyService->getAvailableEquipmentForSet();
         
         return $this->render('asekuracja/equipment-set/add-equipment.html.twig', [
             'equipment_set' => $equipmentSet,
@@ -352,12 +352,31 @@ class EquipmentSetController extends AbstractController
         $limit = 20;
         
         try {
-            $filters = [
-                'search' => $search,
-                'status' => AsekuracyjnyEquipment::STATUS_AVAILABLE
-            ];
+            // Pobranie sprzętu dostępnego dla zestawów (nie przypisanego do żadnego zestawu)
+            $availableEquipment = $this->asekuracyjnyService->getAvailableEquipmentForSet();
             
-            $pagination = $this->asekuracyjnyService->getEquipmentWithPagination($page, $limit, $filters);
+            // Filtrowanie po wyszukiwaniu
+            if (!empty($search)) {
+                $availableEquipment = array_filter($availableEquipment, function($equipment) use ($search) {
+                    $searchLower = strtolower($search);
+                    return stripos($equipment->getName(), $search) !== false ||
+                           stripos($equipment->getInventoryNumber(), $search) !== false ||
+                           stripos($equipment->getModel(), $search) !== false ||
+                           stripos($equipment->getManufacturer(), $search) !== false;
+                });
+            }
+            
+            // Paginacja ręczna
+            $total = count($availableEquipment);
+            $offset = ($page - 1) * $limit;
+            $items = array_slice($availableEquipment, $offset, $limit);
+            
+            $pagination = [
+                'items' => $items,
+                'total' => $total,
+                'page' => $page,
+                'pages' => ceil($total / $limit)
+            ];
             
             $equipment = array_map(function ($item) {
                 return [

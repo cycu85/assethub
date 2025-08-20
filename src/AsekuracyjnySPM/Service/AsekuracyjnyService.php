@@ -355,6 +355,11 @@ class AsekuracyjnyService
         return $this->equipmentRepository->findAvailable();
     }
 
+    public function getAvailableEquipmentForSet(): array
+    {
+        return $this->equipmentRepository->findAvailableForEquipmentSet();
+    }
+
     public function getAvailableEquipmentSets(): array
     {
         return $this->equipmentSetRepository->findAvailable();

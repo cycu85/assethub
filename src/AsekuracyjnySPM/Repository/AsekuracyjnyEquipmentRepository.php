@@ -240,6 +240,19 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findAvailableForEquipmentSet(): array
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.equipmentSets', 'es')
+            ->where('e.status = :status')
+            ->andWhere('e.assignedTo IS NULL')
+            ->andWhere('es.id IS NULL')
+            ->setParameter('status', AsekuracyjnyEquipment::STATUS_AVAILABLE)
+            ->orderBy('e.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     private function applyFilters(QueryBuilder $qb, array $filters): void
     {
         if (!empty($filters['search'])) {
