@@ -266,25 +266,6 @@
         </div>
         {% endif %}
         
-        <!-- Debug: Informacja o załącznikach -->
-        {% if review.status == 'completed' %}
-        <div class="card mt-4 border-info">
-            <div class="card-header bg-info-subtle">
-                <h6 class="card-title mb-0 text-info">
-                    <i class="ri-bug-line me-2"></i>Debug: Załączniki
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="small">
-                    <strong>review.attachments is empty:</strong> {{ review.attachments is empty ? 'YES' : 'NO' }}<br>
-                    <strong>review.attachments type:</strong> {{ review.attachments is iterable ? 'iterable' : 'not iterable' }}<br>
-                    <strong>review.attachments length:</strong> {{ review.attachments|length|default('null') }}<br>
-                    <strong>Raw data:</strong> <pre>{{ review.attachments|json_encode }}</pre>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
         <!-- Załączniki -->
         {% if review.attachments is not empty %}
         <div class="card mt-4">
