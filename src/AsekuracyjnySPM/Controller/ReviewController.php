@@ -426,7 +426,7 @@ class ReviewController extends AbstractController
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
         
-        $review = $this->asekuracijnyService->getReview($id);
+        $review = $this->asekuracyjnyService->getReview($id);
         if (!$review) {
             throw $this->createNotFoundException('Przegląd nie został znaleziony');
         }
