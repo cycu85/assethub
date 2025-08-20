@@ -680,7 +680,16 @@ class AsekuracyjnyService
                 $review->getEquipment()->setNextReviewDate($data['next_review_date']);
             }
             if ($review->getEquipmentSet()) {
-                $review->getEquipmentSet()->setNextReviewDate($data['next_review_date']);
+                $equipmentSet = $review->getEquipmentSet();
+                $equipmentSet->setNextReviewDate($data['next_review_date']);
+                
+                // Aktualizacja dat następnego przeglądu dla wszystkich elementów zestawu
+                $completedDate = $review->getCompletedDate() ?? new \DateTime();
+                foreach ($equipmentSet->getEquipmentItems() as $equipment) {
+                    $nextReviewDate = $this->calculateNextReviewDateForEquipment($equipment, $completedDate, $data['next_review_date']);
+                    $equipment->setNextReviewDate($nextReviewDate);
+                    $equipment->setUpdatedBy($user);
+                }
             }
         }
         
@@ -745,5 +754,20 @@ class AsekuracyjnyService
             'notes' => $review->getNotes(),
             'status' => $review->getStatus()
         ];
+    }
+
+    private function calculateNextReviewDateForEquipment(AsekuracyjnyEquipment $equipment, \DateTimeInterface $completedDate, \DateTimeInterface $fallbackDate): \DateTimeInterface
+    {
+        $reviewIntervalMonths = $equipment->getReviewIntervalMonths();
+        
+        // Jeśli element ma ustawiony okres przeglądu, oblicz datę na podstawie daty zakończenia + okres
+        if ($reviewIntervalMonths && $reviewIntervalMonths > 0) {
+            $nextReviewDate = clone $completedDate;
+            $nextReviewDate->modify("+{$reviewIntervalMonths} months");
+            return $nextReviewDate;
+        }
+        
+        // Jeśli element nie ma ustawionego okresu przeglądu, użyj daty z zestawu
+        return $fallbackDate;
     }
 }
