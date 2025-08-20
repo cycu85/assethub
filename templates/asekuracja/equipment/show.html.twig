@@ -350,10 +350,16 @@
                                     <a href="{{ path('asekuracja_review_show', {id: review.id}) }}" 
                                        class="text-decoration-none small fw-medium">
                                         {{ review.reviewNumber }}
+                                        {% if review.equipmentSet %}
+                                        <i class="ri-stack-line text-info ms-1" title="Przegląd zestawu: {{ review.equipmentSet.name }}"></i>
+                                        {% endif %}
                                     </a>
                                     {% if review.completedDate %}
                                     <div class="text-muted small">
                                         {{ review.completedDate|date('d.m.Y') }}
+                                        {% if review.equipmentSet %}
+                                        <span class="ms-1 text-info small">(zestaw)</span>
+                                        {% endif %}
                                         {% if review.result %}
                                         <span class="ms-2 badge badge-sm bg-{{ review.result == 'passed' ? 'success' : (review.result == 'failed' ? 'danger' : 'warning') }}">
                                             {{ review.resultDisplayName }}
@@ -365,6 +371,9 @@
                                         {% if review.status == 'preparation' %}Przygotowanie
                                         {% elseif review.status == 'sent' %}Wysłane ({{ review.sentDate|date('d.m.Y') }})
                                         {% else %}{{ review.status }}
+                                        {% endif %}
+                                        {% if review.equipmentSet %}
+                                        <span class="ms-1 text-info small">(zestaw)</span>
                                         {% endif %}
                                     </div>
                                     {% endif %}

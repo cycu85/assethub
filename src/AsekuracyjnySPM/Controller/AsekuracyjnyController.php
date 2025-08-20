@@ -163,10 +163,15 @@ class AsekuracyjnyController extends AbstractController
         $canTransfer = $this->authorizationService->hasPermission($user, 'asekuracja', 'TRANSFER');
 
         // Pobierz przeglądy posortowane chronologicznie (najnowsze pierwsze)
+        // 1. Przeglądy bezpośrednio tego sprzętu
+        // 2. Przeglądy zestawów, w których uczestniczy ten sprzęt
         $reviews = $this->entityManager->getRepository(AsekuracyjnyReview::class)
             ->createQueryBuilder('r')
-            ->where('r.equipment = :equipment')
+            ->leftJoin('r.equipmentSet', 'es')
+            ->leftJoin('es.equipment', 'eq')
+            ->where('r.equipment = :equipment OR eq.id = :equipmentId')
             ->setParameter('equipment', $equipment)
+            ->setParameter('equipmentId', $equipment->getId())
             ->orderBy('r.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
