@@ -623,12 +623,9 @@ class AsekuracyjnyService
             $equipmentSet->setUpdatedBy($user);
             
             // Zmiana statusu wszystkich elementów zestawu
-            foreach ($equipmentSet->getEquipmentItems() as $item) {
-                $equipment = $item->getEquipment();
-                if ($equipment) {
-                    $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
-                    $equipment->setUpdatedBy($user);
-                }
+            foreach ($equipmentSet->getEquipmentItems() as $equipment) {
+                $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+                $equipment->setUpdatedBy($user);
             }
         }
         
@@ -700,12 +697,9 @@ class AsekuracyjnyService
             $equipmentSet->setUpdatedBy($user);
             
             // Przywrócenie statusu wszystkich elementów zestawu
-            foreach ($equipmentSet->getEquipmentItems() as $item) {
-                $equipment = $item->getEquipment();
-                if ($equipment) {
-                    $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
-                    $equipment->setUpdatedBy($user);
-                }
+            foreach ($equipmentSet->getEquipmentItems() as $equipment) {
+                $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
+                $equipment->setUpdatedBy($user);
             }
         }
         
