@@ -91,6 +91,9 @@ class AsekuracyjnyEquipment
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private array $customFields = [];
 
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private array $attachments = [];
+
     #[ORM\OneToMany(mappedBy: 'equipment', targetEntity: AsekuracyjnyReview::class, cascade: ['persist'])]
     private Collection $reviews;
 
@@ -137,6 +140,7 @@ class AsekuracyjnyEquipment
         $this->equipmentSets = new ArrayCollection();
         $this->status = self::STATUS_AVAILABLE;
         $this->customFields = [];
+        $this->attachments = [];
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
     }
@@ -572,6 +576,31 @@ class AsekuracyjnyEquipment
         });
 
         return $reviews[0] ?? null;
+    }
+
+    public function getAttachments(): array
+    {
+        return $this->attachments;
+    }
+
+    public function setAttachments(array $attachments): static
+    {
+        $this->attachments = $attachments;
+        return $this;
+    }
+
+    public function addAttachment(array $attachment): static
+    {
+        $this->attachments[] = $attachment;
+        return $this;
+    }
+
+    public function removeAttachment(string $filename): static
+    {
+        $this->attachments = array_filter($this->attachments, function($attachment) use ($filename) {
+            return $attachment['filename'] !== $filename;
+        });
+        return $this;
     }
 
     public function __toString(): string

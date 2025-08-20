@@ -73,6 +73,9 @@ class AsekuracyjnyEquipmentSet
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private array $attachments = [];
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $createdBy = null;
@@ -104,6 +107,7 @@ class AsekuracyjnyEquipmentSet
         $this->transfers = new ArrayCollection();
         $this->status = self::STATUS_AVAILABLE;
         $this->customFields = [];
+        $this->attachments = [];
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
     }
@@ -512,6 +516,31 @@ class AsekuracyjnyEquipmentSet
         return $this->equipment->filter(function(AsekuracyjnyEquipment $equipment) {
             return $equipment->isReviewOverdue();
         })->count();
+    }
+
+    public function getAttachments(): array
+    {
+        return $this->attachments;
+    }
+
+    public function setAttachments(array $attachments): static
+    {
+        $this->attachments = $attachments;
+        return $this;
+    }
+
+    public function addAttachment(array $attachment): static
+    {
+        $this->attachments[] = $attachment;
+        return $this;
+    }
+
+    public function removeAttachment(string $filename): static
+    {
+        $this->attachments = array_filter($this->attachments, function($attachment) use ($filename) {
+            return $attachment['filename'] !== $filename;
+        });
+        return $this;
     }
 
     public function __toString(): string

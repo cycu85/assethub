@@ -238,6 +238,80 @@
         </div>
         {% endif %}
 
+        <!-- Załączniki -->
+        {% if equipment.attachments|length > 0 %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-attachment-line me-2"></i>Załączniki ({{ equipment.attachments|length }})
+                    </h5>
+                    {% if can_edit %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#attachmentsModal">
+                        <i class="ri-add-line me-1"></i>Dodaj
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for attachment in equipment.attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="avatar-sm bg-light rounded me-3">
+                                {% if attachment.filename|split('.')|last in ['pdf'] %}
+                                    <i class="ri-file-pdf-line text-danger fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['doc', 'docx'] %}
+                                    <i class="ri-file-word-line text-primary fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['jpg', 'jpeg', 'png'] %}
+                                    <i class="ri-image-line text-success fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['xls', 'xlsx'] %}
+                                    <i class="ri-file-excel-line text-success fs-16"></i>
+                                {% else %}
+                                    <i class="ri-file-line text-muted fs-16"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14">{{ attachment.original_name }}</h6>
+                                <div class="text-muted small">
+                                    <span>{{ (attachment.size / 1024)|number_format(0) }} KB</span>
+                                    <span class="mx-1">•</span>
+                                    <span>{{ attachment.uploaded_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="ri-more-line"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ path('asekuracja_equipment_attachment_download', {id: equipment.id, filename: attachment.filename}) }}" 
+                                           class="dropdown-item">
+                                            <i class="ri-download-line me-2"></i>Pobierz
+                                        </a>
+                                    </li>
+                                    {% if can_edit %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ path('asekuracja_equipment_attachment_delete', {id: equipment.id, filename: attachment.filename}) }}" 
+                                              class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten załącznik?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete_attachment_' ~ equipment.id ~ '_' ~ attachment.filename) }}">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="ri-delete-bin-line me-2"></i>Usuń
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Uwagi -->
         {% if equipment.notes %}
         <div class="card mb-4">
