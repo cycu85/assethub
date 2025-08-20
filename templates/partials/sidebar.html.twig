@@ -79,12 +79,12 @@
                             <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}" id="sidebarAsekuracja">
                                 <ul class="nav nav-sm flex-column">
                                     <li class="nav-item">
-                                        <a href="{{ path('asekuracja_index') }}" class="nav-link {{ (current_route starts with 'asekuracja_equipment' and not current_route starts with 'asekuracja_equipment_set') or current_route == 'asekuracja_index' ? 'active' : '' }}">
+                                        <a href="{{ path('asekuracja_index') }}" class="nav-link {{ current_route in ['asekuracja_index', 'asekuracja_equipment_new', 'asekuracja_equipment_show', 'asekuracja_equipment_edit', 'asekuracja_equipment_assign', 'asekuracja_search'] ? 'active' : '' }}">
                                             <i class="ri-shield-line me-2"></i>Sprzęt
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ path('asekuracja_equipment_set_index') }}" class="nav-link {{ current_route starts with 'asekuracja_equipment_set' ? 'active' : '' }}">
+                                        <a href="{{ path('asekuracja_equipment_set_index') }}" class="nav-link {{ current_route starts with 'asekuracja_equipment_set' or current_route == 'asekuracja_available_equipment_modal' ? 'active' : '' }}">
                                             <i class="ri-stack-line me-2"></i>Zestawy
                                         </a>
                                     </li>
