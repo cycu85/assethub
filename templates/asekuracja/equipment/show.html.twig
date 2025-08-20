@@ -239,7 +239,6 @@
         {% endif %}
 
         <!-- Załączniki -->
-        {% if equipment.attachments|length > 0 %}
         <div class="card mb-4">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -247,13 +246,14 @@
                         <i class="ri-attachment-line me-2"></i>Załączniki ({{ equipment.attachments|length }})
                     </h5>
                     {% if can_edit %}
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#attachmentsModal">
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#equipmentAttachmentsModal">
                         <i class="ri-add-line me-1"></i>Dodaj
                     </button>
                     {% endif %}
                 </div>
             </div>
             <div class="card-body">
+                {% if equipment.attachments|length > 0 %}
                 <div class="row">
                     {% for attachment in equipment.attachments %}
                     <div class="col-md-6 mb-3">
@@ -308,9 +308,17 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="ri-attachment-line text-muted fs-32"></i>
+                    <p class="text-muted mb-0 mt-2">Brak załączników</p>
+                    {% if can_edit %}
+                    <p class="text-muted small">Kliknij przycisk "Dodaj" aby załączyć pliki</p>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
 
         <!-- Uwagi -->
         {% if equipment.notes %}
@@ -522,6 +530,44 @@
                 </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania załączników -->
+<div class="modal fade" id="equipmentAttachmentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-attachment-line me-2"></i>Dodaj załączniki
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('asekuracja_equipment_attachment_upload', {id: equipment.id}) }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="attachments" class="form-label">Wybierz pliki</label>
+                        <input type="file" class="form-control" id="attachments" name="attachments[]" multiple required
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt">
+                        <div class="form-text">
+                            Dozwolone typy: PDF, Word, Excel, obrazy, pliki tekstowe. Maksymalny rozmiar: 10MB na plik.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="attachment_description" class="form-label">Opis (opcjonalnie)</label>
+                        <textarea class="form-control" id="attachment_description" name="description" rows="3"
+                                  placeholder="Opisz zawartość załączników..."></textarea>
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('upload_equipment_attachment_' ~ equipment.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-upload-line me-1"></i>Prześlij
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

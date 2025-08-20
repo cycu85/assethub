@@ -167,6 +167,88 @@
                 {% endif %}
             </div>
         </div>
+        
+        <!-- Załączniki -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-attachment-line me-2"></i>Załączniki ({{ equipment_set.attachments|length }})
+                    </h5>
+                    {% if can_edit %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#equipmentSetAttachmentsModal">
+                        <i class="ri-add-line me-1"></i>Dodaj
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.attachments|length > 0 %}
+                <div class="row">
+                    {% for attachment in equipment_set.attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="avatar-sm bg-light rounded me-3">
+                                {% if attachment.filename|split('.')|last in ['pdf'] %}
+                                    <i class="ri-file-pdf-line text-danger fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['doc', 'docx'] %}
+                                    <i class="ri-file-word-line text-primary fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['jpg', 'jpeg', 'png'] %}
+                                    <i class="ri-image-line text-success fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['xls', 'xlsx'] %}
+                                    <i class="ri-file-excel-line text-success fs-16"></i>
+                                {% else %}
+                                    <i class="ri-file-line text-muted fs-16"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14">{{ attachment.original_name }}</h6>
+                                <div class="text-muted small">
+                                    <span>{{ (attachment.size / 1024)|number_format(0) }} KB</span>
+                                    <span class="mx-1">•</span>
+                                    <span>{{ attachment.uploaded_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="ri-more-line"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ path('asekuracja_equipment_set_attachment_download', {id: equipment_set.id, filename: attachment.filename}) }}" 
+                                           class="dropdown-item">
+                                            <i class="ri-download-line me-2"></i>Pobierz
+                                        </a>
+                                    </li>
+                                    {% if can_edit %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ path('asekuracja_equipment_set_attachment_delete', {id: equipment_set.id, filename: attachment.filename}) }}" 
+                                              class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten załącznik?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete_attachment_' ~ equipment_set.id ~ '_' ~ attachment.filename) }}">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="ri-delete-bin-line me-2"></i>Usuń
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="ri-attachment-line text-muted fs-32"></i>
+                    <p class="text-muted mb-0 mt-2">Brak załączników</p>
+                    {% if can_edit %}
+                    <p class="text-muted small">Kliknij przycisk "Dodaj" aby załączyć pliki</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
     
     <!-- Statystyki zestawu -->
@@ -421,6 +503,44 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania załączników do zestawu -->
+<div class="modal fade" id="equipmentSetAttachmentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-attachment-line me-2"></i>Dodaj załączniki do zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('asekuracja_equipment_set_attachment_upload', {id: equipment_set.id}) }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="set_attachments" class="form-label">Wybierz pliki</label>
+                        <input type="file" class="form-control" id="set_attachments" name="attachments[]" multiple required
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt">
+                        <div class="form-text">
+                            Dozwolone typy: PDF, Word, Excel, obrazy, pliki tekstowe. Maksymalny rozmiar: 10MB na plik.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="set_attachment_description" class="form-label">Opis (opcjonalnie)</label>
+                        <textarea class="form-control" id="set_attachment_description" name="description" rows="3"
+                                  placeholder="Opisz zawartość załączników..."></textarea>
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('upload_equipment_set_attachment_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-upload-line me-1"></i>Prześlij
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

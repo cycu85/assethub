@@ -16,7 +16,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
+use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/asekuracja/equipment-sets')]
 class EquipmentSetController extends AbstractController
@@ -25,6 +29,7 @@ class EquipmentSetController extends AbstractController
         private AuthorizationService $authorizationService,
         private AuditService $auditService,
         private AsekuracyjnyService $asekuracyjnyService,
+        private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {}
 
@@ -407,6 +412,210 @@ class EquipmentSetController extends AbstractController
             
             return new JsonResponse(['error' => 'Błąd wczytywania sprzętu'], 500);
         }
+    }
+
+    // === ATTACHMENT MANAGEMENT ===
+
+    #[Route('/{id}/attachment/upload', name: 'asekuracja_equipment_set_attachment_upload', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function uploadAttachment(AsekuracyjnyEquipmentSet $equipmentSet, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('upload_equipment_set_attachment_' . $equipmentSet->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            $uploadedFiles = $request->files->get('attachments', []);
+            $description = $request->request->get('description', '');
+            
+            if (empty($uploadedFiles)) {
+                $this->addFlash('error', 'Nie wybrano żadnych plików do przesłania.');
+                return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+            }
+            
+            $uploadedCount = 0;
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/equipment-sets/';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            foreach ($uploadedFiles as $uploadedFile) {
+                if ($uploadedFile instanceof UploadedFile && $uploadedFile->isValid()) {
+                    // Validate file size (10MB max)
+                    if ($uploadedFile->getSize() > 10 * 1024 * 1024) {
+                        $this->addFlash('warning', sprintf('Plik "%s" jest za duży (max 10MB).', $uploadedFile->getClientOriginalName()));
+                        continue;
+                    }
+                    
+                    // Validate file type
+                    $allowedMimeTypes = [
+                        'application/pdf',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'image/jpeg',
+                        'image/png',
+                        'text/plain'
+                    ];
+                    
+                    if (!in_array($uploadedFile->getMimeType(), $allowedMimeTypes)) {
+                        $this->addFlash('warning', sprintf('Typ pliku "%s" nie jest dozwolony.', $uploadedFile->getClientOriginalName()));
+                        continue;
+                    }
+                    
+                    // Generate unique filename
+                    $filename = uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
+                    $uploadedFile->move($uploadDir, $filename);
+                    
+                    // Add to equipment set attachments
+                    $equipmentSet->addAttachment([
+                        'filename' => $filename,
+                        'original_name' => $uploadedFile->getClientOriginalName(),
+                        'size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType(),
+                        'uploaded_at' => new \DateTime(),
+                        'uploaded_by' => $user->getFullName(),
+                        'description' => $description
+                    ]);
+                    
+                    $uploadedCount++;
+                }
+            }
+            
+            if ($uploadedCount > 0) {
+                $this->entityManager->flush();
+                
+                $this->addFlash('success', sprintf('Przesłano %d załączników pomyślnie.', $uploadedCount));
+                
+                // Audit
+                $this->auditService->logUserAction($user, 'upload_equipment_set_attachment', [
+                    'equipment_set_id' => $equipmentSet->getId(),
+                    'files_count' => $uploadedCount,
+                    'description' => $description
+                ], $request);
+            }
+            
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił błąd podczas przesyłania załączników.');
+            $this->logger->error('Failed to upload equipment set attachment', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+    }
+
+    #[Route('/{id}/attachment/{filename}/download', name: 'asekuracja_equipment_set_attachment_download', requirements: ['id' => '\d+'])]
+    public function downloadAttachment(AsekuracyjnyEquipmentSet $equipmentSet, string $filename, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
+        
+        // Check if user can view this equipment set
+        if (!$this->canUserViewEquipmentSet($user, $equipmentSet)) {
+            throw $this->createAccessDeniedException('Brak uprawnień do wyświetlenia tego zestawu.');
+        }
+        
+        // Find attachment
+        $attachment = null;
+        foreach ($equipmentSet->getAttachments() as $att) {
+            if ($att['filename'] === $filename) {
+                $attachment = $att;
+                break;
+            }
+        }
+        
+        if (!$attachment) {
+            throw $this->createNotFoundException('Załącznik nie został znaleziony.');
+        }
+        
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/equipment-sets/' . $filename;
+        
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Plik nie został znaleziony na serwerze.');
+        }
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'download_equipment_set_attachment', [
+            'equipment_set_id' => $equipmentSet->getId(),
+            'filename' => $filename,
+            'original_name' => $attachment['original_name']
+        ], $request);
+        
+        $response = new BinaryFileResponse($filePath);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $attachment['original_name']);
+        
+        return $response;
+    }
+
+    #[Route('/{id}/attachment/{filename}/delete', name: 'asekuracja_equipment_set_attachment_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function deleteAttachment(AsekuracyjnyEquipmentSet $equipmentSet, string $filename, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('delete_attachment_' . $equipmentSet->getId() . '_' . $filename, $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            // Find and remove attachment from database
+            $attachment = null;
+            foreach ($equipmentSet->getAttachments() as $att) {
+                if ($att['filename'] === $filename) {
+                    $attachment = $att;
+                    break;
+                }
+            }
+            
+            if (!$attachment) {
+                $this->addFlash('error', 'Załącznik nie został znaleziony.');
+                return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+            }
+            
+            $equipmentSet->removeAttachment($filename);
+            $this->entityManager->flush();
+            
+            // Remove file from filesystem
+            $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/equipment-sets/' . $filename;
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            
+            $this->addFlash('success', sprintf('Załącznik "%s" został usunięty.', $attachment['original_name']));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'delete_equipment_set_attachment', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'filename' => $filename,
+                'original_name' => $attachment['original_name']
+            ], $request);
+            
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił błąd podczas usuwania załącznika.');
+            $this->logger->error('Failed to delete equipment set attachment', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
     }
 
     // === PRIVATE HELPER METHODS ===
