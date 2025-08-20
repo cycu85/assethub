@@ -278,7 +278,7 @@
                 <div class="small">
                     <strong>review.attachments is empty:</strong> {{ review.attachments is empty ? 'YES' : 'NO' }}<br>
                     <strong>review.attachments type:</strong> {{ review.attachments is iterable ? 'iterable' : 'not iterable' }}<br>
-                    <strong>review.attachments length:</strong> {{ review.attachments|length ?? 'null' }}<br>
+                    <strong>review.attachments length:</strong> {{ review.attachments|length|default('null') }}<br>
                     <strong>Raw data:</strong> <pre>{{ review.attachments|json_encode }}</pre>
                 </div>
             </div>
