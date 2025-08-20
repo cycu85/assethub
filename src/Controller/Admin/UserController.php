@@ -53,7 +53,7 @@ class UserController extends AbstractController
             'active' => $request->query->get('active')
         ];
         
-        $users = $this->userService->getUsersWithPagination($page, 25, $filters);
+        $users = $this->userService->getUsersWithPagination($page, 1000, $filters);
 
         // Pobierz słowniki przez UserService
         $dictionaries = $this->userService->getDictionariesForForms();
