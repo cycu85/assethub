@@ -10,6 +10,7 @@ use App\Entity\UserRole;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyReviewEquipment;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -265,6 +266,9 @@ class AppFixtures extends Fixture
 
         // Create example asekuracyjny equipment and sets
         $this->createAsekuracyjnyExampleData($manager, $adminUser);
+
+        // Create example reviews with new structure
+        $this->createExampleReviews($manager, $adminUser);
 
         // Update users with example data
         $this->updateUsersWithExampleData($manager, $adminUser, $testUser, $hrUser);
@@ -610,5 +614,160 @@ class AppFixtures extends Fixture
         foreach ($equipment as $eq) {
             $equipmentSet->addEquipment($eq);
         }
+
+        $manager->flush();
+        
+        // Store equipment and set for use in reviews
+        $this->equipment = $equipment;
+        $this->equipmentSet = $equipmentSet;
+    }
+
+    private array $equipment = [];
+    private ?AsekuracyjnyEquipmentSet $equipmentSet = null;
+
+    private function createExampleReviews(ObjectManager $manager, User $createdBy): void
+    {
+        // Check if example reviews already exist
+        $reviewRepository = $manager->getRepository(AsekuracyjnyReview::class);
+        if ($reviewRepository->findOneBy(['reviewNumber' => 'PR/2024/08/001'])) {
+            return; // Skip if example reviews already exist
+        }
+
+        if (empty($this->equipment) || !$this->equipmentSet) {
+            return; // Skip if no equipment data
+        }
+
+        // Example 1: Individual equipment review (completed)
+        $individualReview = new AsekuracyjnyReview();
+        $individualReview->setEquipment($this->equipment[0]) // Szelki Petzl
+            ->setReviewType(AsekuracyjnyReview::TYPE_INITIAL)
+            ->setPlannedDate(new \DateTime('2024-08-15'))
+            ->setReviewCompany('TechClimb Kontrole Sp. z o.o.')
+            ->setNotes('Pierwszy przegląd nowego sprzętu po zakupie')
+            ->setStatus(AsekuracyjnyReview::STATUS_COMPLETED)
+            ->setSentDate(new \DateTime('2024-08-20'))
+            ->setCompletedDate(new \DateTime('2024-08-25'))
+            ->setResult(AsekuracyjnyReview::RESULT_PASSED)
+            ->setCertificateNumber('TC/2024/08/157')
+            ->setCost('120.00')
+            ->setNextReviewDate(new \DateTime('2025-08-25'))
+            ->setFindings('Sprzęt w doskonałym stanie, brak usterek')
+            ->setRecommendations('Kontynuować regularne przeglądy co 12 miesięcy')
+            ->setCreatedBy($createdBy)
+            ->setSentBy($createdBy)
+            ->setCompletedBy($createdBy);
+
+        $manager->persist($individualReview);
+        $manager->flush();
+
+        // Create review equipment entry for individual review
+        $reviewEquipment1 = new AsekuracyjnyReviewEquipment();
+        $reviewEquipment1->setReview($individualReview)
+            ->setEquipment($this->equipment[0])
+            ->setWasInSetAtReview(false)
+            ->captureEquipmentSnapshot($this->equipment[0]);
+
+        $manager->persist($reviewEquipment1);
+
+        // Example 2: Set review (completed) with mixed results
+        $setReview = new AsekuracyjnyReview();
+        $setReview->setEquipmentSet($this->equipmentSet)
+            ->setReviewType(AsekuracyjnyReview::TYPE_PERIODIC)
+            ->setPlannedDate(new \DateTime('2024-09-01'))
+            ->setReviewCompany('Alpine Safety Controls')
+            ->setNotes('Okresowy przegląd zestawu podstawowego')
+            ->setStatus(AsekuracyjnyReview::STATUS_COMPLETED)
+            ->setSentDate(new \DateTime('2024-09-05'))
+            ->setCompletedDate(new \DateTime('2024-09-12'))
+            ->setResult(AsekuracyjnyReview::RESULT_CONDITIONALLY_PASSED)
+            ->setCertificateNumber('ASC/2024/09/089')
+            ->setCost('350.00')
+            ->setNextReviewDate(new \DateTime('2025-09-12'))
+            ->setFindings('Ogólnie dobry stan, drobne uwagi do liny')
+            ->setRecommendations('Wymienić linę w ciągu 6 miesięcy, reszta sprzętu w dobrym stanie')
+            ->setCreatedBy($createdBy)
+            ->setSentBy($createdBy)
+            ->setCompletedBy($createdBy);
+
+        $manager->persist($setReview);
+        $manager->flush();
+
+        // Create review equipment entries for set review with individual results
+        $reviewResults = [
+            ['equipment' => $this->equipment[0], 'result' => AsekuracyjnyReviewEquipment::RESULT_INHERITED, 'findings' => null], // Szelki - wynik ogólny
+            ['equipment' => $this->equipment[1], 'result' => AsekuracyjnyReviewEquipment::RESULT_CONDITIONALLY_PASSED, 'findings' => 'Lekkie sfatygowanie na końcu liny'], // Lina - indywidualny wynik
+            ['equipment' => $this->equipment[2], 'result' => AsekuracyjnyReviewEquipment::RESULT_PASSED, 'findings' => 'Doskonały stan'] // Kask - indywidualny pozytywny
+        ];
+
+        foreach ($reviewResults as $index => $resultData) {
+            $reviewEquipment = new AsekuracyjnyReviewEquipment();
+            $reviewEquipment->setReview($setReview)
+                ->setEquipment($resultData['equipment'])
+                ->setWasInSetAtReview(true)
+                ->setIndividualResult($resultData['result'])
+                ->captureEquipmentSnapshot($resultData['equipment'])
+                ->captureSetContext($this->equipmentSet);
+
+            if ($resultData['findings']) {
+                $reviewEquipment->setIndividualFindings($resultData['findings']);
+            }
+
+            if ($resultData['equipment'] === $this->equipment[1]) { // Lina
+                $reviewEquipment->setIndividualRecommendations('Wymienić w ciągu 6 miesięcy lub po 50 godzinach użytkowania');
+            }
+
+            $manager->persist($reviewEquipment);
+        }
+
+        // Example 3: Individual review in progress
+        $progressReview = new AsekuracyjnyReview();
+        $progressReview->setEquipment($this->equipment[2]) // Kask
+            ->setReviewType(AsekuracyjnyReview::TYPE_DAMAGE_CONTROL)
+            ->setPlannedDate(new \DateTime('2024-09-20'))
+            ->setReviewCompany('TechClimb Kontrole Sp. z o.o.')
+            ->setNotes('Kontrola po zgłoszeniu drobnego uszkodzenia')
+            ->setStatus(AsekuracyjnyReview::STATUS_SENT)
+            ->setSentDate(new \DateTime('2024-09-18'))
+            ->setCreatedBy($createdBy)
+            ->setSentBy($createdBy);
+
+        $manager->persist($progressReview);
+        $manager->flush();
+
+        // Create review equipment entry for progress review
+        $reviewEquipment3 = new AsekuracyjnyReviewEquipment();
+        $reviewEquipment3->setReview($progressReview)
+            ->setEquipment($this->equipment[2])
+            ->setWasInSetAtReview(false)
+            ->captureEquipmentSnapshot($this->equipment[2]);
+
+        $manager->persist($reviewEquipment3);
+
+        // Example 4: Review preparation (showing workflow)
+        $preparationReview = new AsekuracyjnyReview();
+        $preparationReview->setEquipmentSet($this->equipmentSet)
+            ->setReviewType(AsekuracyjnyReview::TYPE_PERIODIC)
+            ->setPlannedDate(new \DateTime('2024-10-15'))
+            ->setReviewCompany('Górska Kontrola Sp. z o.o.')
+            ->setNotes('Planowany przegląd kwartalny zestawu')
+            ->setStatus(AsekuracyjnyReview::STATUS_PREPARATION)
+            ->setCreatedBy($createdBy);
+
+        $manager->persist($preparationReview);
+        $manager->flush();
+
+        // Create review equipment entries for preparation review
+        foreach ($this->equipment as $equipment) {
+            $reviewEquipment = new AsekuracyjnyReviewEquipment();
+            $reviewEquipment->setReview($preparationReview)
+                ->setEquipment($equipment)
+                ->setWasInSetAtReview(true)
+                ->captureEquipmentSnapshot($equipment)
+                ->captureSetContext($this->equipmentSet);
+
+            $manager->persist($reviewEquipment);
+        }
+
+        $manager->flush();
     }
 }
