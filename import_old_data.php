@@ -20,8 +20,8 @@ if (php_sapi_name() !== 'cli') {
 
 // Konfiguracja połączenia do bazy danych
 $host = '127.0.0.1';
-$dbname = 'myapp2'; // Nazwa bazy nowego systemu
-$username = 'myapp2';
+$dbname = 'assethub'; // Nazwa bazy nowego systemu
+$username = 'assethub';
 $password = 'secure_password';
 
 try {
