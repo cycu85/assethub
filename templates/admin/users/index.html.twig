@@ -28,7 +28,10 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-sm-12 col-md-6">
-                        <div class="d-flex align-items-center">
+                        <!-- Puste miejsce po lewej -->
+                    </div>
+                    <div class="col-sm-12 col-md-6">
+                        <div class="d-flex align-items-center justify-content-end">
                             <label for="page-size-select" class="form-label me-2 mb-0">Pokaż:</label>
                             <select id="page-size-select" class="form-select form-select-sm" style="width: auto;">
                                 <option value="10" selected>10</option>
@@ -93,6 +96,25 @@
     word-wrap: break-word !important;
     word-break: break-word !important;
     max-width: 150px !important;
+}
+/* Fix search input styling */
+.gridjs-search-input {
+    padding-left: 35px !important;
+}
+.gridjs-search {
+    position: relative !important;
+}
+.gridjs-search::before {
+    content: "\f002" !important;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6c757d !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
 }
 </style>
 {% endblock %}
