@@ -463,6 +463,12 @@ class AsekuracyjnyReview
     public function setCreatedBy(?User $createdBy): self
     {
         $this->createdBy = $createdBy;
+        
+        // Auto-set preparedBy if not already set
+        if ($createdBy && !$this->preparedBy) {
+            $this->preparedBy = $createdBy;
+        }
+        
         return $this;
     }
 

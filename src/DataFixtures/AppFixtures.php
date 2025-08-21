@@ -654,6 +654,7 @@ class AppFixtures extends Fixture
             ->setFindings('Sprzęt w doskonałym stanie, brak usterek')
             ->setRecommendations('Kontynuować regularne przeglądy co 12 miesięcy')
             ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy)
             ->setSentBy($createdBy)
             ->setCompletedBy($createdBy);
 
@@ -686,6 +687,7 @@ class AppFixtures extends Fixture
             ->setFindings('Ogólnie dobry stan, drobne uwagi do liny')
             ->setRecommendations('Wymienić linę w ciągu 6 miesięcy, reszta sprzętu w dobrym stanie')
             ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy)
             ->setSentBy($createdBy)
             ->setCompletedBy($createdBy);
 
@@ -729,6 +731,7 @@ class AppFixtures extends Fixture
             ->setStatus(AsekuracyjnyReview::STATUS_SENT)
             ->setSentDate(new \DateTime('2024-09-18'))
             ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy)
             ->setSentBy($createdBy);
 
         $manager->persist($progressReview);
@@ -751,7 +754,8 @@ class AppFixtures extends Fixture
             ->setReviewCompany('Górska Kontrola Sp. z o.o.')
             ->setNotes('Planowany przegląd kwartalny zestawu')
             ->setStatus(AsekuracyjnyReview::STATUS_PREPARATION)
-            ->setCreatedBy($createdBy);
+            ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy);
 
         $manager->persist($preparationReview);
         $manager->flush();
