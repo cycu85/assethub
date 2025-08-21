@@ -133,7 +133,7 @@
                             <option value="">Wszystkie</option>
                             <option value="no_set" {{ filters.equipment_set_id == 'no_set' ? 'selected' : '' }}>Nie w zestawie</option>
                             {% for set in all_equipment_sets %}
-                            <option value="{{ set.id }}" {{ filters.equipment_set_id == set.id|string ? 'selected' : '' }}>{{ set.name }}</option>
+                            <option value="{{ set.id }}" {{ filters.equipment_set_id == set.id ? 'selected' : '' }}>{{ set.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
