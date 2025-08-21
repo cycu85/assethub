@@ -40,6 +40,7 @@ class ReviewService
 
         $review = new AsekuracyjnyReview();
         $review->setEquipment($equipment);
+        $review->setReviewNumber($this->generateReviewNumber());
         $this->populateReviewFromArray($review, $data);
         $review->setPreparedBy($user);
         $review->setCreatedBy($user);
@@ -92,6 +93,7 @@ class ReviewService
         $review = new AsekuracyjnyReview();
         $review->setEquipmentSet($equipmentSet);
         $review->setSelectedEquipmentIds($selectedEquipmentIds);
+        $review->setReviewNumber($this->generateReviewNumber());
         $this->populateReviewFromArray($review, $data);
         $review->setPreparedBy($user);
         $review->setCreatedBy($user);
@@ -536,6 +538,36 @@ class ReviewService
     public function getEquipmentHistoryWithPagination(AsekuracyjnyEquipment $equipment, int $page = 1, int $limit = 25): array
     {
         return $this->reviewEquipmentRepository->findEquipmentHistoryWithPagination($equipment, $page, $limit);
+    }
+
+    // === HELPER METHODS ===
+
+    /**
+     * Generate unique review number in format PR/YYYY/MM/XXX
+     */
+    private function generateReviewNumber(): string
+    {
+        $year = date('Y');
+        $month = date('m');
+        
+        // Find last number in this month
+        $lastReview = $this->reviewRepository->createQueryBuilder('r')
+            ->where('r.reviewNumber LIKE :pattern')
+            ->setParameter('pattern', "PR/{$year}/{$month}/%")
+            ->orderBy('r.reviewNumber', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+            
+        $nextNumber = 1;
+        if ($lastReview) {
+            $parts = explode('/', $lastReview->getReviewNumber());
+            if (count($parts) === 4) {
+                $nextNumber = intval($parts[3]) + 1;
+            }
+        }
+        
+        return sprintf('PR/%s/%s/%03d', $year, $month, $nextNumber);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\AsekuracyjnySPM\Service\AsekuracyjnyService;
+use App\AsekuracyjnySPM\Service\ReviewService;
 use App\AsekuracyjnySPM\Form\AsekuracyjnyReviewType;
 use App\Entity\User;
 use App\Service\AuthorizationService;
@@ -27,6 +28,7 @@ class ReviewController extends AbstractController
         private AuthorizationService $authorizationService,
         private AuditService $auditService,
         private AsekuracyjnyService $asekuracyjnyService,
+        private ReviewService $reviewService,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {}
@@ -115,14 +117,20 @@ class ReviewController extends AbstractController
                     ]);
                 }
 
-                // Generowanie numeru przeglądu
-                $reviewNumber = $this->generateReviewNumber();
-                $review->setReviewNumber($reviewNumber);
-                $review->setCreatedBy($user);
-                $review->setPreparedBy($user);
-                
-                $this->entityManager->persist($review);
-                $this->entityManager->flush();
+                // Przygotowanie danych dla ReviewService
+                $data = [
+                    'planned_date' => $review->getPlannedDate(),
+                    'review_type' => $review->getReviewType(),
+                    'review_company' => $review->getReviewCompany(),
+                    'notes' => $review->getNotes()
+                ];
+
+                // Utworzenie przeglądu przez ReviewService
+                if ($review->getEquipment()) {
+                    $review = $this->reviewService->createEquipmentReview($review->getEquipment(), $data, $user);
+                } elseif ($review->getEquipmentSet()) {
+                    $review = $this->reviewService->createEquipmentSetReview($review->getEquipmentSet(), $data, $user);
+                }
 
                 // Audit
                 $this->auditService->logUserAction($user, 'create_asekuracja_review', [
@@ -261,14 +269,16 @@ class ReviewController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             try {
-                // Generowanie numeru przeglądu
-                $reviewNumber = $this->generateReviewNumber();
-                $review->setReviewNumber($reviewNumber);
-                $review->setCreatedBy($user);
-                $review->setPreparedBy($user);
-                
-                $this->entityManager->persist($review);
-                $this->entityManager->flush();
+                // Przygotowanie danych dla ReviewService
+                $data = [
+                    'planned_date' => $review->getPlannedDate(),
+                    'review_type' => $review->getReviewType(),
+                    'review_company' => $review->getReviewCompany(),
+                    'notes' => $review->getNotes()
+                ];
+
+                // Utworzenie przeglądu przez ReviewService
+                $review = $this->reviewService->createEquipmentReview($equipment, $data, $user);
 
                 $this->addFlash('success', 'Przegląd dla sprzętu został utworzony pomyślnie.');
                 return $this->redirectToRoute('asekuracja_review_show', ['id' => $review->getId()]);
@@ -317,14 +327,16 @@ class ReviewController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             try {
-                // Generowanie numeru przeglądu
-                $reviewNumber = $this->generateReviewNumber();
-                $review->setReviewNumber($reviewNumber);
-                $review->setCreatedBy($user);
-                $review->setPreparedBy($user);
-                
-                $this->entityManager->persist($review);
-                $this->entityManager->flush();
+                // Przygotowanie danych dla ReviewService
+                $data = [
+                    'planned_date' => $review->getPlannedDate(),
+                    'review_type' => $review->getReviewType(),
+                    'review_company' => $review->getReviewCompany(),
+                    'notes' => $review->getNotes()
+                ];
+
+                // Utworzenie przeglądu przez ReviewService
+                $review = $this->reviewService->createEquipmentSetReview($equipmentSet, $data, $user);
 
                 $this->addFlash('success', 'Przegląd dla zestawu został utworzony pomyślnie.');
                 return $this->redirectToRoute('asekuracja_review_show', ['id' => $review->getId()]);
@@ -577,29 +589,4 @@ class ReviewController extends AbstractController
         return $uploadedFiles;
     }
 
-    private function generateReviewNumber(): string
-    {
-        $year = date('Y');
-        $month = date('m');
-        
-        // Znajdź ostatni numer w tym miesiącu
-        $lastReview = $this->entityManager->getRepository(AsekuracyjnyReview::class)
-            ->createQueryBuilder('r')
-            ->where('r.reviewNumber LIKE :pattern')
-            ->setParameter('pattern', "PR/{$year}/{$month}/%")
-            ->orderBy('r.reviewNumber', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-            
-        $nextNumber = 1;
-        if ($lastReview) {
-            $parts = explode('/', $lastReview->getReviewNumber());
-            if (count($parts) === 4) {
-                $nextNumber = intval($parts[3]) + 1;
-            }
-        }
-        
-        return sprintf('PR/%s/%s/%03d', $year, $month, $nextNumber);
-    }
 }
