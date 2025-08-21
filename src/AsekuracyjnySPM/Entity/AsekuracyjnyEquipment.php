@@ -674,6 +674,39 @@ class AsekuracyjnyEquipment
         return $this;
     }
 
+    /**
+     * Get display names of equipment sets this equipment belongs to
+     */
+    public function getEquipmentSetsDisplayNames(): string
+    {
+        if ($this->equipmentSets->isEmpty()) {
+            return 'Nie w zestawie';
+        }
+
+        $names = [];
+        foreach ($this->equipmentSets as $set) {
+            $names[] = $set->getName();
+        }
+        
+        return implode(', ', $names);
+    }
+
+    /**
+     * Get primary equipment set (first one if multiple)
+     */
+    public function getPrimaryEquipmentSet(): ?AsekuracyjnyEquipmentSet
+    {
+        return $this->equipmentSets->isEmpty() ? null : $this->equipmentSets->first();
+    }
+
+    /**
+     * Check if equipment is part of any set
+     */
+    public function isInSet(): bool
+    {
+        return !$this->equipmentSets->isEmpty();
+    }
+
     public function __toString(): string
     {
         return $this->name ?? '';

@@ -770,4 +770,51 @@ class AsekuracyjnyService
         // Jeśli element nie ma ustawionego okresu przeglądu, użyj daty z zestawu
         return $fallbackDate;
     }
+
+    // === QUERY METHODS ===
+
+    public function getEquipmentWithPagination(int $page = 1, int $limit = 25, array $filters = []): array
+    {
+        return $this->equipmentRepository->findWithPagination($page, $limit, $filters);
+    }
+
+    public function getEquipmentStatistics(): array
+    {
+        return $this->equipmentRepository->getStatistics();
+    }
+
+    public function getAllEquipmentSets(): array
+    {
+        return $this->equipmentRepository->getAllEquipmentSets();
+    }
+
+    public function searchEquipment(string $query, int $limit = 10): array
+    {
+        return $this->equipmentRepository->search($query, $limit);
+    }
+
+    public function getEquipment(int $id): ?AsekuracyjnyEquipment
+    {
+        return $this->equipmentRepository->find($id);
+    }
+
+    public function getEquipmentSet(int $id): ?AsekuracyjnyEquipmentSet
+    {
+        return $this->equipmentSetRepository->find($id);
+    }
+
+    public function getReview(int $id): ?AsekuracyjnyReview
+    {
+        return $this->reviewRepository->find($id);
+    }
+
+    public function getReviewsWithPagination(int $page = 1, int $limit = 25, array $filters = []): array
+    {
+        return $this->reviewRepository->findWithPagination($page, $limit, $filters);
+    }
+
+    public function getReviewStatistics(): array
+    {
+        return $this->reviewRepository->getStatistics();
+    }
 }

@@ -127,7 +127,17 @@
                             <option value="ascender" {{ filters.equipment_type == 'ascender' ? 'selected' : '' }}>Zaciski</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Zestaw</label>
+                        <select name="equipment_set_id" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="no_set" {{ filters.equipment_set_id == 'no_set' ? 'selected' : '' }}>Nie w zestawie</option>
+                            {% for set in all_equipment_sets %}
+                            <option value="{{ set.id }}" {{ filters.equipment_set_id == set.id|string ? 'selected' : '' }}>{{ set.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">Specjalne filtry</label>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="needs_review" 
@@ -187,6 +197,7 @@
                                         {% endif %}
                                     </a>
                                 </th>
+                                <th>Zestaw</th>
                                 <th>
                                     <a href="{{ path('asekuracja_index', app.request.query.all|merge({sort_by: 'status', sort_dir: filters.sort_by == 'status' and filters.sort_dir == 'ASC' ? 'DESC' : 'ASC'})) }}" 
                                        class="text-decoration-none text-dark">
@@ -241,6 +252,26 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">{{ item.equipmentType }}</span>
+                                </td>
+                                <td>
+                                    {% if item.isInSet %}
+                                        {% if item.equipmentSets|length == 1 %}
+                                            <a href="{{ path('asekuracja_equipment_set_show', {id: item.primaryEquipmentSet.id}) }}" 
+                                               class="text-decoration-none">
+                                                <i class="ri-stack-line me-1"></i>{{ item.primaryEquipmentSet.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted" title="{{ item.equipmentSetsDisplayNames }}">
+                                                <i class="ri-stack-line me-1"></i>
+                                                {{ item.equipmentSets|length }} zestawów
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="ri-minus-line me-1"></i>
+                                            Nie w zestawie
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% set status_class = item.status == 'available' ? 'success' : 

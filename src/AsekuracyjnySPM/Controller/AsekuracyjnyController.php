@@ -47,6 +47,7 @@ class AsekuracyjnyController extends AbstractController
             'search' => $request->query->get('search'),
             'status' => $request->query->get('status'),
             'equipment_type' => $request->query->get('equipment_type'),
+            'equipment_set_id' => $request->query->get('equipment_set_id'),
             'assigned_to' => $request->query->get('assigned_to'),
             'needs_review' => $request->query->getBoolean('needs_review'),
             'overdue_review' => $request->query->getBoolean('overdue_review'),
@@ -56,6 +57,7 @@ class AsekuracyjnyController extends AbstractController
 
         $equipmentPagination = $this->asekuracyjnyService->getEquipmentWithPagination($page, 25, $filters);
         $statistics = $this->asekuracyjnyService->getEquipmentStatistics();
+        $allEquipmentSets = $this->asekuracyjnyService->getAllEquipmentSets();
         
         // Sprawdzenie uprawnień do różnych akcji
         $canCreate = $this->authorizationService->hasPermission($user, 'asekuracja', 'CREATE');
@@ -75,6 +77,7 @@ class AsekuracyjnyController extends AbstractController
             'equipment' => $equipmentPagination,
             'statistics' => $statistics,
             'filters' => $filters,
+            'all_equipment_sets' => $allEquipmentSets,
             'can_create' => $canCreate,
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,

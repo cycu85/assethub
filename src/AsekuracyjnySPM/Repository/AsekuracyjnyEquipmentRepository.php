@@ -40,7 +40,9 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('e')
             ->leftJoin('e.assignedTo', 'u')
-            ->addSelect('u');
+            ->leftJoin('e.equipmentSets', 'es')
+            ->addSelect('u')
+            ->addSelect('es');
 
         // Sortowanie
         $sortBy = $filters['sort_by'] ?? 'name';
@@ -297,5 +299,31 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
                 ->andWhere('e.nextReviewDate < :now')
                 ->setParameter('now', $now);
         }
+
+        if (!empty($filters['equipment_set_id'])) {
+            if ($filters['equipment_set_id'] === 'no_set') {
+                // Sprzęt nie w żadnym zestawie
+                $qb->leftJoin('e.equipmentSets', 'esFilter')
+                   ->andWhere('esFilter.id IS NULL');
+            } else {
+                // Sprzęt w konkretnym zestawie
+                $qb->join('e.equipmentSets', 'esFilter')
+                   ->andWhere('esFilter.id = :equipmentSetId')
+                   ->setParameter('equipmentSetId', $filters['equipment_set_id']);
+            }
+        }
+    }
+
+    /**
+     * Get all equipment sets for filtering dropdown
+     */
+    public function getAllEquipmentSets(): array
+    {
+        return $this->getEntityManager()
+            ->getRepository('App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet')
+            ->createQueryBuilder('es')
+            ->orderBy('es.name', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 }
