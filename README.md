@@ -55,11 +55,12 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 - **Zestawy sprzętu** - tworzenie kompletnych zestawów z wielokrotnym wyborem elementów
 - **Modal zakończenia przeglądu** - upload załączników (PDF, DOC, JPG, XLS), wyniki, certyfikaty
 - **Automatyczne statusy** - sprzęt/zestaw automatycznie zmienia status podczas procesu przeglądu
-- **Historia przeglądów** - odnośniki do zakończonych przeglądów w widoku sprzętu i zestawów
+- **Historia przeglądów z snapshot** - sztywne powiązania elementów z przeglądami, niezależne od zmian w zestawach
 - **System uprawnień** - granularne role (ADMIN, EDITOR, VIEWER, LIST) z pełną kontrolą dostępu
-- **Załączniki przeglądów** - bezpieczne przechowywanie i pobieranie dokumentów z audytem
+- **Załączniki przeglądów** - bezpieczne przechowywanie w katalogach `public/uploads/asekuracja/`
 - **Dashboard z metrykami** - karty sprzętu, statystyki przeglądów, alerty terminów
 - **Słowniki konfiguracyjne** - typy sprzętu, statusy, typy zestawów i przeglądów
+- **Indywidualne wyniki w zestawach** - różne wyniki dla poszczególnych elementów w przeglądach zestawów
 
 ### 🛡️ Moduł Środków Ochrony Osobistej (ŚOP)
 - Kontrola wydawania ŚOP zgodnie z normami
@@ -151,7 +152,7 @@ System zdarzeń domenowych z subskrybentami:
 | **Serwer Web** | Apache 2.4+ / Nginx 1.18+ |
 | **Baza Danych** | MySQL 8.0+ (domyślnie) / PostgreSQL 13+ / SQLite 3.35+ |
 | **Pamięć RAM** | Minimum 512MB, zalecane 2GB+ |
-| **Przestrzeń Dyskowa** | Minimum 1GB, zalecane 10GB+ (w tym miejsce na avatary, backupy bazy danych) |
+| **Przestrzeń Dyskowa** | Minimum 1GB, zalecane 10GB+ (w tym miejsce na avatary, załączniki asekuracji, backupy) |
 | **PHP Extensions** | mysql, pdo, intl, mbstring, xml, curl, gd, ldap |
 | **Narzędzia systemowe** | mysqldump (dla AdminService database backups) |
 
@@ -247,6 +248,9 @@ System zdarzeń domenowych z subskrybentami:
    sudo -u www-data php bin/console doctrine:database:create
    sudo -u www-data php bin/console doctrine:migrations:migrate --no-interaction
    
+   # Załadowanie przykładowych danych z nowymi przeglądami
+   sudo -u www-data php bin/console doctrine:fixtures:load --no-interaction
+   
    # Ustawienie uprawnień
    sudo chmod -R 755 var/
    sudo chmod -R 777 var/cache var/log
@@ -257,8 +261,11 @@ System zdarzeń domenowych z subskrybentami:
    # Tworzenie katalogów dla uploads i backupów
    sudo -u www-data mkdir -p public/uploads/avatars
    sudo -u www-data mkdir -p public/uploads/reviews
+   sudo -u www-data mkdir -p public/uploads/asekuracja/equipment
+   sudo -u www-data mkdir -p public/uploads/asekuracja/sets
    sudo -u www-data mkdir -p var/backups
-   sudo chmod 755 public/uploads/avatars public/uploads/reviews var/backups
+   sudo chmod 755 public/uploads/avatars public/uploads/reviews public/uploads/asekuracja var/backups
+   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
    sudo chown -R www-data:www-data public/uploads var/backups
    ```
 
@@ -381,7 +388,9 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    
    # Tworzenie katalogów
    sudo -u www-data mkdir -p var/log public/uploads/avatars public/uploads/reviews var/backups
-   sudo chmod 755 public/uploads/avatars public/uploads/reviews var/backups
+   sudo -u www-data mkdir -p public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
+   sudo chmod 755 public/uploads/avatars public/uploads/reviews public/uploads/asekuracja var/backups
+   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
    ```
 
 5. **Konfiguracja Apache dla Ubuntu 24.04**
@@ -740,15 +749,27 @@ assethub/
 ├── config/           # Konfiguracja Symfony
 ├── migrations/       # Migracje bazy danych
 ├── public/          # Pliki publiczne (CSS, JS, obrazy)
+│   └── uploads/     # Katalogi dla uploads
+│       ├── avatars/ # Zdjęcia profilowe użytkowników
+│       ├── reviews/ # Załączniki przeglądów (legacy)
+│       └── asekuracja/
+│           ├── equipment/  # Załączniki sprzętu asekuracyjnego
+│           └── sets/      # Załączniki zestawów asekuracyjnych
 ├── src/
 │   ├── Controller/  # Kontrolery
 │   ├── Entity/      # Encje Doctrine
 │   ├── Form/        # Formularze Symfony
 │   ├── Repository/  # Repozytoria danych
-│   └── Service/     # Usługi biznesowe
+│   ├── Service/     # Usługi biznesowe
+│   └── AsekuracyjnySPM/  # Moduł Asekuracja
+│       ├── Controller/   # Kontrolery modułu
+│       ├── Entity/      # Encje: Equipment, Review, ReviewEquipment
+│       ├── Repository/  # Repozytoria z zaawansowanymi zapytaniami
+│       └── Service/     # Serwisy biznesowe modułu
 ├── templates/       # Szablony Twig
+│   └── asekuracja/  # Szablony modułu Asekuracja
 ├── tests/          # Testy automatyczne
-└── var/            # Cache, logi, sesje
+└── var/            # Cache, logi, sesje, backupy
 ```
 
 ### Środowisko Deweloperskie
