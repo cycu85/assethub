@@ -543,11 +543,6 @@ class AsekuracyjnyService
         return $this->reviewRepository->find($id);
     }
 
-    public function getReviewStatistics(): array
-    {
-        return $this->reviewRepository->getStatistics();
-    }
-
     public function createReview(array $data, User $user): AsekuracyjnyReview
     {
         $review = new AsekuracyjnyReview();
