@@ -54,7 +54,7 @@ class EquipmentSetController extends AbstractController
             'sort_dir' => $request->query->get('sort_dir')
         ];
 
-        $equipmentSetsPagination = $this->asekuracyjnyService->getEquipmentSetsWithPagination($page, 25, $filters);
+        $equipmentSetsPagination = $this->asekuracyjnyService->getEquipmentSetsWithPagination($page, 1000, $filters);
         $statistics = $this->asekuracyjnyService->getEquipmentSetStatistics();
         
         // Sprawdzenie uprawnień

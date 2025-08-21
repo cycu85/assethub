@@ -55,7 +55,7 @@ class AsekuracyjnyController extends AbstractController
             'sort_dir' => $request->query->get('sort_dir')
         ];
 
-        $equipmentPagination = $this->asekuracyjnyService->getEquipmentWithPagination($page, 25, $filters);
+        $equipmentPagination = $this->asekuracyjnyService->getEquipmentWithPagination($page, 1000, $filters);
         $statistics = $this->asekuracyjnyService->getEquipmentStatistics();
         $allEquipmentSets = $this->asekuracyjnyService->getAllEquipmentSets();
         
