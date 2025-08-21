@@ -97,6 +97,9 @@ class AsekuracyjnyEquipment
     #[ORM\OneToMany(mappedBy: 'equipment', targetEntity: AsekuracyjnyReview::class, cascade: ['persist'])]
     private Collection $reviews;
 
+    #[ORM\OneToMany(mappedBy: 'equipment', targetEntity: AsekuracyjnyReviewEquipment::class, cascade: ['persist'])]
+    private Collection $reviewEquipments;
+
     #[ORM\OneToMany(mappedBy: 'equipment', targetEntity: AsekuracyjnyTransfer::class, cascade: ['persist'])]
     private Collection $transfers;
 
@@ -136,6 +139,7 @@ class AsekuracyjnyEquipment
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
+        $this->reviewEquipments = new ArrayCollection();
         $this->transfers = new ArrayCollection();
         $this->equipmentSets = new ArrayCollection();
         $this->status = self::STATUS_AVAILABLE;
@@ -564,6 +568,35 @@ class AsekuracyjnyEquipment
         return new \DateTime() > $this->nextReviewDate;
     }
 
+    /**
+     * @return Collection<int, AsekuracyjnyReviewEquipment>
+     */
+    public function getReviewEquipments(): Collection
+    {
+        return $this->reviewEquipments;
+    }
+
+    public function addReviewEquipment(AsekuracyjnyReviewEquipment $reviewEquipment): self
+    {
+        if (!$this->reviewEquipments->contains($reviewEquipment)) {
+            $this->reviewEquipments->add($reviewEquipment);
+            $reviewEquipment->setEquipment($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReviewEquipment(AsekuracyjnyReviewEquipment $reviewEquipment): self
+    {
+        if ($this->reviewEquipments->removeElement($reviewEquipment)) {
+            if ($reviewEquipment->getEquipment() === $this) {
+                $reviewEquipment->setEquipment(null);
+            }
+        }
+
+        return $this;
+    }
+
     public function getLastReview(): ?AsekuracyjnyReview
     {
         $reviews = $this->reviews->toArray();
@@ -576,6 +609,44 @@ class AsekuracyjnyEquipment
         });
 
         return $reviews[0] ?? null;
+    }
+
+    /**
+     * Get the last completed review equipment entry (complete history)
+     */
+    public function getLastReviewEquipment(): ?AsekuracyjnyReviewEquipment
+    {
+        $reviewEquipments = $this->reviewEquipments->filter(function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->getReview() && $reviewEquipment->getReview()->isCompleted();
+        })->toArray();
+
+        if (empty($reviewEquipments)) {
+            return null;
+        }
+
+        usort($reviewEquipments, function($a, $b) {
+            return $b->getReview()->getCompletedDate() <=> $a->getReview()->getCompletedDate();
+        });
+
+        return $reviewEquipments[0] ?? null;
+    }
+
+    /**
+     * Get complete review history for this equipment (including when it was part of sets)
+     */
+    public function getCompleteReviewHistory(): Collection
+    {
+        return $this->reviewEquipments->filter(function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->getReview() && $reviewEquipment->getReview()->isCompleted();
+        });
+    }
+
+    /**
+     * Get count of all reviews this equipment has been through
+     */
+    public function getReviewHistoryCount(): int
+    {
+        return $this->getCompleteReviewHistory()->count();
     }
 
     public function getAttachments(): array

@@ -5,9 +5,11 @@ namespace App\AsekuracyjnySPM\Service;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyReviewEquipment;
 use App\AsekuracyjnySPM\Repository\AsekuracyjnyReviewRepository;
 use App\AsekuracyjnySPM\Repository\AsekuracyjnyEquipmentRepository;
 use App\AsekuracyjnySPM\Repository\AsekuracyjnyEquipmentSetRepository;
+use App\AsekuracyjnySPM\Repository\AsekuracyjnyReviewEquipmentRepository;
 use App\Entity\User;
 use App\Service\AuditService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +24,7 @@ class ReviewService
         private AsekuracyjnyReviewRepository $reviewRepository,
         private AsekuracyjnyEquipmentRepository $equipmentRepository,
         private AsekuracyjnyEquipmentSetRepository $equipmentSetRepository,
+        private AsekuracyjnyReviewEquipmentRepository $reviewEquipmentRepository,
         private EntityManagerInterface $entityManager,
         private AuditService $auditService,
         private LoggerInterface $logger,
@@ -48,6 +51,15 @@ class ReviewService
 
         $this->entityManager->persist($review);
         $this->entityManager->flush();
+
+        // Create review equipment entry
+        $reviewEquipment = new AsekuracyjnyReviewEquipment();
+        $reviewEquipment->setReview($review);
+        $reviewEquipment->setEquipment($equipment);
+        $reviewEquipment->setWasInSetAtReview(false);
+        $reviewEquipment->captureEquipmentSnapshot($equipment);
+
+        $this->entityManager->persist($reviewEquipment);
 
         // Update equipment status
         $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
@@ -91,6 +103,28 @@ class ReviewService
 
         $this->entityManager->persist($review);
         $this->entityManager->flush();
+
+        // Create review equipment entries for all equipments in the review
+        $equipmentsToReview = empty($selectedEquipmentIds) 
+            ? $equipmentSet->getEquipment()->toArray()
+            : $equipmentSet->getEquipment()->filter(function($equipment) use ($selectedEquipmentIds) {
+                return in_array($equipment->getId(), $selectedEquipmentIds);
+            })->toArray();
+
+        foreach ($equipmentsToReview as $equipment) {
+            $reviewEquipment = new AsekuracyjnyReviewEquipment();
+            $reviewEquipment->setReview($review);
+            $reviewEquipment->setEquipment($equipment);
+            $reviewEquipment->setWasInSetAtReview(true);
+            $reviewEquipment->captureEquipmentSnapshot($equipment);
+            $reviewEquipment->captureSetContext($equipmentSet);
+
+            $this->entityManager->persist($reviewEquipment);
+
+            // Update individual equipment status
+            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+            $equipment->setUpdatedBy($user);
+        }
 
         // Update equipment set status
         $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW);
@@ -434,5 +468,141 @@ class ReviewService
         }
 
         $this->entityManager->flush();
+    }
+
+    // === REVIEW EQUIPMENT METHODS ===
+
+    /**
+     * Get complete review history for equipment (including when it was part of sets)
+     */
+    public function getEquipmentReviewHistory(AsekuracyjnyEquipment $equipment): array
+    {
+        return $this->reviewEquipmentRepository->findByEquipment($equipment);
+    }
+
+    /**
+     * Get all equipments that were reviewed in a specific review
+     */
+    public function getReviewEquipments(AsekuracyjnyReview $review): array
+    {
+        return $this->reviewEquipmentRepository->findByReview($review);
+    }
+
+    /**
+     * Get review equipment history with pagination
+     */
+    public function getEquipmentHistoryWithPagination(AsekuracyjnyEquipment $equipment, int $page = 1, int $limit = 25): array
+    {
+        return $this->reviewEquipmentRepository->findEquipmentHistoryWithPagination($equipment, $page, $limit);
+    }
+
+    /**
+     * Update individual equipment result in a review
+     */
+    public function updateEquipmentReviewResult(
+        AsekuracyjnyReview $review, 
+        AsekuracyjnyEquipment $equipment, 
+        string $result, 
+        ?string $findings = null,
+        ?string $recommendations = null,
+        User $user = null
+    ): bool {
+        foreach ($review->getReviewEquipments() as $reviewEquipment) {
+            if ($reviewEquipment->getEquipment() === $equipment) {
+                $reviewEquipment->setIndividualResult($result);
+                if ($findings) {
+                    $reviewEquipment->setIndividualFindings($findings);
+                }
+                if ($recommendations) {
+                    $reviewEquipment->setIndividualRecommendations($recommendations);
+                }
+
+                $this->entityManager->flush();
+
+                if ($user) {
+                    $this->auditService->logUserAction($user, 'update_equipment_review_result', [
+                        'review_id' => $review->getId(),
+                        'equipment_id' => $equipment->getId(),
+                        'result' => $result,
+                        'has_findings' => !empty($findings),
+                        'has_recommendations' => !empty($recommendations)
+                    ]);
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get statistics for review equipment results
+     */
+    public function getReviewEquipmentStatistics(): array
+    {
+        return $this->reviewEquipmentRepository->getResultStatistics();
+    }
+
+    /**
+     * Search in review equipment history
+     */
+    public function searchReviewEquipmentHistory(string $query, int $limit = 10): array
+    {
+        return $this->reviewEquipmentRepository->search($query, $limit);
+    }
+
+    /**
+     * Find orphaned review equipments (where equipment was deleted)
+     */
+    public function getOrphanedReviewEquipments(): array
+    {
+        return $this->reviewEquipmentRepository->findOrphanedReviews();
+    }
+
+    /**
+     * Get equipments reviewed in a specific time period
+     */
+    public function getEquipmentsReviewedInPeriod(\DateTimeInterface $startDate, \DateTimeInterface $endDate): array
+    {
+        return $this->reviewEquipmentRepository->findByDateRange($startDate, $endDate);
+    }
+
+    /**
+     * Check if equipment was ever part of a set review
+     */
+    public function wasEquipmentInSetReview(AsekuracyjnyEquipment $equipment): bool
+    {
+        $history = $this->getEquipmentReviewHistory($equipment);
+        
+        foreach ($history as $reviewEquipment) {
+            if ($reviewEquipment->wasSetReview()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the last review equipment entry for equipment
+     */
+    public function getLastReviewEquipmentForEquipment(AsekuracyjnyEquipment $equipment): ?AsekuracyjnyReviewEquipment
+    {
+        $history = $this->getEquipmentReviewHistory($equipment);
+        
+        $completedReviews = array_filter($history, function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->getReview() && $reviewEquipment->getReview()->isCompleted();
+        });
+
+        if (empty($completedReviews)) {
+            return null;
+        }
+
+        usort($completedReviews, function($a, $b) {
+            return $b->getReview()->getCompletedDate() <=> $a->getReview()->getCompletedDate();
+        });
+
+        return $completedReviews[0] ?? null;
     }
 }

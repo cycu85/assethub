@@ -103,6 +103,9 @@ class AsekuracyjnyReview
     #[ORM\JoinColumn(nullable: true)]
     private ?User $updatedBy = null;
 
+    #[ORM\OneToMany(mappedBy: 'review', targetEntity: AsekuracyjnyReviewEquipment::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $reviewEquipments;
+
     public const STATUS_PREPARATION = 'preparation';
     public const STATUS_SENT = 'sent';
     public const STATUS_COMPLETED = 'completed';
@@ -144,6 +147,7 @@ class AsekuracyjnyReview
         $this->status = self::STATUS_PREPARATION;
         $this->selectedEquipmentIds = [];
         $this->attachments = [];
+        $this->reviewEquipments = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
         $this->generateReviewNumber();
@@ -587,6 +591,88 @@ class AsekuracyjnyReview
 
         $endDate = $this->completedDate ?? new \DateTime();
         return $this->sentDate->diff($endDate)->days;
+    }
+
+    /**
+     * @return Collection<int, AsekuracyjnyReviewEquipment>
+     */
+    public function getReviewEquipments(): Collection
+    {
+        return $this->reviewEquipments;
+    }
+
+    public function addReviewEquipment(AsekuracyjnyReviewEquipment $reviewEquipment): self
+    {
+        if (!$this->reviewEquipments->contains($reviewEquipment)) {
+            $this->reviewEquipments->add($reviewEquipment);
+            $reviewEquipment->setReview($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReviewEquipment(AsekuracyjnyReviewEquipment $reviewEquipment): self
+    {
+        if ($this->reviewEquipments->removeElement($reviewEquipment)) {
+            if ($reviewEquipment->getReview() === $this) {
+                $reviewEquipment->setReview(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get all equipments that are part of this review (both individual and from sets)
+     */
+    public function getReviewedEquipments(): Collection
+    {
+        return $this->reviewEquipments->map(function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->getEquipment();
+        })->filter(function($equipment) {
+            return $equipment !== null;
+        });
+    }
+
+    /**
+     * Check if specific equipment is part of this review
+     */
+    public function hasEquipmentInReview(AsekuracyjnyEquipment $equipment): bool
+    {
+        foreach ($this->reviewEquipments as $reviewEquipment) {
+            if ($reviewEquipment->getEquipment() === $equipment) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get count of equipments in this review
+     */
+    public function getReviewedEquipmentsCount(): int
+    {
+        return $this->reviewEquipments->count();
+    }
+
+    /**
+     * Get equipments that were reviewed as part of a set
+     */
+    public function getSetReviewedEquipments(): Collection
+    {
+        return $this->reviewEquipments->filter(function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->wasSetReview();
+        });
+    }
+
+    /**
+     * Get equipments that were reviewed individually
+     */
+    public function getIndividuallyReviewedEquipments(): Collection
+    {
+        return $this->reviewEquipments->filter(function(AsekuracyjnyReviewEquipment $reviewEquipment) {
+            return $reviewEquipment->wasIndividualReview();
+        });
     }
 
     public function __toString(): string
