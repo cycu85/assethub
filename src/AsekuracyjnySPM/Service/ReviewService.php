@@ -205,6 +205,9 @@ class ReviewService
         $review->completeReview($user, $data['result'] ?? null);
         $this->entityManager->flush();
 
+        // Update individual equipment review results
+        $this->updateEquipmentReviewResults($review, $data);
+
         // Update equipment/set status and next review date
         $this->updateSubjectAfterReview($review, $data, $user);
 
@@ -465,6 +468,45 @@ class ReviewService
                 : AsekuracyjnyEquipmentSet::STATUS_AVAILABLE
             );
             $equipmentSet->setUpdatedBy($user);
+        }
+
+        $this->entityManager->flush();
+    }
+
+    /**
+     * Update equipment review results after review completion
+     */
+    private function updateEquipmentReviewResults(AsekuracyjnyReview $review, array $data): void
+    {
+        // Only process if review has equipment review entries
+        if ($review->getReviewEquipments()->isEmpty()) {
+            return;
+        }
+
+        $mainResult = $review->getResult();
+        $mainFindings = $review->getFindings();
+        $mainRecommendations = $review->getRecommendations();
+        $nextReviewDate = $data['next_review_date'] ?? null;
+
+        foreach ($review->getReviewEquipments() as $reviewEquipment) {
+            // Set individual result to 'inherited' if not explicitly set
+            if (!$reviewEquipment->getIndividualResult()) {
+                $reviewEquipment->setIndividualResult(AsekuracyjnyReviewEquipment::RESULT_INHERITED);
+            }
+
+            // Set individual findings and recommendations if not explicitly set and main review has them
+            if (!$reviewEquipment->getIndividualFindings() && $mainFindings) {
+                $reviewEquipment->setIndividualFindings($mainFindings);
+            }
+
+            if (!$reviewEquipment->getIndividualRecommendations() && $mainRecommendations) {
+                $reviewEquipment->setIndividualRecommendations($mainRecommendations);
+            }
+
+            // Set next review date for individual equipment
+            if ($nextReviewDate) {
+                $reviewEquipment->setIndividualNextReviewDate($nextReviewDate);
+            }
         }
 
         $this->entityManager->flush();
