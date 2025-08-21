@@ -1,0 +1,359 @@
+# Code Review Report - Moduł Asekuracja w Aplikacji AssetHub
+
+## 1. Architektura i Organizacja Kodu
+
+### Struktura katalogów i namespace'ów ✅ **DOBRA**
+- Czysta struktura następuje konwencje Symfony
+- Poprawnie rozdzielone namespace'y na `App\AsekuracyjnySPM\`
+- Logiczne grupowanie: Controller, Entity, Service, Repository, Form
+- Separacja logiki biznesowej od prezentacji
+
+### Separacja odpowiedzialności ✅ **DOBRA**
+- **Kontrolery**: Odpowiadają za obsługę HTTP requests i delegują logikę do serwisów
+- **Serwisy**: Zawierają główną logikę biznesową
+- **Repozytoria**: Obsługują zapytania do bazy danych
+- **Encje**: Definiują model danych z odpowiednimi walidacjami
+
+### Wzorce projektowe ⚠️ **ŚREDNIA**
+**Pozytywne:**
+- Service Layer Pattern - główna logika w AsekuracyjnyService
+- Repository Pattern - oddzielenie logiki dostępu do danych
+- Dependency Injection - właściwe wykorzystanie DI container
+
+**Do poprawy:**
+- Brakuje interfejsów dla serwisów (narusza SOLID principles)
+- AsekuracyjnyService jest zbyt duży (778 linii) - narusza Single Responsibility Principle
+
+## 2. Jakość Kodu
+
+### Czytelność i konsystencja ✅ **DOBRA**
+- Spójne nazewnictwo klas i metod
+- Kod w języku polskim (nazwy zmiennych, komentarze) - zgodne z domeną biznesową
+- Prawidłowe używanie PSR-12 coding standards
+
+### Nazewnictwo ⚠️ **ŚREDNIA**
+**Pozytywne:**
+- Nazwy klas i metod są opisowe
+- Nazwy zmiennych są zrozumiałe
+
+**Do poprawy:**
+- Mieszanie języków: klasy po angielsku (`AsekuracyjnyEquipment`) ale metody często po polsku
+- Niektóre nazwy mogą być mylące (`getEquipmentSetsDisplayNames()` zwraca string, nie array)
+
+### Komentarze i dokumentacja ⚠️ **ŚREDNIA**
+**Pozytywne:**
+- PHPDoc dla typów zwracanych w kolekcjach
+- Komentarze wyjaśniające złożoną logikę
+
+**Do poprawy:**
+```php
+// Brakuje dokumentacji dla publicznych metod
+public function createEquipment(array $data, User $user): AsekuracyjnyEquipment
+{
+    // Brak opisu parametrów i logiki
+}
+```
+
+### Duplikacja kodu ❌ **SŁABA**
+**Problemy:**
+1. **Duplikacja logiki uploadów** - podobny kod w 3 kontrolerach:
+```php
+// AsekuracyjnyController.php:456-552
+// EquipmentSetController.php:419-515  
+// ReviewController.php:539-590
+```
+
+2. **Duplikacja walidacji plików**:
+```php
+$allowedMimeTypes = [
+    'application/pdf',
+    'application/msword',
+    // ... powtarzane w każdym kontrolerze
+];
+```
+
+3. **Duplikacja logiki CSRF**:
+```php
+if (!$this->isCsrfTokenValid('delete_equipment_' . $equipment->getId(), $request->request->get('_token'))) {
+    throw $this->createAccessDeniedException('Invalid CSRF token.');
+}
+```
+
+## 3. Bezpieczeństwo
+
+### Autoryzacja i kontrola dostępu ✅ **BARDZO DOBRA**
+```php
+// Prawidłowe sprawdzanie uprawnień na różnych poziomach
+$this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
+$this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
+$canEdit = $this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT');
+```
+
+### CSRF Protection ✅ **DOBRA**
+```php
+// Poprawnie implementowana ochrona CSRF dla wszystkich form actions
+if (!$this->isCsrfTokenValid('delete_equipment_' . $equipment->getId(), $request->request->get('_token'))) {
+    throw $this->createAccessDeniedException('Invalid CSRF token.');
+}
+```
+
+### Walidacja danych wejściowych ✅ **DOBRA**
+```php
+// Walidacja na poziomie encji
+#[Assert\NotBlank(message: 'Nazwa sprzętu jest wymagana')]
+#[Assert\Length(max: 255, maxMessage: 'Nazwa nie może być dłuższa niż {{ limit }} znaków')]
+private ?string $name = null;
+
+// Walidacja w serwisach
+$violations = $this->validator->validate($equipment);
+if (count($violations) > 0) {
+    throw new ValidationException('Błędy walidacji', $violations);
+}
+```
+
+### Upload plików ⚠️ **ŚREDNIA**
+**Pozytywne:**
+- Walidacja rozmiaru (10MB limit)
+- Walidacja typów MIME
+- Unikalne nazwy plików
+
+**Do poprawy:**
+```php
+// Problematyczne: bezpośrednie użycie getClientOriginalExtension()
+$filename = uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
+
+// Brakuje:
+// 1. Walidacji rzeczywistych nagłówków pliku (magic numbers)
+// 2. Antywirusowego skanowania
+// 3. Ograniczenia katalogów uploadu
+```
+
+### XSS Protection ✅ **DOBRA**
+Twig automatycznie escapuje output, ale:
+```twig
+{# Przykłady z szablonów - poprawnie zabezpieczone #}
+{{ equipment.name }}
+{{ equipment.description|nl2br }}
+```
+
+## 4. Performance
+
+### Optymalizacja zapytań ✅ **DOBRA**
+```php
+// Poprawne użycie JOIN i SELECT dla optymalizacji
+$qb = $this->createQueryBuilder('e')
+    ->leftJoin('e.assignedTo', 'u')
+    ->leftJoin('e.equipmentSets', 'es')
+    ->addSelect('u')
+    ->addSelect('es');
+```
+
+### N+1 Problem ✅ **DOBRA**
+```php
+// Unikanie N+1 przez eager loading w repozytoriach
+->leftJoin('e.assignedTo', 'u')
+->addSelect('u')
+```
+
+### Cache'owanie ❌ **BRAK**
+- Brak wykorzystania cache dla:
+  - Statystyk dashboardu
+  - Słowników (equipment types)
+  - Częstych zapytań
+
+## 5. Zarządzanie Błędami
+
+### Exception Handling ✅ **BARDZO DOBRA**
+```php
+// Właściwe hierarchie wyjątków
+try {
+    $equipment = $this->asekuracyjnyService->createEquipment($data, $user);
+} catch (ValidationException $e) {
+    $this->addFlash('error', 'Błędy walidacji: ' . $e->getMessage());
+} catch (BusinessLogicException $e) {
+    $this->addFlash('error', $e->getMessage());
+} catch (\Exception $e) {
+    $this->addFlash('error', 'Wystąpił nieoczekiwany błąd.');
+    $this->logger->error('Failed to create equipment', [...]);
+}
+```
+
+### Logowanie ✅ **DOBRA**
+```php
+// Strukturalne logowanie z kontekstem
+$this->logger->info('Utworzono sprzęt asekuracyjny', [
+    'equipment_id' => $equipment->getId(),
+    'inventory_number' => $equipment->getInventoryNumber(),
+    'user' => $user->getUsername()
+]);
+```
+
+## 6. Testy
+
+### Pokrycie testowe ❌ **BRAK**
+- **Krytyczny problem**: Brak testów jednostkowych dla modułu asekuracja
+- Brak testów integracyjnych
+- Brak testów funkcjonalnych kontrolerów
+
+## 7. Doctrine/ORM
+
+### Mapowanie encji ✅ **DOBRA**
+```php
+// Poprawne użycie atrybutów Doctrine
+#[ORM\Entity(repositoryClass: AsekuracyjnyEquipmentRepository::class)]
+#[ORM\HasLifecycleCallbacks]
+#[ORM\Table(name: 'asekuracyjny_equipment')]
+
+// Właściwe relacje
+#[ORM\ManyToMany(targetEntity: AsekuracyjnyEquipmentSet::class, inversedBy: 'equipment')]
+#[ORM\JoinTable(name: 'asekuracyjny_equipment_set_items')]
+```
+
+### Lifecycle Callbacks ✅ **DOBRA**
+```php
+#[ORM\PreUpdate]
+public function setUpdatedValue(): void
+{
+    $this->updatedAt = new \DateTime();
+}
+```
+
+### Relacje ⚠️ **ŚREDNIA**
+**Pozytywne:**
+- Prawidłowo zdefiniowane relacje Many-to-Many, One-to-Many
+- Użycie cascade operations
+
+**Do poprawy:**
+- Brak lazy loading strategy definitions
+- Potencjalny problem z circular references
+
+## 8. Frontend (Twig)
+
+### Struktura szablonów ✅ **DOBRA**
+```twig
+{% extends 'base.html.twig' %}
+{% block title %}Sprzęt asekuracyjny - {{ app_name() }}{% endblock %}
+```
+
+### Bezpieczeństwo XSS ✅ **DOBRA**
+- Automatyczne escapowanie Twig
+- Poprawne użycie filtrów
+
+### Responsywność ✅ **DOBRA**
+- Bootstrap classes
+- Mobile-friendly komponenty
+
+## Rekomendacje do Poprawy
+
+### Krytyczne (Priorytet 1)
+1. **Dodać testy** - napisać testy jednostkowe dla serwisów i kontrolerów
+2. **Refaktoryzacja AsekuracyjnyService** - podzielić na mniejsze serwisy
+3. **Utworzenie FileUploadService** - wyeliminować duplikację kodu uploadów
+
+### Wysokie (Priorytet 2)
+4. **Dodać interfejsy dla serwisów** - przestrzeganie SOLID principles
+5. **Implementacja cache** - dla statystyk i słowników
+6. **Poprawić bezpieczeństwo uploadów** - dodać walidację magic numbers
+
+### Średnie (Priorytet 3)
+7. **Dodać dokumentację API** - PHPDoc dla publicznych metod
+8. **Standaryzacja nazewnictwa** - spójność językowa
+9. **Optymalizacja zapytań** - dodać indeksy dla często przeszukiwanych pól
+
+### Niskie (Priorytet 4)
+10. **Dodać metryki performance** - monitoring czasów odpowiedzi
+11. **Implementacja soft delete** - zamiast hard delete dla auditability
+
+## Ocena Ogólna
+
+**Ocena: 7/10** - **DOBRA JAKOŚĆ KODU**
+
+**Mocne strony:**
+- Świetne zarządzanie bezpieczeństwem i autoryzacją
+- Właściwa architektura zgodna z wzorcami Symfony
+- Dobra obsługa błędów i logowanie
+- Przejrzysta struktura kodu
+
+**Główne problemy do rozwiązania:**
+- Brak testów (krytyczne)
+- Duplikacja kodu w obsłudze uploadów
+- Zbyt duży serwis główny
+- Brak cache'owania
+
+Moduł jest funkcjonalny i bezpieczny, ale wymaga refaktoryzacji i dodania testów przed produkcją.
+
+## Szczegółowe Zalecenia Refaktoryzacji
+
+### 1. Podział AsekuracyjnyService na mniejsze serwisy:
+```
+AsekuracyjnyEquipmentService - zarządzanie sprzętem
+AsekuracyjnyEquipmentSetService - zarządzanie zestawami  
+AsekuracyjnyReviewService - zarządzanie przeglądami (już istnieje)
+AsekuracyjnyFileUploadService - obsługa uploadów
+AsekuracyjnyStatisticsService - generowanie statystyk
+```
+
+### 2. Utworzenie interfejsów:
+```php
+interface EquipmentServiceInterface
+{
+    public function createEquipment(array $data, User $user): AsekuracyjnyEquipment;
+    public function updateEquipment(AsekuracyjnyEquipment $equipment, array $data, User $user): AsekuracyjnyEquipment;
+    // ...
+}
+```
+
+### 3. FileUploadService dla eliminacji duplikacji:
+```php
+class FileUploadService
+{
+    private array $allowedMimeTypes = [
+        'application/pdf',
+        'application/msword',
+        // ...
+    ];
+    
+    public function uploadFiles(array $files, string $directory, User $user): array
+    {
+        // Wspólna logika uploadu
+    }
+    
+    private function validateFile(UploadedFile $file): void
+    {
+        // Wspólna walidacja
+    }
+}
+```
+
+### 4. Przykład testów jednostkowych:
+```php
+class AsekuracyjnyEquipmentServiceTest extends TestCase
+{
+    public function testCreateEquipmentWithValidData(): void
+    {
+        // Given
+        $data = ['name' => 'Test Equipment', 'inventory_number' => 'TEST-001'];
+        $user = $this->createMock(User::class);
+        
+        // When
+        $equipment = $this->service->createEquipment($data, $user);
+        
+        // Then
+        $this->assertInstanceOf(AsekuracyjnyEquipment::class, $equipment);
+        $this->assertEquals('Test Equipment', $equipment->getName());
+    }
+}
+```
+
+### 5. Cache dla statystyk:
+```php
+public function getEquipmentStatistics(): array
+{
+    return $this->cache->get('equipment_statistics', function (ItemInterface $item) {
+        $item->expiresAfter(300); // 5 minutes
+        return $this->equipmentRepository->getStatistics();
+    });
+}
+```
+
+Ten raport code review zawiera wszystkie kluczowe aspekty modułu asekuracja z konkretnymi rekomendacjami do poprawy.
