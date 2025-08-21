@@ -121,60 +121,65 @@
             <div class="card-header">
                 <h6 class="card-title mb-0">
                     <i class="ri-tools-line me-2"></i>Przedmiot przeglądu
+                    <span class="badge bg-info ms-2">{{ review.reviewedEquipmentsCount }} elementów</span>
                 </h6>
             </div>
             <div class="card-body">
-                {% if review.equipment %}
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-primary rounded me-3">
-                        <i class="ri-shield-line text-white fs-16"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                            <a href="{{ path('asekuracja_equipment_show', {id: review.equipment.id}) }}" 
-                               class="text-decoration-none">
-                                {{ review.equipment.name }}
-                            </a>
-                        </h6>
-                        <div class="text-muted small">
-                            <span class="me-3">{{ review.equipment.inventoryNumber }}</span>
-                            <span class="me-3">{{ review.equipment.equipmentType }}</span>
-                            {% if review.equipment.manufacturer and review.equipment.model %}
-                                <span>{{ review.equipment.manufacturer }} {{ review.equipment.model }}</span>
+                {% if review.reviewEquipments|length > 0 %}
+                    {% for reviewEquipment in review.reviewEquipments %}
+                    <div class="d-flex align-items-center mb-3 {{ loop.last ? '' : 'border-bottom pb-3' }}">
+                        <div class="avatar-sm bg-{{ reviewEquipment.wasSetReview ? 'info' : 'primary' }} rounded me-3">
+                            <i class="ri-{{ reviewEquipment.wasSetReview ? 'stack' : 'shield' }}-line text-white fs-16"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                {% if reviewEquipment.equipment %}
+                                    <a href="{{ path('asekuracja_equipment_show', {id: reviewEquipment.equipment.id}) }}" 
+                                       class="text-decoration-none">
+                                        {{ reviewEquipment.equipmentDisplayName }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">{{ reviewEquipment.equipmentDisplayName }} (usunięty)</span>
+                                {% endif %}
+                                {% if reviewEquipment.wasSetReview %}
+                                    <small class="text-info ms-2">
+                                        <i class="ri-stack-line"></i> {{ reviewEquipment.setNameAtReview }}
+                                    </small>
+                                {% endif %}
+                            </h6>
+                            <div class="text-muted small">
+                                <span class="me-3">{{ reviewEquipment.equipmentDisplayInventoryNumber }}</span>
+                                <span class="me-3">{{ reviewEquipment.equipmentTypeAtReview }}</span>
+                                {% if reviewEquipment.equipmentManufacturerAtReview and reviewEquipment.equipmentModelAtReview %}
+                                    <span>{{ reviewEquipment.equipmentManufacturerAtReview }} {{ reviewEquipment.equipmentModelAtReview }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if review.status == 'completed' %}
+                                {% set effective_result = reviewEquipment.effectiveResult %}
+                                {% if effective_result %}
+                                    {% set result_class = effective_result == 'passed' ? 'success' : 
+                                                         (effective_result == 'failed' ? 'danger' : 
+                                                         (effective_result == 'conditionally_passed' ? 'warning' : 'secondary')) %}
+                                    <span class="badge bg-{{ result_class }} mb-1">
+                                        {{ reviewEquipment.effectiveResultDisplayName }}
+                                    </span><br>
+                                {% endif %}
+                            {% endif %}
+                            {% if reviewEquipment.equipment %}
+                                {% set status_class = reviewEquipment.equipment.status == 'available' ? 'success' : 'warning' %}
+                                <span class="badge bg-{{ status_class }}">{{ reviewEquipment.equipment.statusDisplayName }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ reviewEquipment.equipmentStatusAtReview }}</span>
                             {% endif %}
                         </div>
                     </div>
-                    <div>
-                        {% set status_class = review.equipment.status == 'available' ? 'success' : 'warning' %}
-                        <span class="badge bg-{{ status_class }}">{{ review.equipment.statusDisplayName }}</span>
-                    </div>
-                </div>
-                {% elseif review.equipmentSet %}
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-info rounded me-3">
-                        <i class="ri-stack-line text-white fs-16"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                            <a href="{{ path('asekuracja_equipment_set_show', {id: review.equipmentSet.id}) }}" 
-                               class="text-decoration-none">
-                                {{ review.equipmentSet.name }}
-                            </a>
-                        </h6>
-                        <div class="text-muted small">
-                            <span class="me-3">Zestaw {{ review.equipmentSet.setType }}</span>
-                            <span>{{ review.equipmentSet.equipmentItems|length }} elementów</span>
-                        </div>
-                    </div>
-                    <div>
-                        {% set status_class = review.equipmentSet.status == 'available' ? 'success' : 'warning' %}
-                        <span class="badge bg-{{ status_class }}">{{ review.equipmentSet.statusDisplayName }}</span>
-                    </div>
-                </div>
+                    {% endfor %}
                 {% else %}
                 <div class="text-center text-muted py-3">
                     <i class="ri-alert-line fs-24"></i>
-                    <p class="mb-0">Nie określono przedmiotu przeglądu</p>
+                    <p class="mb-0">Brak elementów w przeglądzie</p>
                 </div>
                 {% endif %}
             </div>
@@ -262,6 +267,99 @@
                     </div>
                 </div>
                 {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Szczegółowe wyniki dla elementów -->
+        {% if review.status == 'completed' and review.reviewEquipments|length > 1 %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-list-check-2 me-2"></i>Szczegółowe wyniki elementów
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Element</th>
+                                <th>Typ</th>
+                                <th>Wynik</th>
+                                <th>Uwagi/Usterki</th>
+                                <th>Zalecenia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reviewEquipment in review.reviewEquipments %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-{{ reviewEquipment.wasSetReview ? 'stack' : 'shield' }}-line text-{{ reviewEquipment.wasSetReview ? 'info' : 'primary' }} me-2"></i>
+                                        <div>
+                                            <strong>{{ reviewEquipment.equipmentDisplayName }}</strong><br>
+                                            <small class="text-muted">{{ reviewEquipment.equipmentDisplayInventoryNumber }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ reviewEquipment.equipmentTypeAtReview }}</span>
+                                    {% if reviewEquipment.wasSetReview %}
+                                        <br><small class="text-info">z zestawu</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set effective_result = reviewEquipment.effectiveResult %}
+                                    {% if effective_result %}
+                                        {% set result_class = effective_result == 'passed' ? 'success' : 
+                                                             (effective_result == 'failed' ? 'danger' : 
+                                                             (effective_result == 'conditionally_passed' ? 'warning' : 'secondary')) %}
+                                        <span class="badge bg-{{ result_class }}">
+                                            {{ reviewEquipment.effectiveResultDisplayName }}
+                                        </span>
+                                        {% if reviewEquipment.individualResult and reviewEquipment.individualResult != 'inherited' %}
+                                            <br><small class="text-muted">wynik indywidualny</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if reviewEquipment.individualFindings %}
+                                        <div class="text-truncate" style="max-width: 200px;" 
+                                             title="{{ reviewEquipment.individualFindings }}">
+                                            {{ reviewEquipment.individualFindings }}
+                                        </div>
+                                    {% elseif review.findings and not reviewEquipment.individualFindings %}
+                                        <div class="text-truncate text-muted" style="max-width: 200px;" 
+                                             title="{{ review.findings }}">
+                                            {{ review.findings }} <small>(ogólne)</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if reviewEquipment.individualRecommendations %}
+                                        <div class="text-truncate" style="max-width: 200px;" 
+                                             title="{{ reviewEquipment.individualRecommendations }}">
+                                            {{ reviewEquipment.individualRecommendations }}
+                                        </div>
+                                    {% elseif review.recommendations and not reviewEquipment.individualRecommendations %}
+                                        <div class="text-truncate text-muted" style="max-width: 200px;" 
+                                             title="{{ review.recommendations }}">
+                                            {{ review.recommendations }} <small>(ogólne)</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endif %}

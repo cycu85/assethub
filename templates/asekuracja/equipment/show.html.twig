@@ -421,9 +421,74 @@
                 {% endif %}
                 
                 <!-- Historia przeglądów -->
-                {% if reviews|length > 0 %}
+                {% if equipment.completeReviewHistory|length > 0 %}
                 <div class="mt-3">
-                    <label class="text-muted small">Historia przeglądów</label>
+                    <label class="text-muted small">Kompletna historia przeglądów ({{ equipment.reviewHistoryCount }})</label>
+                    <div class="list-group list-group-flush">
+                        {% for reviewEquipment in equipment.completeReviewHistory|slice(0, 5) %}
+                        {% set review = reviewEquipment.review %}
+                        <div class="list-group-item px-0 py-2 border-0 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <a href="{{ path('asekuracja_review_show', {id: review.id}) }}" 
+                                       class="text-decoration-none small fw-medium">
+                                        {{ review.reviewNumber }}
+                                        {% if reviewEquipment.wasSetReview %}
+                                        <i class="ri-stack-line text-info ms-1" title="Przegląd zestawu: {{ reviewEquipment.setNameAtReview }}"></i>
+                                        {% endif %}
+                                    </a>
+                                    {% if review.completedDate %}
+                                    <div class="text-muted small">
+                                        {{ review.completedDate|date('d.m.Y') }}
+                                        {% if reviewEquipment.wasSetReview %}
+                                        <span class="ms-1 text-info small">({{ reviewEquipment.setNameAtReview }})</span>
+                                        {% endif %}
+                                        
+                                        {% set effective_result = reviewEquipment.effectiveResult %}
+                                        {% if effective_result %}
+                                        <span class="ms-2 badge badge-sm bg-{{ effective_result == 'passed' ? 'success' : (effective_result == 'failed' ? 'danger' : 'warning') }}">
+                                            {{ reviewEquipment.effectiveResultDisplayName }}
+                                        </span>
+                                        {% if reviewEquipment.individualResult and reviewEquipment.individualResult != 'inherited' %}
+                                            <i class="ri-user-line text-primary ms-1" title="Wynik indywidualny"></i>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-muted small">
+                                        {% if review.status == 'preparation' %}Przygotowanie
+                                        {% elseif review.status == 'sent' %}Wysłane ({{ review.sentDate|date('d.m.Y') }})
+                                        {% else %}{{ review.status }}
+                                        {% endif %}
+                                        {% if reviewEquipment.wasSetReview %}
+                                        <span class="ms-1 text-info small">({{ reviewEquipment.setNameAtReview }})</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Snapshot danych z przeglądu -->
+                                    {% if reviewEquipment.equipmentNameAtReview != equipment.name or 
+                                          reviewEquipment.equipmentInventoryNumberAtReview != equipment.inventoryNumber %}
+                                    <div class="text-warning small">
+                                        <i class="ri-information-line me-1"></i>
+                                        Dane z przeglądu: {{ reviewEquipment.equipmentNameAtReview }} ({{ reviewEquipment.equipmentInventoryNumberAtReview }})
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <i class="ri-external-link-line text-muted small"></i>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if equipment.completeReviewHistory|length > 5 %}
+                        <div class="text-center py-2">
+                            <small class="text-muted">i {{ equipment.completeReviewHistory|length - 5 }} więcej przeglądów...</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% elseif reviews|length > 0 %}
+                <div class="mt-3">
+                    <label class="text-muted small">Historia przeglądów (stary format)</label>
                     <div class="list-group list-group-flush">
                         {% for review in reviews|slice(0, 5) %}
                         <div class="list-group-item px-0 py-2 border-0 border-bottom">

@@ -59,7 +59,7 @@ class AsekuracyjnyReviewEquipment
     private ?string $individualRecommendations = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    private ?string $individualNextReviewDate = null;
+    private ?\DateTimeInterface $individualNextReviewDate = null;
 
     #[ORM\Column(type: Types::BOOLEAN)]
     private bool $wasInSetAtReview = false;
@@ -249,12 +249,12 @@ class AsekuracyjnyReviewEquipment
         return $this;
     }
 
-    public function getIndividualNextReviewDate(): ?string
+    public function getIndividualNextReviewDate(): ?\DateTimeInterface
     {
         return $this->individualNextReviewDate;
     }
 
-    public function setIndividualNextReviewDate(?string $individualNextReviewDate): self
+    public function setIndividualNextReviewDate(?\DateTimeInterface $individualNextReviewDate): self
     {
         $this->individualNextReviewDate = $individualNextReviewDate;
         return $this;
