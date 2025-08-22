@@ -66,8 +66,11 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
 
         $this->applyFilters($qb, $filters);
 
-        $offset = ($page - 1) * $limit;
-        $qb->setFirstResult($offset)->setMaxResults($limit);
+        // Obsługa paginacji - jeśli limit to 0, nie stosuj ograniczeń
+        if ($limit > 0) {
+            $offset = ($page - 1) * $limit;
+            $qb->setFirstResult($offset)->setMaxResults($limit);
+        }
 
         $query = $qb->getQuery();
         $items = $query->getResult();
@@ -82,7 +85,7 @@ class AsekuracyjnyEquipmentRepository extends ServiceEntityRepository
             'total' => $total,
             'page' => $page,
             'limit' => $limit,
-            'pages' => ceil($total / $limit)
+            'pages' => $limit > 0 ? ceil($total / $limit) : 1
         ];
     }
 
