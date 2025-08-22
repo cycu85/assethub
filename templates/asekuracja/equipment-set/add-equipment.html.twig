@@ -269,6 +269,12 @@
     word-break: break-word !important;
     max-width: 200px !important;
 }
+.gridjs-td:nth-child(2) {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 250px !important;
+}
 /* Fix search input styling */
 .gridjs-search-input {
     padding-left: 35px !important;
@@ -308,9 +314,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let availableEquipment = [];
     let currentGrid = null;
+    let selectedEquipmentIds = new Set(); // Przechowywanie wybranych elementów
     
     // Załaduj dostępny sprzęt przy otwarciu modala
     document.getElementById('addEquipmentModal').addEventListener('show.bs.modal', function() {
+        selectedEquipmentIds.clear(); // Reset wybranych elementów
+        selectAllCheckbox.checked = false;
         loadAvailableEquipment();
     });
     
@@ -348,7 +357,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="form-check">
                     <input class="form-check-input equipment-checkbox" type="checkbox" 
                            value="${equipment.id}" id="equipment_${equipment.id}"
-                           onchange="updateSelectedCount()">
+                           ${selectedEquipmentIds.has(equipment.id.toString()) ? 'checked' : ''}
+                           onchange="handleCheckboxChange(this)">
                 </div>
             `),
             gridjs.html(`
@@ -411,10 +421,19 @@ document.addEventListener('DOMContentLoaded', function() {
         currentGrid = new gridjs.Grid(gridConfig).render(document.getElementById("modal-table-gridjs"));
     }
 
+    // Obsługa zmiany checkboxa
+    window.handleCheckboxChange = function(checkbox) {
+        if (checkbox.checked) {
+            selectedEquipmentIds.add(checkbox.value);
+        } else {
+            selectedEquipmentIds.delete(checkbox.value);
+        }
+        updateSelectedCount();
+    }
+
     // Funkcja aktualizacji liczby wybranych elementów
-    window.updateSelectedCount = function() {
-        const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
-        selectedCountSpan.textContent = selectedCheckboxes.length;
+    function updateSelectedCount() {
+        selectedCountSpan.textContent = selectedEquipmentIds.size;
     }
     
     // Handle page size change
@@ -426,9 +445,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Zaznacz/odznacz wszystkie
     selectAllCheckbox.addEventListener('change', function() {
         const checkboxes = document.querySelectorAll('.equipment-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
+        if (selectAllCheckbox.checked) {
+            // Zaznacz wszystkie na aktualnej stronie
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedEquipmentIds.add(checkbox.value);
+            });
+        } else {
+            // Odznacz wszystkie na aktualnej stronie
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                selectedEquipmentIds.delete(checkbox.value);
+            });
+        }
         updateSelectedCount();
     });
     
@@ -436,8 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
     addEquipmentForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const selectedEquipment = document.querySelectorAll('.equipment-checkbox:checked');
-        if (selectedEquipment.length === 0) {
+        if (selectedEquipmentIds.size === 0) {
             alert('Wybierz co najmniej jeden element sprzętu.');
             return;
         }
@@ -447,11 +475,11 @@ document.addEventListener('DOMContentLoaded', function() {
         form.method = 'POST';
         form.action = '{{ path("asekuracja_equipment_set_add_equipment", {id: equipment_set.id}) }}';
         
-        selectedEquipment.forEach(checkbox => {
+        selectedEquipmentIds.forEach(equipmentId => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'equipment_ids[]';
-            input.value = checkbox.value;
+            input.value = equipmentId;
             form.appendChild(input);
         });
         
