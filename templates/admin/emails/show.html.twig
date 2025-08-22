@@ -2,7 +2,14 @@
 
 {% block title %}Szczegóły maila #{{ email.id }}{% endblock %}
 
-{% block body %}
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/">Strona główna</a></li>
+    <li class="breadcrumb-item"><a href="/admin">Administracja</a></li>
+    <li class="breadcrumb-item"><a href="{{ path('admin_emails_index') }}">Historia maili</a></li>
+    <li class="breadcrumb-item active">Mail #{{ email.id }}</li>
+{% endblock %}
+
+{% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
