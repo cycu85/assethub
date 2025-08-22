@@ -1086,6 +1086,76 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(form);
         form.submit();
     });
+
+    // Walidacja formularza zakończenia przeglądu
+    const completeReviewForm = document.querySelector('#completeReviewModal form');
+    const completedDateField = document.getElementById('completedDate');
+    const nextReviewDateField = document.getElementById('nextReviewDate');
+    
+    function validateCompletedDate() {
+        const completedDate = new Date(completedDateField.value);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Koniec dnia
+        
+        if (completedDate > today) {
+            completedDateField.setCustomValidity('Data zakończenia przeglądu nie może być z przyszłości');
+            return false;
+        } else {
+            completedDateField.setCustomValidity('');
+            return true;
+        }
+    }
+    
+    function validateNextReviewDate() {
+        if (!nextReviewDateField.value || !completedDateField.value) {
+            nextReviewDateField.setCustomValidity('');
+            return true;
+        }
+        
+        const completedDate = new Date(completedDateField.value);
+        const nextReviewDate = new Date(nextReviewDateField.value);
+        
+        if (nextReviewDate <= completedDate) {
+            nextReviewDateField.setCustomValidity('Data następnego przeglądu musi być późniejsza niż data zakończenia');
+            return false;
+        } else {
+            nextReviewDateField.setCustomValidity('');
+            return true;
+        }
+    }
+    
+    function validateCompleteReviewForm() {
+        const isCompletedDateValid = validateCompletedDate();
+        const isNextReviewDateValid = validateNextReviewDate();
+        
+        return isCompletedDateValid && isNextReviewDateValid;
+    }
+    
+    // Event listenery dla walidacji na bieżąco
+    completedDateField.addEventListener('change', function() {
+        validateCompletedDate();
+        validateNextReviewDate(); // Rewalidacja następnej daty
+    });
+    
+    completedDateField.addEventListener('blur', validateCompletedDate);
+    
+    nextReviewDateField.addEventListener('change', validateNextReviewDate);
+    nextReviewDateField.addEventListener('blur', validateNextReviewDate);
+    
+    // Walidacja przed wysłaniem formularza
+    completeReviewForm.addEventListener('submit', function(e) {
+        if (!validateCompleteReviewForm()) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Pokaż komunikat błędu
+            const firstInvalidField = completeReviewForm.querySelector(':invalid');
+            if (firstInvalidField) {
+                firstInvalidField.focus();
+                firstInvalidField.reportValidity();
+            }
+        }
+    });
 });
 {% endif %}
 </script>
