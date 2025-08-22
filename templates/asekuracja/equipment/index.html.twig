@@ -340,6 +340,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="badge bg-{{ status_class }}">{{ item.statusDisplayName }}</span>
             `),
             gridjs.html(`
+                {% if item.projekt %}
+                    <span class="text-dark">{{ item.projekt }}</span>
+                {% else %}
+                    <span class="text-muted">-</span>
+                {% endif %}
+            `),
+            gridjs.html(`
                 {% if item.assignedTo %}
                     <span class="text-dark">{{ item.assignedTo.fullName }}</span>
                     <br><small class="text-muted">{{ item.assignedDate|date('d.m.Y') }}</small>
@@ -403,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { name: 'Typ', width: '100px' },
                 { name: 'Zestaw', width: '150px' },
                 { name: 'Status', width: '100px' },
+                { name: 'Projekt', width: '120px' },
                 { name: 'Przypisane do', width: '150px' },
                 { name: 'Następny przegląd', width: '150px' },
                 { name: 'Akcje', width: '120px', sort: false }
