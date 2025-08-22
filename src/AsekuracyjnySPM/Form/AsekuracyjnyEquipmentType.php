@@ -148,6 +148,15 @@ class AsekuracyjnyEquipmentType extends AbstractType
                 ]
             ])
             
+            ->add('projekt', TextType::class, [
+                'label' => 'Projekt',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => 'Nazwa projektu, w ramach którego zakupiono sprzęt'
+                ]
+            ])
+            
             ->add('warrantyExpiry', DateType::class, [
                 'label' => 'Koniec gwarancji',
                 'required' => false,

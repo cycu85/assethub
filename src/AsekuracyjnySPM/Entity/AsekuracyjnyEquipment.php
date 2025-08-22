@@ -61,6 +61,9 @@ class AsekuracyjnyEquipment
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $invoiceNumber = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $projekt = null;
+
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $warrantyExpiry = null;
 
@@ -289,6 +292,17 @@ class AsekuracyjnyEquipment
     public function setInvoiceNumber(?string $invoiceNumber): self
     {
         $this->invoiceNumber = $invoiceNumber;
+        return $this;
+    }
+
+    public function getProjekt(): ?string
+    {
+        return $this->projekt;
+    }
+
+    public function setProjekt(?string $projekt): self
+    {
+        $this->projekt = $projekt;
         return $this;
     }
 

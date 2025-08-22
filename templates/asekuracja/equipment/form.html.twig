@@ -207,6 +207,15 @@
                             {{ form_errors(form.invoiceNumber) }}
                         </div>
                     </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.projekt, 'Projekt', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.projekt, {'attr': {'class': 'form-control', 'placeholder': 'Nazwa projektu'}}) }}
+                            {{ form_errors(form.projekt) }}
+                            <div class="form-text">Projekt w ramach którego zakupiono sprzęt</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Przeglądy -->

@@ -186,7 +186,7 @@
         </div>
 
         <!-- Dane zakupowe -->
-        {% if equipment.purchaseDate or equipment.purchasePrice or equipment.supplier %}
+        {% if equipment.purchaseDate or equipment.purchasePrice or equipment.supplier or equipment.projekt %}
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">Dane zakupowe</h5>
@@ -218,6 +218,12 @@
                         <div class="mb-3">
                             <label class="text-muted small">Numer faktury</label>
                             <p class="mb-0">{{ equipment.invoiceNumber }}</p>
+                        </div>
+                        {% endif %}
+                        {% if equipment.projekt %}
+                        <div class="mb-3">
+                            <label class="text-muted small">Projekt</label>
+                            <p class="mb-0">{{ equipment.projekt }}</p>
                         </div>
                         {% endif %}
                         {% if equipment.manufacturingDate %}
