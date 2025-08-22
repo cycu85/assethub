@@ -614,6 +614,36 @@
     word-break: break-word !important;
     max-width: 250px !important;
 }
+
+/* Fix for select field in complete review modal */
+#completeReviewModal #result {
+    appearance: none !important;
+    background-color: var(--vz-input-bg-custom) !important;
+    background-image: var(--vz-form-select-bg-img), var(--vz-form-select-bg-icon, none) !important;
+    background-position: right .9rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 16px 12px !important;
+    border: var(--vz-border-width) solid var(--vz-input-border-custom) !important;
+    border-radius: var(--vz-border-radius) !important;
+    color: var(--vz-body-color) !important;
+    display: block !important;
+    font-size: .825rem !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    padding: .5rem 2.7rem .5rem .9rem !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    vertical-align: initial !important;
+}
+
+#completeReviewModal #result:focus {
+    border-color: var(--vz-input-focus-border-color) !important;
+    outline: 0 !important;
+    box-shadow: var(--vz-input-btn-focus-box-shadow) !important;
+}
 </style>
 
 <!-- Modal dodawania sprzętu do przeglądu -->
