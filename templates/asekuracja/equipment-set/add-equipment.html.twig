@@ -145,17 +145,6 @@
             <div id="addEquipmentForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Szukaj sprzętu</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="ri-search-line"></i>
-                            </span>
-                            <input type="text" class="form-control" id="equipmentSearch" 
-                                   placeholder="Wpisz nazwę, numer inwentarzowy lub producenta...">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
                         <label class="form-label">Filtruj według typu</label>
                         <select class="form-select" id="equipmentTypeFilter">
                             <option value="">Wszystkie typy</option>
@@ -275,17 +264,17 @@
     word-break: break-word !important;
     max-width: 250px !important;
 }
-/* Fix search input styling */
-.gridjs-search-input {
+/* Fix search input styling for modal */
+#modal-table-gridjs .gridjs-search-input {
     padding-left: 35px !important;
+    background-image: none !important;
 }
-.gridjs-search {
+#modal-table-gridjs .gridjs-search {
     position: relative !important;
 }
-.gridjs-search::before {
+#modal-table-gridjs .gridjs-search::before {
     content: "\f002" !important;
-    font-family: "Font Awesome 5 Free" !important;
-    font-weight: 900 !important;
+    font-family: "RemixIcon" !important;
     position: absolute !important;
     left: 12px !important;
     top: 50% !important;
@@ -293,6 +282,7 @@
     color: #6c757d !important;
     z-index: 10 !important;
     pointer-events: none !important;
+    font-size: 14px !important;
 }
 /* Prevent row clicking behavior */
 #modal-table-gridjs .gridjs-tr {
@@ -324,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addEquipmentButton = document.getElementById('addEquipmentButton');
     
     let availableEquipment = [];
+    let filteredEquipment = [];
     let currentGrid = null;
     let selectedEquipmentIds = new Set(); // Przechowywanie wybranych elementów
     
@@ -345,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             availableEquipment = data.equipment || [];
+            filteredEquipment = [...availableEquipment]; // Kopia dla filtrowania
             
             equipmentListLoading.style.display = 'none';
             
@@ -354,6 +346,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 createGrid(10);
                 document.getElementById('modal-table-gridjs').style.display = 'block';
             }
+            
+            // Binduj filtr typu sprzętu
+            bindEquipmentTypeFilter();
         } catch (error) {
             console.error('Błąd ładowania sprzętu:', error);
             equipmentListLoading.style.display = 'none';
@@ -362,8 +357,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function createGrid(pageSize = 10) {
-        // Prepare data for GridJS with checkboxes
-        const equipmentData = availableEquipment.map(equipment => [
+        // Prepare data for GridJS with checkboxes using filtered data
+        const equipmentData = filteredEquipment.map(equipment => [
             gridjs.html(`
                 <div class="form-check" onclick="event.stopPropagation();">
                     <input class="form-check-input equipment-checkbox" type="checkbox" 
@@ -436,6 +431,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         currentGrid = new gridjs.Grid(gridConfig).render(document.getElementById("modal-table-gridjs"));
+        
+        // Re-apply checkbox states after grid render
+        setTimeout(() => {
+            restoreCheckboxStates();
+        }, 100);
     }
 
     // Obsługa zmiany checkboxa
@@ -443,16 +443,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Zatrzymaj propagację eventu
         event.stopPropagation();
         
-        console.log('Checkbox changed:', checkbox.value, checkbox.checked);
-        
         if (checkbox.checked) {
             selectedEquipmentIds.add(checkbox.value);
         } else {
             selectedEquipmentIds.delete(checkbox.value);
         }
         updateSelectedCount();
-        
-        console.log('Selected IDs:', Array.from(selectedEquipmentIds));
     }
 
     // Funkcja aktualizacji liczby wybranych elementów
@@ -465,6 +461,49 @@ document.addEventListener('DOMContentLoaded', function() {
         const pageSize = parseInt(this.value);
         createGrid(pageSize);
     });
+    
+    // Funkcja bindowania filtra typu sprzętu
+    function bindEquipmentTypeFilter() {
+        equipmentTypeFilter.addEventListener('change', function() {
+            applyFilters();
+        });
+    }
+    
+    // Funkcja aplikowania filtrów
+    function applyFilters() {
+        const selectedType = equipmentTypeFilter.value;
+        
+        if (selectedType === '') {
+            filteredEquipment = [...availableEquipment];
+        } else {
+            filteredEquipment = availableEquipment.filter(equipment => 
+                equipment.equipment_type === selectedType
+            );
+        }
+        
+        // Odtwórz grid z przefiltrowanymi danymi
+        const currentPageSize = parseInt(document.getElementById('modal-page-size-select').value);
+        createGrid(currentPageSize);
+        
+        // Pokaż/ukryj komunikat o braku wyników
+        if (filteredEquipment.length === 0) {
+            document.getElementById('modal-table-gridjs').style.display = 'none';
+            equipmentListEmpty.style.display = 'block';
+        } else {
+            document.getElementById('modal-table-gridjs').style.display = 'block';
+            equipmentListEmpty.style.display = 'none';
+        }
+    }
+    
+    // Funkcja przywracania stanów checkboxów po renderze grid
+    function restoreCheckboxStates() {
+        const checkboxes = document.querySelectorAll('.equipment-checkbox');
+        checkboxes.forEach(checkbox => {
+            if (selectedEquipmentIds.has(checkbox.value)) {
+                checkbox.checked = true;
+            }
+        });
+    }
     
     // Zaznacz/odznacz wszystkie
     selectAllCheckbox.addEventListener('change', function() {
@@ -490,14 +529,10 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('Add button clicked, selected count:', selectedEquipmentIds.size);
-        
         if (selectedEquipmentIds.size === 0) {
             alert('Wybierz co najmniej jeden element sprzętu.');
             return;
         }
-        
-        console.log('Submitting form with IDs:', Array.from(selectedEquipmentIds));
         
         // Utwórz formularz z wybranymi elementami
         const form = document.createElement('form');
