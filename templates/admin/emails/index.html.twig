@@ -1,0 +1,287 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Historia maili{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <h4 class="page-title">Historia maili</h4>
+                <div class="page-title-right">
+                    <a href="{{ path('admin_emails_stats') }}" class="btn btn-primary">
+                        <i class="ri-bar-chart-line"></i> Statystyki
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtry -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Okres</label>
+                            <select name="days" class="form-control">
+                                <option value="7" {{ current_days == 7 ? 'selected' : '' }}>Ostatnie 7 dni</option>
+                                <option value="30" {{ current_days == 30 ? 'selected' : '' }}>Ostatnie 30 dni</option>
+                                <option value="90" {{ current_days == 90 ? 'selected' : '' }}>Ostatnie 90 dni</option>
+                                <option value="365" {{ current_days == 365 ? 'selected' : '' }}>Ostatni rok</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-control">
+                                <option value="">Wszystkie</option>
+                                <option value="sent" {{ current_status == 'sent' ? 'selected' : '' }}>Wysłane</option>
+                                <option value="failed" {{ current_status == 'failed' ? 'selected' : '' }}>Błędne</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Typ</label>
+                            <select name="type" class="form-control">
+                                <option value="">Wszystkie typy</option>
+                                <option value="user_welcome" {{ current_type == 'user_welcome' ? 'selected' : '' }}>Powitalne</option>
+                                <option value="password_reset" {{ current_type == 'password_reset' ? 'selected' : '' }}>Reset hasła</option>
+                                <option value="review_notification" {{ current_type == 'review_notification' ? 'selected' : '' }}>Przeglądy</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Szukaj</label>
+                            <input type="text" name="search" class="form-control" placeholder="Email lub temat..." value="{{ current_search }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="ri-search-line"></i> Filtruj
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statystyki -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-primary-lighten text-primary rounded">
+                                    <i class="ri-mail-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.total }}</h5>
+                            <p class="text-muted mb-0">Łącznie maili</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-success-lighten text-success rounded">
+                                    <i class="ri-check-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.sent }}</h5>
+                            <p class="text-muted mb-0">Wysłane pomyślnie</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-danger-lighten text-danger rounded">
+                                    <i class="ri-error-warning-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.failed }}</h5>
+                            <p class="text-muted mb-0">Błędy wysyłania</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-info-lighten text-info rounded">
+                                    <i class="ri-percentage-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.success_rate }}%</h5>
+                            <p class="text-muted mb-0">Wskaźnik sukcesu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista maili -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div id="emails-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const emailsData = [
+        {% for email in emails %}
+        {
+            id: {{ email.id }},
+            recipient: '{{ email.recipientName ? email.recipientName ~ ' <' ~ email.recipientEmail ~ '>' : email.recipientEmail }}',
+            subject: '{{ email.subject|e('js') }}',
+            type: '{{ email.emailType ? email.emailType : 'Brak' }}',
+            status: '{{ email.status }}',
+            sent_at: '{{ email.sentAt.format('Y-m-d H:i:s') }}',
+            sent_by: '{{ email.sentBy ? email.sentBy.fullName : 'System' }}'
+        },
+        {% endfor %}
+    ];
+
+    const grid = new gridjs.Grid({
+        columns: [
+            {
+                name: 'Odbiorca',
+                id: 'recipient',
+                width: '25%'
+            },
+            {
+                name: 'Temat',
+                id: 'subject',
+                width: '30%',
+                formatter: (cell, row) => {
+                    return gridjs.html(`<a href="{{ path('admin_emails_show', {id: '__ID__'}) }}".replace('__ID__', row.cells[0].data) class="text-decoration-none">${cell}</a>`);
+                }
+            },
+            {
+                name: 'Typ',
+                id: 'type',
+                width: '15%'
+            },
+            {
+                name: 'Status',
+                id: 'status',
+                width: '10%',
+                formatter: (cell) => {
+                    const statusClass = cell === 'sent' ? 'success' : 'danger';
+                    const statusText = cell === 'sent' ? 'Wysłany' : 'Błąd';
+                    return gridjs.html(`<span class="badge bg-${statusClass}">${statusText}</span>`);
+                }
+            },
+            {
+                name: 'Data wysyłki',
+                id: 'sent_at',
+                width: '15%'
+            },
+            {
+                name: 'Wysłał',
+                id: 'sent_by',
+                width: '15%'
+            }
+        ],
+        data: emailsData.map(email => [email.id, email.recipient, email.subject, email.type, email.status, email.sent_at, email.sent_by]),
+        sort: true,
+        search: {
+            enabled: true,
+            placeholder: 'Szukaj w tabeli...'
+        },
+        pagination: {
+            enabled: true,
+            limit: 25,
+            summary: true
+        },
+        language: {
+            'search': {
+                'placeholder': '🔍 Szukaj...'
+            },
+            'pagination': {
+                'previous': 'Poprzednia',
+                'next': 'Następna',
+                'navigate': (page, pages) => `Strona ${page} z ${pages}`,
+                'page': (page) => `Strona ${page}`,
+                'showing': 'Pokazano',
+                'of': 'z',
+                'to': 'do',
+                'results': 'wyników'
+            },
+            'loading': 'Ładowanie...',
+            'noRecordsFound': 'Nie znaleziono rekordów',
+            'error': 'Wystąpił błąd podczas ładowania danych'
+        },
+        style: {
+            th: {
+                'background-color': '#f8f9fa',
+                'color': '#495057',
+                'border-bottom': '2px solid #dee2e6'
+            },
+            td: {
+                'border-bottom': '1px solid #dee2e6'
+            }
+        }
+    });
+
+    grid.render(document.getElementById('emails-grid'));
+
+    // Dodaj style CSS dla GridJS
+    const style = document.createElement('style');
+    style.textContent = `
+        .gridjs-search {
+            margin-bottom: 20px;
+        }
+        .gridjs-search-input {
+            font-family: "remixicon";
+        }
+        .gridjs-search-input::placeholder {
+            font-family: inherit;
+        }
+        .gridjs-pagination {
+            margin-top: 20px;
+        }
+        .gridjs-th-sort {
+            cursor: pointer;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}

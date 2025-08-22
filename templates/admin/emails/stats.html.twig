@@ -1,0 +1,296 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Statystyki maili{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <h4 class="page-title">Statystyki maili</h4>
+                <div class="page-title-right">
+                    <a href="{{ path('admin_emails_index') }}" class="btn btn-primary">
+                        <i class="ri-mail-line"></i> Historia maili
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtry -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Okres</label>
+                            <select name="days" class="form-control" onchange="this.form.submit()">
+                                <option value="7" {{ current_days == 7 ? 'selected' : '' }}>Ostatnie 7 dni</option>
+                                <option value="30" {{ current_days == 30 ? 'selected' : '' }}>Ostatnie 30 dni</option>
+                                <option value="90" {{ current_days == 90 ? 'selected' : '' }}>Ostatnie 90 dni</option>
+                                <option value="365" {{ current_days == 365 ? 'selected' : '' }}>Ostatni rok</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statystyki główne -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-primary-lighten text-primary rounded">
+                                    <i class="ri-mail-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.total }}</h5>
+                            <p class="text-muted mb-0">Łącznie maili</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-success-lighten text-success rounded">
+                                    <i class="ri-check-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.sent }}</h5>
+                            <p class="text-muted mb-0">Wysłane pomyślnie</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-danger-lighten text-danger rounded">
+                                    <i class="ri-error-warning-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.failed }}</h5>
+                            <p class="text-muted mb-0">Błędy wysyłania</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-sm">
+                                <span class="avatar-title bg-info-lighten text-info rounded">
+                                    <i class="ri-user-line font-20"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="fw-semibold mb-0">{{ stats.unique_recipients }}</h5>
+                            <p class="text-muted mb-0">Unikalni odbiorcy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Wskaźnik sukcesu -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Wskaźnik sukcesu</h5>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-{{ stats.success_rate >= 95 ? 'success' : (stats.success_rate >= 85 ? 'warning' : 'danger') }}" 
+                                     role="progressbar" 
+                                     style="width: {{ stats.success_rate }}%" 
+                                     aria-valuenow="{{ stats.success_rate }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ stats.success_rate }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <h4 class="mb-0 text-{{ stats.success_rate >= 95 ? 'success' : (stats.success_rate >= 85 ? 'warning' : 'danger') }}">
+                                {{ stats.success_rate }}%
+                            </h4>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">
+                        {% if stats.success_rate >= 95 %}
+                            <i class="ri-check-line text-success"></i> Bardzo dobry wskaźnik sukcesu
+                        {% elseif stats.success_rate >= 85 %}
+                            <i class="ri-error-warning-line text-warning"></i> Średni wskaźnik sukcesu
+                        {% else %}
+                            <i class="ri-close-line text-danger"></i> Niski wskaźnik sukcesu
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rozkład statusów -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Rozkład statusów</h5>
+                    {% if status_counts %}
+                        {% for status, count in status_counts %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <span class="badge bg-{{ status == 'sent' ? 'success' : 'danger' }} me-2">
+                                        {{ status == 'sent' ? 'Wysłane' : 'Błędne' }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong>{{ count }}</strong>
+                                    <small class="text-muted">
+                                        ({{ ((count / stats.total) * 100)|round(1) }}%)
+                                    </small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Brak danych</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ostatnie maile -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Ostatnie maile (7 dni)</h5>
+                    
+                    {% if recent_emails %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Odbiorca</th>
+                                        <th>Temat</th>
+                                        <th>Typ</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for email in recent_emails %}
+                                    <tr>
+                                        <td>{{ email.sentAt.format('Y-m-d H:i') }}</td>
+                                        <td>
+                                            {{ email.recipientName ?: email.recipientEmail }}
+                                            {% if email.recipientName %}
+                                                <br><small class="text-muted">{{ email.recipientEmail }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ path('admin_emails_show', {id: email.id}) }}" class="text-decoration-none">
+                                                {{ email.subject|length > 50 ? email.subject|slice(0, 50) ~ '...' : email.subject }}
+                                            </a>
+                                        </td>
+                                        <td>{{ email.emailType ?: '-' }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ email.status == 'sent' ? 'success' : 'danger' }}">
+                                                {{ email.status == 'sent' ? 'Wysłany' : 'Błąd' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ path('admin_emails_show', {id: email.id}) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="ri-eye-line"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Brak ostatnich maili</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Czyszczenie historii -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="ri-delete-bin-line"></i> Czyszczenie historii maili
+                    </h5>
+                    <p class="card-text">
+                        Możesz usunąć stare rekordy historii maili, aby zwolnić miejsce w bazie danych.
+                        Operacja jest nieodwracalna.
+                    </p>
+                    
+                    <form method="POST" action="{{ path('admin_emails_cleanup') }}" onsubmit="return confirmCleanup(this)">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label">Usuń maile starsze niż:</label>
+                                <select name="days" class="form-control">
+                                    <option value="30">30 dni</option>
+                                    <option value="60">60 dni</option>
+                                    <option value="90" selected>90 dni</option>
+                                    <option value="180">180 dni</option>
+                                    <option value="365">365 dni</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="ri-delete-bin-line"></i> Wyczyść historię
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmCleanup(form) {
+    const days = form.days.value;
+    const message = `Czy na pewno chcesz usunąć wszystkie maile starsze niż ${days} dni?\n\nTa operacja jest nieodwracalna!`;
+    
+    return confirm(message);
+}
+</script>
+{% endblock %}

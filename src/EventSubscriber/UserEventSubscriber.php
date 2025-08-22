@@ -5,17 +5,16 @@ namespace App\EventSubscriber;
 use App\Event\User\UserCreatedEvent;
 use App\Event\User\UserUpdatedEvent;
 use App\Service\AuditService;
+use App\Service\EmailService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
 
 class UserEventSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private AuditService $auditService,
         private LoggerInterface $logger,
-        private ?MailerInterface $mailer = null
+        private ?EmailService $emailService = null
     ) {
     }
 
@@ -58,31 +57,28 @@ class UserEventSubscriber implements EventSubscriberInterface
 
     public function sendWelcomeEmail(UserCreatedEvent $event): void
     {
-        if (!$this->mailer) {
-            return; // Mailer not configured
+        if (!$this->emailService) {
+            return; // Email service not configured
         }
 
         $user = $event->getUser();
+        $context = $event->getContext();
 
-        try {
-            $email = (new Email())
-                ->from('noreply@assethub.local')
-                ->to($user->getEmail())
-                ->subject('Witamy w AssetHub!')
-                ->html($this->getWelcomeEmailContent($user));
+        // Sprawdź czy wysłać mail z hasłem tymczasowym
+        $temporaryPassword = $context['temporary_password'] ?? null;
 
-            $this->mailer->send($email);
+        $success = $this->emailService->sendWelcomeEmail($user, $temporaryPassword);
 
-            $this->logger->info('Welcome email sent', [
-                'user_id' => $user->getId(),
-                'email' => $user->getEmail()
-            ]);
-
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to send welcome email', [
+        if ($success) {
+            $this->logger->info('Welcome email sent via EmailService', [
                 'user_id' => $user->getId(),
                 'email' => $user->getEmail(),
-                'error' => $e->getMessage()
+                'temporary_password_included' => $temporaryPassword !== null
+            ]);
+        } else {
+            $this->logger->error('Failed to send welcome email via EmailService', [
+                'user_id' => $user->getId(),
+                'email' => $user->getEmail()
             ]);
         }
     }
@@ -128,20 +124,5 @@ class UserEventSubscriber implements EventSubscriberInterface
                 'critical_changes' => $criticalChanges
             ]);
         }
-    }
-
-    private function getWelcomeEmailContent($user): string
-    {
-        return sprintf(
-            '<h1>Witamy w AssetHub, %s!</h1>
-            <p>Twoje konto zostało utworzone pomyślnie.</p>
-            <p><strong>Nazwa użytkownika:</strong> %s</p>
-            <p><strong>Email:</strong> %s</p>
-            <p>Możesz teraz zalogować się do systemu zarządzania zasobami.</p>
-            <p>Zespół AssetHub</p>',
-            htmlspecialchars($user->getFullName()),
-            htmlspecialchars($user->getUsername()),
-            htmlspecialchars($user->getEmail())
-        );
     }
 }

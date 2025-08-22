@@ -126,6 +126,22 @@ class EmailSettingsType extends AbstractType
                     ])
                 ]
             ])
+            ->add('history_retention_days', IntegerType::class, [
+                'label' => 'Dni przechowywania historii maili',
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => '90'
+                ],
+                'help' => 'Liczba dni przez które przechowywana jest historia wysłanych maili (minimum 7 dni)',
+                'constraints' => [
+                    new NotBlank(['message' => 'Liczba dni jest wymagana']),
+                    new Range([
+                        'min' => 7,
+                        'max' => 3650,
+                        'notInRangeMessage' => 'Liczba dni musi być między {{ min }} a {{ max }}',
+                    ])
+                ]
+            ])
             ->add('test_email', EmailType::class, [
                 'label' => 'Email testowy',
                 'mapped' => false,

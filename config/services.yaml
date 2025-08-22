@@ -1,4 +1,6 @@
 parameters:
+    # Email system configuration
+    app.email.history_retention_days: 90
 
 services:
     _defaults:

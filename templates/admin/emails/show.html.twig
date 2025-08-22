@@ -1,0 +1,188 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Szczegóły maila #{{ email.id }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <h4 class="page-title">
+                    Szczegóły maila #{{ email.id }}
+                    <span class="badge bg-{{ email.status == 'sent' ? 'success' : 'danger' }} ms-2">
+                        {{ email.status == 'sent' ? 'Wysłany' : 'Błąd' }}
+                    </span>
+                </h4>
+                <div class="page-title-right">
+                    <a href="{{ path('admin_emails_index') }}" class="btn btn-secondary">
+                        <i class="ri-arrow-left-line"></i> Powrót do listy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8">
+            <!-- Treść maila -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Treść wiadomości</h5>
+                    
+                    {% if email.bodyHtml %}
+                        <div class="alert alert-info">
+                            <i class="ri-information-line"></i> Wiadomość HTML
+                        </div>
+                        <div class="border p-3" style="max-height: 500px; overflow-y: auto;">
+                            {{ email.bodyHtml|raw }}
+                        </div>
+                        
+                        {% if email.bodyText %}
+                            <hr>
+                            <h6>Wersja tekstowa:</h6>
+                            <pre class="bg-light p-3" style="max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ email.bodyText }}</pre>
+                        {% endif %}
+                    {% elseif email.bodyText %}
+                        <div class="alert alert-info">
+                            <i class="ri-information-line"></i> Wiadomość tekstowa
+                        </div>
+                        <pre class="bg-light p-3" style="max-height: 500px; overflow-y: auto; white-space: pre-wrap;">{{ email.bodyText }}</pre>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="ri-error-warning-line"></i> Brak treści wiadomości
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if email.errorMessage %}
+                <!-- Błąd wysyłania -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">
+                            <i class="ri-error-warning-line"></i> Błąd wysyłania
+                        </h5>
+                        <div class="alert alert-danger">
+                            {{ email.errorMessage }}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if email.metadata %}
+                <!-- Metadane -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Metadane</h5>
+                        <pre class="bg-light p-3">{{ email.metadata|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-xl-4">
+            <!-- Informacje podstawowe -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Informacje podstawowe</h5>
+                    
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">ID:</th>
+                            <td>{{ email.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge bg-{{ email.status == 'sent' ? 'success' : 'danger' }}">
+                                    {{ email.statusDisplayName }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Typ:</th>
+                            <td>{{ email.emailType ?: 'Brak' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Temat:</th>
+                            <td>{{ email.subject }}</td>
+                        </tr>
+                        <tr>
+                            <th>Data wysyłki:</th>
+                            <td>{{ email.sentAt.format('Y-m-d H:i:s') }}</td>
+                        </tr>
+                        {% if email.messageId %}
+                        <tr>
+                            <th>Message ID:</th>
+                            <td><small class="text-muted">{{ email.messageId }}</small></td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Nadawca i odbiorca -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Nadawca i odbiorca</h5>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-1">Od:</h6>
+                        <div>
+                            {% if email.senderName %}
+                                <strong>{{ email.senderName }}</strong><br>
+                            {% endif %}
+                            <small class="text-muted">{{ email.senderEmail ?: 'Brak danych' }}</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-1">Do:</h6>
+                        <div>
+                            {% if email.recipientName %}
+                                <strong>{{ email.recipientName }}</strong><br>
+                            {% endif %}
+                            <small class="text-muted">{{ email.recipientEmail }}</small>
+                        </div>
+                    </div>
+
+                    {% if email.sentBy %}
+                    <div>
+                        <h6 class="text-muted mb-1">Wysłał:</h6>
+                        <div>
+                            <i class="ri-user-line"></i> {{ email.sentBy.fullName }}
+                            <small class="text-muted d-block">{{ email.sentBy.username }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Akcje -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Akcje</h5>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('admin_emails_index') }}" class="btn btn-outline-secondary">
+                            <i class="ri-list-check"></i> Zobacz wszystkie maile
+                        </a>
+                        
+                        {% if email.recipientEmail %}
+                        <a href="{{ path('admin_emails_index', {search: email.recipientEmail}) }}" class="btn btn-outline-primary">
+                            <i class="ri-search-line"></i> Maile do tego odbiorcy
+                        </a>
+                        {% endif %}
+                        
+                        {% if email.emailType %}
+                        <a href="{{ path('admin_emails_index', {type: email.emailType}) }}" class="btn btn-outline-info">
+                            <i class="ri-tag-line"></i> Maile tego typu
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

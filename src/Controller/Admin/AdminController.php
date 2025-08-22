@@ -624,6 +624,7 @@ class AdminController extends AbstractController
             'smtp_password' => '', // Nigdy nie pobieraj hasła do formularza
             'from_email' => $this->settingService->get('from_email', 'noreply@localhost'),
             'from_name' => $this->settingService->get('from_name', 'AssetHub System'),
+            'history_retention_days' => (int) $this->settingService->get('email_history_retention_days', '90'),
         ];
     }
 
@@ -639,6 +640,11 @@ class AdminController extends AbstractController
         // Zapisz hasło tylko jeśli zostało podane
         if (!empty($data['smtp_password'])) {
             $this->settingService->set('smtp_password', $data['smtp_password'], 'email', 'password', 'Hasło SMTP');
+        }
+        
+        // Zapisz ustawienia historii maili
+        if (isset($data['history_retention_days'])) {
+            $this->settingService->set('email_history_retention_days', (string) $data['history_retention_days'], 'email', 'number', 'Dni przechowywania historii maili');
         }
     }
 

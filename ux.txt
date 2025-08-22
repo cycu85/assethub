@@ -1,0 +1,82 @@
+# Analiza UX/UI dla stron szczegółów sprzętu i zestawów asekuracyjnych
+
+## Usprawnienia dla strony sprzętu (/asekuracja/equipment/{id})
+
+### Układ i nawigacja:
+- Przygotować sticky header z najważniejszymi akcjami przy przewijaniu długiej strony
+- Dodać floating action button (FAB) dla najważniejszej akcji (np. "Nowy przegląd")
+- Przenieść przyciski akcji z prawej strony headera do bardziej dostępnego miejsca
+
+### Informacje i dane:
+- Połączyć sekcje "Podstawowe informacje" i "Dane zakupowe" w jedną kartę z zakładkami
+- Dodać wizualny timeline dla historii przeglądów zamiast zwykłej listy
+- Stworzyć dashboard-style widżety dla kluczowych metryk (dni do przeglądu, wartość sprzętu)
+- Dodać mapę/schemat lokalizacji sprzętu jeśli dostępne
+
+### Historia przeglądów:
+- Zastąpić długą listę przeglądów interaktywnym timeline'em
+- Dodać filtry i sortowanie dla historii przeglądów
+- Wyświetlać graficzny status każdego przeglądu (ikony, kolory)
+
+### Załączniki:
+- Dodać podgląd miniatur dla obrazów
+- Pogrupować załączniki według typu
+- Dodać drag & drop interface dla łatwiejszego dodawania plików
+
+## Usprawnienia dla strony zestawu (/asekuracja/equipment-sets/{id})
+
+### Organizacja treści:
+- Przenieść "Statystyki zestawu" nad główne informacje - są bardziej kluczowe
+- Dodać więcej wizualnych wskaźników kompletności zestawu (progress bar, wykres kołowy)
+- Stworzyć compact view dla podstawowych informacji
+
+### Lista sprzętu:
+- Zastąpić tabelę bardziej wizualną listą kart (cards) z miniaturami
+- Dodać filtry dla statusu sprzętu (dostępne/przypisane/uszkodzone)
+- Dodać bulk actions dla zarządzania wieloma elementami naraz
+- Dodać sortowanie według daty przeglądu, statusu, typu
+
+### Responsywność:
+- Ulepszyć widok mobilny - tabela sprzętu nie jest mobile-friendly
+- Przeorganizować layout na urządzeniach małych (pionowy stack)
+
+## Ogólne usprawnienia dla obu stron
+
+### Visual hierarchy:
+- Zwiększyć kontrast między sekcjami
+- Dodać więcej white space między kartami
+- Użyć bardziej wyrazistych kolorów dla statusów krytycznych
+
+### Nawigacja:
+- Dodać breadcrumbs z rozwijaniem dla łatwiejszej nawigacji
+- Dodać "Szybkie akcje" w sidebar'ze
+- Stworzyć floating navigation dla przewijania między sekcjami
+
+### Performance i UX:
+- Lazy loading dla historii przeglądów i załączników
+- Dodać skeleton screens podczas ładowania danych
+- Implementować infinite scroll dla długich list
+- Dodać keyboard shortcuts dla power users
+
+### Accessibility:
+- Poprawić focus indicators
+- Dodać ARIA labels dla wszystkich interaktywnych elementów
+- Zwiększyć kontrastowość tekstu w niektórych miejscach
+
+### Wizualizacja danych:
+- Dodać mini-wykresy dla trendów przeglądów
+- Stworzyć heat mapy dla terminów przeglądów
+- Dodać progress indicators dla completeness zestawów
+
+## Podsumowanie
+
+Największe usprawienia UX przyniosłyby:
+- Reorganizacja informacji według ważności
+- Interaktywne timeline'y dla historii
+- Lepszy mobile experience
+- Więcej wizualnych wskaźników statusu
+
+Data analizy: 2025-08-22
+Analizowane pliki:
+- /home/waldi/Projekty/assethub/templates/asekuracja/equipment/show.html.twig (639 linii)
+- /home/waldi/Projekty/assethub/templates/asekuracja/equipment-set/show.html.twig (555 linii)
