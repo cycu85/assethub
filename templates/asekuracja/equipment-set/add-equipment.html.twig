@@ -51,9 +51,17 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="ri-list-check-2 me-2"></i>Aktualny sprzęt w zestawie ({{ equipment_set.equipmentItems|length }})
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-list-check-2 me-2"></i>Aktualny sprzęt w zestawie ({{ equipment_set.equipmentItems|length }})
+                    </h5>
+                    <div class="d-flex align-items-center" id="bulkActionsContainer" style="display: none;">
+                        <span class="text-muted me-3">Zaznaczono: <span id="currentSelectedCount">0</span></span>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="removeSelectedButton">
+                            <i class="ri-delete-bin-line me-1"></i>Usuń zaznaczone
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 {% if equipment_set.equipmentItems|length > 0 %}
@@ -61,6 +69,12 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
+                                <th width="50">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAllCurrent">
+                                        <label class="form-check-label" for="selectAllCurrent"></label>
+                                    </div>
+                                </th>
                                 <th>Sprzęt</th>
                                 <th>Typ</th>
                                 <th>Producent/Model</th>
@@ -73,6 +87,13 @@
                             {% for item in equipment_set.equipmentItems %}
                             {% set equipment = item.equipment is defined ? item.equipment : item %}
                             <tr>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input current-equipment-checkbox" type="checkbox" 
+                                               value="{{ equipment.id }}" id="current_equipment_{{ equipment.id }}">
+                                        <label class="form-check-label" for="current_equipment_{{ equipment.id }}"></label>
+                                    </div>
+                                </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-sm bg-light rounded me-3">
@@ -550,6 +571,117 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(form);
         form.submit();
     });
+    
+    // ================================
+    // BULK ACTIONS FOR CURRENT EQUIPMENT
+    // ================================
+    
+    const selectAllCurrentCheckbox = document.getElementById('selectAllCurrent');
+    const currentSelectedCountSpan = document.getElementById('currentSelectedCount');
+    const bulkActionsContainer = document.getElementById('bulkActionsContainer');
+    const removeSelectedButton = document.getElementById('removeSelectedButton');
+    
+    let selectedCurrentEquipmentIds = new Set();
+    
+    // Update selected count and show/hide bulk actions
+    function updateCurrentSelectedCount() {
+        const count = selectedCurrentEquipmentIds.size;
+        currentSelectedCountSpan.textContent = count;
+        
+        if (count > 0) {
+            bulkActionsContainer.style.display = 'flex';
+        } else {
+            bulkActionsContainer.style.display = 'none';
+        }
+        
+        // Update select all checkbox state
+        const allCheckboxes = document.querySelectorAll('.current-equipment-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.current-equipment-checkbox:checked');
+        
+        if (checkedCheckboxes.length === 0) {
+            selectAllCurrentCheckbox.indeterminate = false;
+            selectAllCurrentCheckbox.checked = false;
+        } else if (checkedCheckboxes.length === allCheckboxes.length) {
+            selectAllCurrentCheckbox.indeterminate = false;
+            selectAllCurrentCheckbox.checked = true;
+        } else {
+            selectAllCurrentCheckbox.indeterminate = true;
+            selectAllCurrentCheckbox.checked = false;
+        }
+    }
+    
+    // Handle individual checkbox changes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('current-equipment-checkbox')) {
+            if (e.target.checked) {
+                selectedCurrentEquipmentIds.add(e.target.value);
+            } else {
+                selectedCurrentEquipmentIds.delete(e.target.value);
+            }
+            updateCurrentSelectedCount();
+        }
+    });
+    
+    // Handle select all checkbox
+    if (selectAllCurrentCheckbox) {
+        selectAllCurrentCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.current-equipment-checkbox');
+            
+            if (this.checked) {
+                // Check all
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    selectedCurrentEquipmentIds.add(checkbox.value);
+                });
+            } else {
+                // Uncheck all
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    selectedCurrentEquipmentIds.delete(checkbox.value);
+                });
+            }
+            updateCurrentSelectedCount();
+        });
+    }
+    
+    // Handle bulk remove
+    if (removeSelectedButton) {
+        removeSelectedButton.addEventListener('click', function() {
+            if (selectedCurrentEquipmentIds.size === 0) {
+                alert('Wybierz co najmniej jeden element sprzętu do usunięcia.');
+                return;
+            }
+            
+            const count = selectedCurrentEquipmentIds.size;
+            const message = `Czy na pewno usunąć ${count} ${count === 1 ? 'element' : count < 5 ? 'elementy' : 'elementów'} z zestawu?`;
+            
+            if (confirm(message)) {
+                // Create form for bulk removal
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ path("asekuracja_equipment_set_remove_bulk_equipment", {id: equipment_set.id}) }}';
+                
+                // Add CSRF token
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_token';
+                csrfInput.value = '{{ csrf_token("remove_bulk_equipment_" ~ equipment_set.id) }}';
+                form.appendChild(csrfInput);
+                
+                // Add selected equipment IDs
+                selectedCurrentEquipmentIds.forEach(equipmentId => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'equipment_ids[]';
+                    input.value = equipmentId;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

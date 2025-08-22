@@ -344,6 +344,85 @@ class EquipmentSetController extends AbstractController
         return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
     }
 
+    #[Route('/{id}/equipment/remove-bulk', name: 'asekuracja_equipment_set_remove_bulk_equipment', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function removeBulkEquipment(AsekuracyjnyEquipmentSet $equipmentSet, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('remove_bulk_equipment_' . $equipmentSet->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        $equipmentIds = $request->request->all('equipment_ids');
+        
+        if (empty($equipmentIds)) {
+            $this->addFlash('error', 'Nie wybrano żadnego sprzętu do usunięcia.');
+            return $this->redirectToRoute('asekuracja_equipment_set_add_equipment', ['id' => $equipmentSet->getId()]);
+        }
+        
+        $removedCount = 0;
+        $errors = [];
+        
+        try {
+            $this->entityManager->beginTransaction();
+            
+            foreach ($equipmentIds as $equipmentId) {
+                try {
+                    $equipment = $this->asekuracyjnyService->getEquipmentRepository()->find($equipmentId);
+                    if (!$equipment) {
+                        $errors[] = "Sprzęt o ID {$equipmentId} nie został znaleziony.";
+                        continue;
+                    }
+                    
+                    $this->asekuracyjnyService->removeEquipmentFromSet($equipmentSet, $equipment, $user);
+                    $removedCount++;
+                    
+                } catch (BusinessLogicException $e) {
+                    $errors[] = sprintf('Błąd przy usuwaniu "%s": %s', $equipment->getName() ?? "ID {$equipmentId}", $e->getMessage());
+                } catch (\Exception $e) {
+                    $errors[] = sprintf('Nieoczekiwany błąd przy usuwaniu sprzętu ID %s', $equipmentId);
+                    $this->logger->error('Failed to remove equipment from set in bulk operation', [
+                        'equipment_set_id' => $equipmentSet->getId(),
+                        'equipment_id' => $equipmentId,
+                        'error' => $e->getMessage(),
+                        'user' => $user->getUsername()
+                    ]);
+                }
+            }
+            
+            $this->entityManager->commit();
+            
+            // Flash messages
+            if ($removedCount > 0) {
+                $message = sprintf('Usunięto %d %s z zestawu.', 
+                    $removedCount, 
+                    $removedCount === 1 ? 'element' : ($removedCount < 5 ? 'elementy' : 'elementów')
+                );
+                $this->addFlash('success', $message);
+            }
+            
+            foreach ($errors as $error) {
+                $this->addFlash('error', $error);
+            }
+            
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            $this->addFlash('error', 'Wystąpił błąd podczas usuwania sprzętu. Operacja została wycofana.');
+            $this->logger->error('Bulk equipment removal failed', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'equipment_ids' => $equipmentIds,
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_add_equipment', ['id' => $equipmentSet->getId()]);
+    }
+
     #[Route('/available-equipment', name: 'asekuracja_available_equipment_modal')]
     public function availableEquipmentModal(Request $request): JsonResponse
     {
