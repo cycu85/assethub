@@ -142,7 +142,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" id="addEquipmentForm">
+            <div id="addEquipmentForm">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Szukaj sprzętu</label>
@@ -218,11 +218,11 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="ri-close-line me-1"></i>Anuluj
                     </button>
-                    <button type="submit" class="btn btn-success">
+                    <button type="button" class="btn btn-success" id="addEquipmentButton">
                         <i class="ri-check-line me-1"></i>Dodaj wybrany sprzęt (<span id="selectedCount">0</span>)
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const equipmentListEmpty = document.getElementById('equipmentListEmpty');
     const selectAllCheckbox = document.getElementById('selectAll');
     const selectedCountSpan = document.getElementById('selectedCount');
-    const addEquipmentForm = document.getElementById('addEquipmentForm');
+    const addEquipmentButton = document.getElementById('addEquipmentButton');
     
     let availableEquipment = [];
     let currentGrid = null;
@@ -443,12 +443,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Zatrzymaj propagację eventu
         event.stopPropagation();
         
+        console.log('Checkbox changed:', checkbox.value, checkbox.checked);
+        
         if (checkbox.checked) {
             selectedEquipmentIds.add(checkbox.value);
         } else {
             selectedEquipmentIds.delete(checkbox.value);
         }
         updateSelectedCount();
+        
+        console.log('Selected IDs:', Array.from(selectedEquipmentIds));
     }
 
     // Funkcja aktualizacji liczby wybranych elementów
@@ -481,14 +485,19 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedCount();
     });
     
-    // Obsługa formularza
-    addEquipmentForm.addEventListener('submit', function(e) {
+    // Obsługa przycisku dodawania
+    addEquipmentButton.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Add button clicked, selected count:', selectedEquipmentIds.size);
         
         if (selectedEquipmentIds.size === 0) {
             alert('Wybierz co najmniej jeden element sprzętu.');
             return;
         }
+        
+        console.log('Submitting form with IDs:', Array.from(selectedEquipmentIds));
         
         // Utwórz formularz z wybranymi elementami
         const form = document.createElement('form');
