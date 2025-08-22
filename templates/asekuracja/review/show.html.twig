@@ -727,7 +727,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="result" class="form-label">Wynik przeglądu <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="result" name="result" required>
+                                <select class="form-select" id="result" name="result" required>
                                     <option value="">Wybierz wynik</option>
                                     <option value="passed" selected>Pozytywny</option>
                                     <option value="failed">Negatywny</option>
@@ -750,7 +750,7 @@
                             <div class="mb-3">
                                 <label for="cost" class="form-label">Koszt przeglądu (PLN)</label>
                                 <input type="number" class="form-control" id="cost" name="cost" step="0.01" min="0"
-                                       placeholder="0.00">
+                                       value="0.00" placeholder="0.00">
                             </div>
                         </div>
                     </div>
