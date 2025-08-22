@@ -167,7 +167,28 @@
                         </select>
                     </div>
                     
-                    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                    <div class="border rounded p-3">
+                        <div class="row mb-3">
+                            <div class="col-sm-12 col-md-6">
+                                <!-- Puste miejsce po lewej -->
+                            </div>
+                            <div class="col-sm-12 col-md-6">
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <label for="modal-page-size-select" class="form-label me-2 mb-0">Pokaż:</label>
+                                    <select id="modal-page-size-select" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                        <option value="0">Wszystkie</option>
+                                    </select>
+                                    <span class="ms-2 text-muted">wierszy</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="equipmentListLoading" class="text-center py-4">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Ładowanie...</span>
@@ -175,9 +196,7 @@
                             <p class="mt-2 text-muted">Ładowanie dostępnego sprzętu...</p>
                         </div>
                         
-                        <div id="equipmentList" style="display: none;">
-                            <!-- Lista będzie załadowana przez JavaScript -->
-                        </div>
+                        <div id="modal-table-gridjs" style="display: none;"></div>
                         
                         <div id="equipmentListEmpty" class="text-center py-4" style="display: none;">
                             <i class="ri-inbox-line text-muted fs-48"></i>
@@ -209,13 +228,78 @@
 </div>
 {% endblock %}
 
+{% block head_css %}
+{{ parent() }}
+<!-- gridjs css -->
+<link href="{{ asset('assets/libs/gridjs/theme/mermaid.min.css') }}" rel="stylesheet" type="text/css" />
+<style>
+.gridjs-table {
+    border: none !important;
+}
+.gridjs-th {
+    background-color: #f8f9fa !important;
+    border: none !important;
+    color: #495057 !important;
+    font-weight: 600 !important;
+}
+.gridjs-td {
+    border: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+.gridjs-sort {
+    color: #495057 !important;
+}
+.gridjs-sort::after {
+    content: "\f0dc" !important;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+}
+.gridjs-sort-asc::after {
+    content: "\f0de" !important;
+}
+.gridjs-sort-desc::after {
+    content: "\f0dd" !important;
+}
+.gridjs-td {
+    white-space: nowrap !important;
+}
+.gridjs-td:nth-child(1) {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 200px !important;
+}
+/* Fix search input styling */
+.gridjs-search-input {
+    padding-left: 35px !important;
+}
+.gridjs-search {
+    position: relative !important;
+}
+.gridjs-search::before {
+    content: "\f002" !important;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6c757d !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+}
+</style>
+{% endblock %}
+
 {% block javascript %}
+<!-- gridjs js -->
+<script src="{{ asset('assets/libs/gridjs/gridjs.umd.js') }}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const equipmentModal = new bootstrap.Modal(document.getElementById('addEquipmentModal'));
     const equipmentSearch = document.getElementById('equipmentSearch');
     const equipmentTypeFilter = document.getElementById('equipmentTypeFilter');
-    const equipmentList = document.getElementById('equipmentList');
     const equipmentListLoading = document.getElementById('equipmentListLoading');
     const equipmentListEmpty = document.getElementById('equipmentListEmpty');
     const selectAllCheckbox = document.getElementById('selectAll');
@@ -223,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addEquipmentForm = document.getElementById('addEquipmentForm');
     
     let availableEquipment = [];
-    let filteredEquipment = [];
+    let currentGrid = null;
     
     // Załaduj dostępny sprzęt przy otwarciu modala
     document.getElementById('addEquipmentModal').addEventListener('show.bs.modal', function() {
@@ -234,21 +318,21 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadAvailableEquipment() {
         try {
             equipmentListLoading.style.display = 'block';
-            equipmentList.style.display = 'none';
+            document.getElementById('modal-table-gridjs').style.display = 'none';
             equipmentListEmpty.style.display = 'none';
             
             const response = await fetch('{{ path("asekuracja_available_equipment_modal") }}');
             const data = await response.json();
             
             availableEquipment = data.equipment || [];
-            filteredEquipment = [...availableEquipment];
             
             equipmentListLoading.style.display = 'none';
             
             if (availableEquipment.length === 0) {
                 equipmentListEmpty.style.display = 'block';
             } else {
-                renderEquipmentList();
+                createGrid(10);
+                document.getElementById('modal-table-gridjs').style.display = 'block';
             }
         } catch (error) {
             console.error('Błąd ładowania sprzętu:', error);
@@ -257,87 +341,87 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Funkcja renderowania listy sprzętu
-    function renderEquipmentList() {
-        if (filteredEquipment.length === 0) {
-            equipmentList.style.display = 'none';
-            equipmentListEmpty.style.display = 'block';
-            return;
-        }
-        
-        equipmentListEmpty.style.display = 'none';
-        
-        const html = filteredEquipment.map(equipment => `
-            <div class="form-check border-bottom py-3">
-                <input class="form-check-input equipment-checkbox" type="checkbox" 
-                       value="${equipment.id}" id="equipment_${equipment.id}">
-                <label class="form-check-label w-100" for="equipment_${equipment.id}">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-light rounded me-3">
-                            <i class="ri-shield-line text-primary fs-16"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1">${equipment.name}</h6>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-secondary me-2">${equipment.equipment_type}</span>
-                                <small class="text-muted me-2">${equipment.inventory_number}</small>
-                                ${equipment.manufacturer ? `<small class="text-muted">${equipment.manufacturer} ${equipment.model || ''}</small>` : ''}
-                            </div>
-                            <div class="mt-1">
-                                <span class="badge bg-success">${equipment.status}</span>
-                            </div>
-                        </div>
+    function createGrid(pageSize = 10) {
+        // Prepare data for GridJS with checkboxes
+        const equipmentData = availableEquipment.map(equipment => [
+            gridjs.html(`
+                <div class="form-check">
+                    <input class="form-check-input equipment-checkbox" type="checkbox" 
+                           value="${equipment.id}" id="equipment_${equipment.id}"
+                           onchange="updateSelectedCount()">
+                </div>
+            `),
+            gridjs.html(`
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-light rounded me-3">
+                        <i class="ri-shield-line text-primary fs-16"></i>
                     </div>
-                </label>
-            </div>
-        `).join('');
-        
-        equipmentList.innerHTML = html;
-        equipmentList.style.display = 'block';
-        
-        // Dodaj event listenery dla checkboxów
-        document.querySelectorAll('.equipment-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateSelectedCount);
-        });
-        
-        updateSelectedCount();
+                    <div>
+                        <h6 class="mb-0">${equipment.name}</h6>
+                        <span class="text-muted small">${equipment.inventory_number}</span>
+                    </div>
+                </div>
+            `),
+            gridjs.html(`<span class="badge bg-secondary">${equipment.equipment_type}</span>`),
+            gridjs.html(`
+                ${equipment.manufacturer ? equipment.manufacturer : '-'}
+                ${equipment.model ? `<br><small class="text-muted">${equipment.model}</small>` : ''}
+            `),
+            gridjs.html(`<span class="badge bg-success">${equipment.status}</span>`)
+        ]);
+
+        const gridConfig = {
+            columns: [
+                { name: '', width: '50px', sort: false },
+                { name: 'Sprzęt', width: '250px' },
+                { name: 'Typ', width: '120px' },
+                { name: 'Producent/Model', width: '180px' },
+                { name: 'Status', width: '100px' }
+            ],
+            data: equipmentData,
+            sort: true,
+            search: true,
+            className: {
+                table: 'table table-borderless table-centered align-middle table-nowrap mb-0',
+                th: 'text-muted',
+                td: 'text-body'
+            },
+            language: {
+                search: { placeholder: 'Szukaj sprzętu...' },
+                pagination: {
+                    previous: 'Poprzednia',
+                    next: 'Następna',
+                    showing: 'Pokazane',
+                    results: () => 'wyniki'
+                }
+            }
+        };
+
+        if (pageSize > 0) {
+            gridConfig.pagination = {
+                limit: pageSize,
+                summary: true
+            };
+        }
+
+        if (currentGrid) {
+            currentGrid.destroy();
+        }
+
+        currentGrid = new gridjs.Grid(gridConfig).render(document.getElementById("modal-table-gridjs"));
     }
-    
+
     // Funkcja aktualizacji liczby wybranych elementów
-    function updateSelectedCount() {
+    window.updateSelectedCount = function() {
         const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
         selectedCountSpan.textContent = selectedCheckboxes.length;
     }
     
-    // Filtrowanie po wyszukiwaniu
-    equipmentSearch.addEventListener('input', function() {
-        filterEquipment();
+    // Handle page size change
+    document.getElementById('modal-page-size-select').addEventListener('change', function() {
+        const pageSize = parseInt(this.value);
+        createGrid(pageSize);
     });
-    
-    // Filtrowanie po typie
-    equipmentTypeFilter.addEventListener('change', function() {
-        filterEquipment();
-    });
-    
-    // Funkcja filtrowania
-    function filterEquipment() {
-        const searchTerm = equipmentSearch.value.toLowerCase();
-        const selectedType = equipmentTypeFilter.value;
-        
-        filteredEquipment = availableEquipment.filter(equipment => {
-            const matchesSearch = !searchTerm || 
-                equipment.name.toLowerCase().includes(searchTerm) ||
-                equipment.inventory_number.toLowerCase().includes(searchTerm) ||
-                (equipment.manufacturer && equipment.manufacturer.toLowerCase().includes(searchTerm));
-                
-            const matchesType = !selectedType || equipment.equipment_type === selectedType;
-            
-            return matchesSearch && matchesType;
-        });
-        
-        renderEquipmentList();
-        selectAllCheckbox.checked = false;
-    }
     
     // Zaznacz/odznacz wszystkie
     selectAllCheckbox.addEventListener('change', function() {

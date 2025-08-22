@@ -354,7 +354,7 @@ class EquipmentSetController extends AbstractController
         
         $search = $request->query->get('search', '');
         $page = $request->query->getInt('page', 1);
-        $limit = 20;
+        $limit = 1000;
         
         try {
             // Pobranie sprzętu dostępnego dla zestawów (nie przypisanego do żadnego zestawu)
