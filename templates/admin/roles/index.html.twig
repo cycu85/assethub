@@ -87,6 +87,25 @@
 }
 .gridjs-sort-desc::after {
 }
+/* Fix search input styling */
+.gridjs-search-input {
+    padding-left: 35px !important;
+}
+.gridjs-search {
+    position: relative !important;
+}
+.gridjs-search::before {
+    content: "\f002" !important;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6c757d !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+}
 
 /* Fix text wrapping in permissions column */
 .gridjs-td:nth-child(5) {
