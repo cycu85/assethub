@@ -303,6 +303,23 @@ document.addEventListener('DOMContentLoaded', function() {
             `),
             gridjs.html(`<span class="badge bg-info">{{ set.setType ?: 'Podstawowy' }}</span>`),
             gridjs.html(`
+                {% set has_overdue = false %}
+                {% set has_upcoming = false %}
+                {% for item in set.equipmentItems %}
+                    {% set equipment = item.equipment is defined ? item.equipment : item %}
+                    {% if equipment.nextReviewDate %}
+                        {% set review_date = equipment.nextReviewDate|date('Y-m-d') %}
+                        {% set today_date = 'now'|date('Y-m-d') %}
+                        {% if review_date < today_date %}
+                            {% set has_overdue = true %}
+                        {% else %}
+                            {% set days_to_review = date(equipment.nextReviewDate).diff(date()).days %}
+                            {% if days_to_review <= 30 %}
+                                {% set has_upcoming = true %}
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
                 <div class="d-flex align-items-center">
                     <span class="fw-medium">{{ set.equipmentItems|length }}</span>
                     <span class="text-muted ms-1">elementów</span>
@@ -310,6 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="ri-check-line text-success ms-2" title="Zestaw kompletny"></i>
                     {% else %}
                     <i class="ri-error-warning-line text-warning ms-2" title="Zestaw niekompletny"></i>
+                    {% endif %}
+                    {% if has_overdue %}
+                    <i class="ri-error-warning-line text-danger ms-2" title="Elementy z przeterminowanymi przeglądami"></i>
+                    {% elseif has_upcoming %}
+                    <i class="ri-time-line text-warning ms-2" title="Elementy wymagające przeglądu w ciągu 30 dni"></i>
                     {% endif %}
                 </div>
                 {% if set.equipmentItems|length > 0 %}
@@ -353,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <br><small>Za {{ days_to_review }} dni</small>
                             </span>
                         {% else %}
-                            <span class="text-muted">
+                            <span class="text-success">
                                 {{ set.nextReviewDate|date('d.m.Y') }}
                                 <br><small>Za {{ days_to_review }} dni</small>
                             </span>
