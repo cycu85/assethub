@@ -679,4 +679,94 @@ class ReviewService
 
         return $completedReviews[0] ?? null;
     }
+
+    // === EQUIPMENT MANAGEMENT IN REVIEWS ===
+
+    public function addEquipmentToReview(AsekuracyjnyReview $review, AsekuracyjnyEquipment $equipment, User $user): AsekuracyjnyReviewEquipment
+    {
+        // Sprawdzenie czy sprzęt już nie jest w przeglądzie
+        foreach ($review->getReviewEquipments() as $reviewEquipment) {
+            if ($reviewEquipment->getEquipment() && $reviewEquipment->getEquipment()->getId() === $equipment->getId()) {
+                throw new BusinessLogicException(sprintf('Sprzęt "%s" już znajduje się w tym przeglądzie.', $equipment->getName()));
+            }
+        }
+
+        // Sprawdzenie czy przegląd nie jest zakończony
+        if ($review->getStatus() === 'completed') {
+            throw new BusinessLogicException('Nie można dodawać sprzętu do zakończonego przeglądu.');
+        }
+
+        // Tworzenie nowego AsekuracyjnyReviewEquipment
+        $reviewEquipment = new AsekuracyjnyReviewEquipment();
+        $reviewEquipment->setReview($review);
+        $reviewEquipment->setEquipment($equipment);
+        
+        // Zapisanie aktualnych danych sprzętu na moment przeglądu
+        $reviewEquipment->setEquipmentStatusAtReview($equipment->getStatus());
+        $reviewEquipment->setEquipmentNameAtReview($equipment->getName());
+        $reviewEquipment->setEquipmentInventoryNumberAtReview($equipment->getInventoryNumber());
+        $reviewEquipment->setEquipmentTypeAtReview($equipment->getEquipmentType());
+        $reviewEquipment->setEquipmentManufacturerAtReview($equipment->getManufacturer());
+        $reviewEquipment->setEquipmentModelAtReview($equipment->getModel());
+        $reviewEquipment->setEquipmentSerialNumberAtReview($equipment->getSerialNumber());
+        $reviewEquipment->setEquipmentNextReviewDateAtReview($equipment->getNextReviewDate());
+        $reviewEquipment->setWasInSetAtReview(false); // nie z zestawu
+
+        // Zapisanie w bazie
+        $this->entityManager->persist($reviewEquipment);
+        $this->entityManager->flush();
+
+        // Audit
+        $this->auditService->logUserAction($user, 'add_equipment_to_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber(),
+            'equipment_id' => $equipment->getId(),
+            'equipment_name' => $equipment->getName(),
+            'equipment_inventory_number' => $equipment->getInventoryNumber()
+        ]);
+
+        $this->logger->info('Equipment added to review', [
+            'review_id' => $review->getId(),
+            'equipment_id' => $equipment->getId(),
+            'user' => $user->getUsername()
+        ]);
+
+        return $reviewEquipment;
+    }
+
+    public function removeEquipmentFromReview(AsekuracyjnyReview $review, AsekuracyjnyReviewEquipment $reviewEquipment, User $user): void
+    {
+        // Sprawdzenie czy przegląd nie jest zakończony
+        if ($review->getStatus() === 'completed') {
+            throw new BusinessLogicException('Nie można usuwać sprzętu z zakończonego przeglądu.');
+        }
+
+        // Sprawdzenie czy AsekuracyjnyReviewEquipment należy do tego przeglądu
+        if ($reviewEquipment->getReview()->getId() !== $review->getId()) {
+            throw new BusinessLogicException('Element sprzętu nie należy do tego przeglądu.');
+        }
+
+        $equipmentName = $reviewEquipment->getEquipmentDisplayName();
+        $equipmentId = $reviewEquipment->getEquipment() ? $reviewEquipment->getEquipment()->getId() : null;
+
+        // Usunięcie z bazy
+        $this->entityManager->remove($reviewEquipment);
+        $this->entityManager->flush();
+
+        // Audit
+        $this->auditService->logUserAction($user, 'remove_equipment_from_review', [
+            'review_id' => $review->getId(),
+            'review_number' => $review->getReviewNumber(),
+            'review_equipment_id' => $reviewEquipment->getId(),
+            'equipment_id' => $equipmentId,
+            'equipment_name' => $equipmentName
+        ]);
+
+        $this->logger->info('Equipment removed from review', [
+            'review_id' => $review->getId(),
+            'review_equipment_id' => $reviewEquipment->getId(),
+            'equipment_id' => $equipmentId,
+            'user' => $user->getUsername()
+        ]);
+    }
 }

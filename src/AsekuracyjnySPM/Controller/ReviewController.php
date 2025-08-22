@@ -589,4 +589,160 @@ class ReviewController extends AbstractController
         return $uploadedFiles;
     }
 
+    #[Route('/{id}/equipment/add', name: 'asekuracja_review_add_equipment', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function addEquipment(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
+        
+        $review = $this->asekuracyjnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // Sprawdzenie czy przegląd nie jest zakończony
+        if ($review->getStatus() === 'completed') {
+            $this->addFlash('error', 'Nie można modyfikować zakończonego przeglądu.');
+            return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('add_review_equipment_' . $review->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        $equipmentIds = $request->request->all('equipment_ids');
+        
+        if (empty($equipmentIds)) {
+            $this->addFlash('error', 'Nie wybrano żadnego sprzętu do dodania.');
+            return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+        }
+        
+        $addedCount = 0;
+        $errors = [];
+        
+        try {
+            $this->entityManager->beginTransaction();
+            
+            foreach ($equipmentIds as $equipmentId) {
+                try {
+                    $equipment = $this->asekuracyjnyService->getEquipmentRepository()->find($equipmentId);
+                    if (!$equipment) {
+                        $errors[] = "Sprzęt o ID {$equipmentId} nie został znaleziony.";
+                        continue;
+                    }
+                    
+                    $this->reviewService->addEquipmentToReview($review, $equipment, $user);
+                    $addedCount++;
+                    
+                } catch (BusinessLogicException $e) {
+                    $errors[] = sprintf('Błąd przy dodawaniu "%s": %s', $equipment->getName() ?? "ID {$equipmentId}", $e->getMessage());
+                } catch (\Exception $e) {
+                    $errors[] = sprintf('Nieoczekiwany błąd przy dodawaniu sprzętu ID %s', $equipmentId);
+                    $this->logger->error('Failed to add equipment to review', [
+                        'review_id' => $review->getId(),
+                        'equipment_id' => $equipmentId,
+                        'error' => $e->getMessage(),
+                        'user' => $user->getUsername()
+                    ]);
+                }
+            }
+            
+            $this->entityManager->commit();
+            
+            // Flash messages
+            if ($addedCount > 0) {
+                $message = sprintf('Dodano %d %s do przeglądu.', 
+                    $addedCount, 
+                    $addedCount === 1 ? 'element' : ($addedCount < 5 ? 'elementy' : 'elementów')
+                );
+                $this->addFlash('success', $message);
+            }
+            
+            foreach ($errors as $error) {
+                $this->addFlash('error', $error);
+            }
+            
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            $this->addFlash('error', 'Wystąpił błąd podczas dodawania sprzętu. Operacja została wycofana.');
+            $this->logger->error('Bulk equipment addition to review failed', [
+                'review_id' => $review->getId(),
+                'equipment_ids' => $equipmentIds,
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+    }
+
+    #[Route('/{id}/equipment/{equipmentId}/remove', name: 'asekuracja_review_remove_equipment', requirements: ['id' => '\d+', 'equipmentId' => '\d+'], methods: ['POST'])]
+    public function removeEquipment(int $id, int $equipmentId, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
+        
+        $review = $this->asekuracyjnyService->getReview($id);
+        if (!$review) {
+            throw $this->createNotFoundException('Przegląd nie został znaleziony');
+        }
+        
+        // Sprawdzenie czy przegląd nie jest zakończony
+        if ($review->getStatus() === 'completed') {
+            $this->addFlash('error', 'Nie można modyfikować zakończonego przeglądu.');
+            return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('remove_review_equipment_' . $review->getId() . '_' . $equipmentId, $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        // Znajdź AsekuracyjnyReviewEquipment
+        $reviewEquipment = null;
+        foreach ($review->getReviewEquipments() as $re) {
+            if ($re->getId() === $equipmentId) {
+                $reviewEquipment = $re;
+                break;
+            }
+        }
+        
+        if (!$reviewEquipment) {
+            $this->addFlash('error', 'Element nie został znaleziony w przeglądzie.');
+            return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+        }
+        
+        try {
+            $equipmentName = $reviewEquipment->getEquipmentDisplayName();
+            $this->reviewService->removeEquipmentFromReview($review, $reviewEquipment, $user);
+            
+            $this->addFlash('success', sprintf('Usunięto "%s" z przeglądu.', $equipmentName));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'remove_equipment_from_review', [
+                'review_id' => $review->getId(),
+                'review_equipment_id' => $equipmentId,
+                'equipment_name' => $equipmentName
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił błąd podczas usuwania sprzętu z przeglądu.');
+            $this->logger->error('Failed to remove equipment from review', [
+                'review_id' => $review->getId(),
+                'review_equipment_id' => $equipmentId,
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_review_show', ['id' => $id]);
+    }
+
 }
