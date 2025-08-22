@@ -294,6 +294,17 @@
     z-index: 10 !important;
     pointer-events: none !important;
 }
+/* Prevent row clicking behavior */
+#modal-table-gridjs .gridjs-tr {
+    cursor: default !important;
+    pointer-events: auto !important;
+}
+#modal-table-gridjs .gridjs-td {
+    pointer-events: none !important;
+}
+#modal-table-gridjs .gridjs-td:first-child {
+    pointer-events: auto !important;
+}
 </style>
 {% endblock %}
 
@@ -354,11 +365,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Prepare data for GridJS with checkboxes
         const equipmentData = availableEquipment.map(equipment => [
             gridjs.html(`
-                <div class="form-check">
+                <div class="form-check" onclick="event.stopPropagation();">
                     <input class="form-check-input equipment-checkbox" type="checkbox" 
                            value="${equipment.id}" id="equipment_${equipment.id}"
                            ${selectedEquipmentIds.has(equipment.id.toString()) ? 'checked' : ''}
-                           onchange="handleCheckboxChange(this)">
+                           onchange="handleCheckboxChange(this)"
+                           onclick="event.stopPropagation();">
                 </div>
             `),
             gridjs.html(`
@@ -404,6 +416,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     showing: 'Pokazane',
                     results: () => 'wyniki'
                 }
+            },
+            style: {
+                table: {
+                    'user-select': 'none'
+                }
             }
         };
 
@@ -423,6 +440,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Obsługa zmiany checkboxa
     window.handleCheckboxChange = function(checkbox) {
+        // Zatrzymaj propagację eventu
+        event.stopPropagation();
+        
         if (checkbox.checked) {
             selectedEquipmentIds.add(checkbox.value);
         } else {
