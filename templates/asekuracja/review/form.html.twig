@@ -68,7 +68,7 @@
                 </div>
                 {% endif %}
 
-                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true, 'data-validation': 'custom'}}) }}
                 
                 <div class="row">
                     <div class="col-md-6">
@@ -271,8 +271,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
-    const plannedDateField = document.getElementById('{{ form.plannedDate.vars.id }}');
-    const reviewTypeField = document.getElementById('{{ form.reviewType.vars.id }}');
+    
+    // Szukanie pól po atrybucie name (bardziej niezawodne)
+    const plannedDateField = form.querySelector('input[name*="plannedDate"]');
+    const reviewTypeField = form.querySelector('select[name*="reviewType"]');
+    
+    console.log('Form validation - plannedDateField:', plannedDateField);
+    console.log('Form validation - reviewTypeField:', reviewTypeField);
+    
+    if (!plannedDateField || !reviewTypeField) {
+        console.warn('Nie można znaleźć pól formularza dla walidacji');
+        return;
+    }
     
     // Walidacja formularza przed wysłaniem
     form.addEventListener('submit', function(e) {
@@ -338,11 +348,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
-    {% if form.equipment is defined and form.equipmentSet is defined %}
-    const equipmentField = document.getElementById('{{ form.equipment.vars.id }}');
-    const equipmentSetField = document.getElementById('{{ form.equipmentSet.vars.id }}');
+    const equipmentField = form.querySelector('select[name*="equipment"]:not([name*="equipmentSet"])');
+    const equipmentSetField = form.querySelector('select[name*="equipmentSet"]');
     
     if (equipmentField && equipmentSetField) {
+        console.log('Found equipment fields for mutual exclusion');
         equipmentField.addEventListener('change', function() {
             if (this.value) {
                 equipmentSetField.value = '';
@@ -355,7 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    {% endif %}
 });
 </script>
 {% endblock %}
