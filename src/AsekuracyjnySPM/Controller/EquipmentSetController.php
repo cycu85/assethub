@@ -500,6 +500,14 @@ class EquipmentSetController extends AbstractController
     {
         $user = $this->getUser();
         
+        // Debug logging
+        $this->logger->info('Upload attachment called', [
+            'equipment_set_id' => $equipmentSet->getId(),
+            'user' => $user->getUsername(),
+            'files' => $request->files->count(),
+            'method' => $request->getMethod()
+        ]);
+        
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'asekuracja', 'EDIT', $request);
         
