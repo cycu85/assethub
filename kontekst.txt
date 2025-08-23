@@ -967,4 +967,161 @@ Aby nowe pozycje menu z podmenu zachowywały stan rozwinięcia, użyj tego wzorc
 - ✅ Poprawne użycie Bootstrap collapse z `aria-expanded` i klasą `show`
 - ✅ Wzorzec gotowy do wykorzystania w nowych modułach
 
+## SYSTEM MAILI - ENTERPRISE EMAIL MANAGEMENT
+
+### EmailService - Centralny serwis do wysyłania maili
+Wszystkie moduły MUSZĄ używać EmailService zamiast bezpośredniego MailerInterface:
+
+```php
+public function __construct(
+    // ... inne serwisy
+    private EmailService $emailService
+) {}
+
+// POPRAWNE - używanie EmailService z automatyczną historią
+$success = $this->emailService->sendEmail(
+    to: $user->getEmail(),
+    subject: 'Temat maila',
+    body: 'Treść maila',
+    toName: $user->getFullName(), // opcjonalnie
+    emailType: 'user_notification', // typ dla kategoryzacji
+    metadata: ['user_id' => $user->getId(), 'action' => 'created'] // dodatkowe dane
+);
+
+// POPRAWNE - wysyłanie maili HTML
+$success = $this->emailService->sendHtmlEmail(
+    to: $user->getEmail(),
+    subject: 'Temat maila',
+    htmlBody: '<h1>Witaj!</h1><p>Treść HTML</p>',
+    textBody: 'Witaj! Treść tekstowa', // opcjonalnie - auto-generowana z HTML
+    toName: $user->getFullName(),
+    emailType: 'welcome_email',
+    metadata: ['template' => 'user_welcome']
+);
+```
+
+### Gotowe metody EmailService
+```php
+// Mail powitalny dla nowego użytkownika
+$this->emailService->sendWelcomeEmail($user, $temporaryPassword); // $temporaryPassword opcjonalnie
+
+// Mail z resetem hasła  
+$this->emailService->sendPasswordResetEmail($user, $resetToken);
+
+// Mail z powiadomieniem o przeglądzie (dla asekuracji)
+$this->emailService->sendReviewNotificationEmail($email, $name, $reviewData);
+```
+
+### Konfiguracja SMTP
+EmailService automatycznie używa ustawień SMTP z bazy danych:
+- Ustawienia konfigurowane w `/admin/settings/email`
+- Dynamiczny transport SMTP z bazy danych
+- Fallback do domyślnego mailera w razie błędów
+- Automatyczne ukrywanie haseł w logach
+
+### Historia maili - Automatyczne logowanie
+Każdy mail wysłany przez EmailService jest automatycznie logowany:
+- **Tabela**: `email_history`
+- **Pola**: recipient_email, subject, body_text, body_html, status, email_type, metadata, sent_by, error_message
+- **Automatyczne czyszczenie**: Konfigurowalny retention (domyślnie 90 dni)
+- **Interface**: `/admin/emails` - przeglądanie i statystyki
+
+### Wzorzec dla nowych modułów - WYSYŁANIE MAILI
+```php
+// W EventSubscriber modułu
+class NewModuleEventSubscriber implements EventSubscriberInterface
+{
+    public function __construct(
+        private AuditService $auditService,
+        private LoggerInterface $logger,
+        private ?EmailService $emailService = null // Opcjonalnie
+    ) {}
+    
+    public function onEntityCreated(EntityCreatedEvent $event): void
+    {
+        // Audit
+        $this->auditService->logUserAction($event->getCreatedBy(), 'entity_created_event', [
+            'entity_id' => $event->getEntity()->getId()
+        ]);
+        
+        // Email notification (jeśli EmailService dostępny)
+        if ($this->emailService) {
+            $this->sendCreationNotification($event);
+        }
+    }
+    
+    private function sendCreationNotification(EntityCreatedEvent $event): void
+    {
+        $entity = $event->getEntity();
+        $user = $event->getCreatedBy();
+        
+        // Wyślij powiadomienie do administratorów lub zainteresowanych
+        $success = $this->emailService->sendEmail(
+            to: 'admin@company.com',
+            subject: 'Nowa encja utworzona: ' . $entity->getName(),
+            body: "Użytkownik {$user->getFullName()} utworzył nową encję: {$entity->getName()}",
+            toName: 'Administrator',
+            emailType: 'entity_created',
+            metadata: [
+                'entity_id' => $entity->getId(),
+                'entity_type' => get_class($entity),
+                'created_by' => $user->getId()
+            ]
+        );
+        
+        if ($success) {
+            $this->logger->info('Creation notification sent', [
+                'entity_id' => $entity->getId(),
+                'recipient' => 'admin@company.com'
+            ]);
+        }
+    }
+}
+```
+
+### Czyszczenie historii maili
+```bash
+# Komenda czyszcząca stare maile
+php bin/console app:email:cleanup [dni] [--dry-run] [--force]
+
+# Przykłady
+php bin/console app:email:cleanup 30 --dry-run    # Pokaż co zostanie usunięte
+php bin/console app:email:cleanup 90 --force     # Usuń maile starsze niż 90 dni
+php bin/console app:email:cleanup                 # Użyj domyślnych ustawień
+
+# Cron job (raz w tygodniu)
+0 2 * * 0 cd /path/to/project && php bin/console app:email:cleanup --force
+```
+
+### WAŻNE - Co NIE WOLNO robić z mailami:
+```php
+// BŁĘDNE - bezpośrednie używanie MailerInterface
+private MailerInterface $mailer;
+$this->mailer->send($email); // ❌ Nie loguje do historii!
+
+// BŁĘDNE - tworzenie własnego transportu SMTP
+$transport = Transport::fromDsn($dsn);
+$mailer = new Mailer($transport); // ❌ Omija konfigurację z bazy danych!
+
+// POPRAWNE - zawsze EmailService
+$this->emailService->sendEmail(...); // ✅ Automatyczna historia + SMTP z bazy
+```
+
+### Historia maili - Interface administratora
+- **Główna lista**: `/admin/emails` - filtrowanie, wyszukiwanie, paginacja
+- **Szczegóły**: `/admin/emails/{id}` - pełne dane maila + metadane
+- **Statystyki**: `/admin/emails/stats` - wskaźniki sukcesu, rozkład typów
+- **Czyszczenie**: Formularz do manualnego czyszczenia starych rekordów
+- **Menu**: Panel administracyjny → Historia maili
+
+### EmailService - Funkcjonalności zaawansowane
+- ✅ Dynamiczny transport SMTP z bazy danych
+- ✅ Automatyczne logowanie wszystkich maili (udane + nieudane)
+- ✅ Obsługa både HTML i tekstowych maili
+- ✅ Metadane w formacie JSON dla rozszerzonych informacji
+- ✅ Fallback do domyślnego mailera przy błędach konfiguracji
+- ✅ Security - ukrywanie haseł w logach
+- ✅ Kompatybilność z Symfony 6+ (Security bundle)
+- ✅ Gotowe szablony maili (powitalne, reset hasła, powiadomienia)
+
 System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!
