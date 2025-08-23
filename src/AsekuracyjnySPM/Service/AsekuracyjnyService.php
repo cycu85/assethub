@@ -700,19 +700,28 @@ class AsekuracyjnyService
         
         // Przywrócenie statusu sprzętu lub zestawu po zakończeniu przeglądu
         if ($review->getEquipment()) {
-            // Przegląd pojedynczego sprzętu - przywrócenie statusu na "available"
+            // Przegląd pojedynczego sprzętu - przywrócenie statusu na podstawie przypisania
             $equipment = $review->getEquipment();
-            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
+            $equipment->setStatus($equipment->isAssigned() 
+                ? AsekuracyjnyEquipment::STATUS_ASSIGNED 
+                : AsekuracyjnyEquipment::STATUS_AVAILABLE
+            );
             $equipment->setUpdatedBy($user);
         } elseif ($review->getEquipmentSet()) {
-            // Przegląd zestawu - przywrócenie statusu zestawu i wszystkich jego elementów
+            // Przegląd zestawu - przywrócenie statusu na podstawie przypisania
             $equipmentSet = $review->getEquipmentSet();
-            $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_AVAILABLE);
+            $equipmentSet->setStatus($equipmentSet->isAssigned() 
+                ? AsekuracyjnyEquipmentSet::STATUS_ASSIGNED 
+                : AsekuracyjnyEquipmentSet::STATUS_AVAILABLE
+            );
             $equipmentSet->setUpdatedBy($user);
             
-            // Przywrócenie statusu wszystkich elementów zestawu
+            // Przywrócenie statusu wszystkich elementów zestawu na podstawie ich przypisania
             foreach ($equipmentSet->getEquipmentItems() as $equipment) {
-                $equipment->setStatus(AsekuracyjnyEquipment::STATUS_AVAILABLE);
+                $equipment->setStatus($equipment->isAssigned() 
+                    ? AsekuracyjnyEquipment::STATUS_ASSIGNED 
+                    : AsekuracyjnyEquipment::STATUS_AVAILABLE
+                );
                 $equipment->setUpdatedBy($user);
             }
         }
