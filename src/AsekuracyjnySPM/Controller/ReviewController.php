@@ -88,6 +88,8 @@ class ReviewController extends AbstractController
         $this->authorizationService->checkPermission($user, 'asekuracja', 'REVIEW', $request);
         
         $review = new AsekuracyjnyReview();
+        // Ustawienie domyślnej daty planowanego przeglądu na dziś
+        $review->setPlannedDate(new \DateTime());
         $form = $this->createForm(AsekuracyjnyReviewType::class, $review);
         
         $form->handleRequest($request);

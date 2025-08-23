@@ -272,97 +272,31 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     
-    // Szukanie pól po atrybucie name (bardziej niezawodne)
-    const plannedDateField = form.querySelector('input[name*="plannedDate"]');
-    const reviewTypeField = form.querySelector('select[name*="reviewType"]');
-    
-    console.log('Form validation - plannedDateField:', plannedDateField);
-    console.log('Form validation - reviewTypeField:', reviewTypeField);
-    
-    if (!plannedDateField || !reviewTypeField) {
-        console.warn('Nie można znaleźć pól formularza dla walidacji');
-        return;
-    }
-    
-    // Walidacja formularza przed wysłaniem
-    form.addEventListener('submit', function(e) {
-        let isValid = true;
-        
-        // Sprawdzenie czy data przeglądu jest uzupełniona
-        if (!plannedDateField.value.trim()) {
-            e.preventDefault();
-            isValid = false;
-            
-            // Pokazanie błędu
-            plannedDateField.classList.add('is-invalid');
-            let errorElement = plannedDateField.parentNode.querySelector('.invalid-feedback');
-            if (!errorElement) {
-                errorElement = document.createElement('div');
-                errorElement.className = 'invalid-feedback';
-                plannedDateField.parentNode.appendChild(errorElement);
-            }
-            errorElement.textContent = 'Data planowanego przeglądu jest wymagana';
-        } else {
-            plannedDateField.classList.remove('is-invalid');
-        }
-        
-        // Sprawdzenie czy typ przeglądu jest wybrany
-        if (!reviewTypeField.value.trim()) {
-            e.preventDefault();
-            isValid = false;
-            
-            // Pokazanie błędu
-            reviewTypeField.classList.add('is-invalid');
-            let errorElement = reviewTypeField.parentNode.querySelector('.invalid-feedback');
-            if (!errorElement) {
-                errorElement = document.createElement('div');
-                errorElement.className = 'invalid-feedback';
-                reviewTypeField.parentNode.appendChild(errorElement);
-            }
-            errorElement.textContent = 'Typ przeglądu jest wymagany';
-        } else {
-            reviewTypeField.classList.remove('is-invalid');
-        }
-        
-        if (!isValid) {
-            // Przewiń do pierwszego błędu
-            const firstError = form.querySelector('.is-invalid');
-            if (firstError) {
-                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                firstError.focus();
-            }
-        }
-    });
-    
-    // Usuwanie błędów przy wpisywaniu
-    plannedDateField.addEventListener('input', function() {
-        if (this.value.trim()) {
-            this.classList.remove('is-invalid');
-        }
-    });
-    
-    reviewTypeField.addEventListener('change', function() {
-        if (this.value.trim()) {
-            this.classList.remove('is-invalid');
-        }
-    });
-    
     // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
     const equipmentField = form.querySelector('select[name*="equipment"]:not([name*="equipmentSet"])');
     const equipmentSetField = form.querySelector('select[name*="equipmentSet"]');
     
     if (equipmentField && equipmentSetField) {
-        console.log('Found equipment fields for mutual exclusion');
         equipmentField.addEventListener('change', function() {
             if (this.value) {
                 equipmentSetField.value = '';
+                equipmentSetField.classList.remove('is-invalid');
             }
         });
         
         equipmentSetField.addEventListener('change', function() {
             if (this.value) {
                 equipmentField.value = '';
+                equipmentField.classList.remove('is-invalid');
             }
+        });
+    }
+    
+    // Podstawowa walidacja typu przeglądu (server-side validation już to sprawdza)
+    const reviewTypeField = form.querySelector('select[name*="reviewType"]');
+    if (reviewTypeField) {
+        reviewTypeField.addEventListener('change', function() {
+            this.classList.remove('is-invalid');
         });
     }
 });
