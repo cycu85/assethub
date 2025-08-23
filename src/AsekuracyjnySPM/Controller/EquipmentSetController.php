@@ -992,6 +992,457 @@ class EquipmentSetController extends AbstractController
         return $response;
     }
 
+    // === RETURN MANAGEMENT ===
+
+    #[Route('/return/{setId}/prepare', name: 'asekuracja_return_prepare', requirements: ['setId' => '\d+'], methods: ['POST'])]
+    public function prepareReturn(int $setId, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'TRANSFER', $request);
+        
+        $equipmentSet = $this->entityManager->find(AsekuracyjnyEquipmentSet::class, $setId);
+        if (!$equipmentSet) {
+            throw $this->createNotFoundException('Zestaw nie został znaleziony.');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('prepare_return_' . $equipmentSet->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            // Find active transfer for this equipment set
+            $activeTransfer = null;
+            foreach ($equipmentSet->getTransfers() as $transfer) {
+                if ($transfer->isTransferred()) {
+                    $activeTransfer = $transfer;
+                    break;
+                }
+            }
+            
+            if (!$activeTransfer) {
+                throw new BusinessLogicException('Nie znaleziono aktywnego przekazania dla tego zestawu.');
+            }
+            
+            $returnDate = $request->request->get('return_date');
+            $returnNotes = $request->request->get('return_notes');
+            
+            // Start return process
+            $activeTransfer->startReturn($returnNotes);
+            
+            $this->entityManager->flush();
+            
+            // Generate return protocol PDF
+            try {
+                $pdfContent = $this->generateReturnProtocolPDF($activeTransfer);
+                $filename = 'return_protocol_' . $activeTransfer->getTransferNumber() . '.pdf';
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/';
+                
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                file_put_contents($uploadDir . $filename, $pdfContent);
+                $activeTransfer->setReturnProtocolFilename($filename);
+                $this->entityManager->flush();
+                
+            } catch (\Exception $e) {
+                $this->logger->error('Failed to generate return protocol PDF', [
+                    'transfer_id' => $activeTransfer->getId(),
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the return if PDF generation fails
+            }
+            
+            $this->addFlash('success', sprintf(
+                'Zwrot %s został przygotowany. Status: %s', 
+                $activeTransfer->getTransferNumber(),
+                $activeTransfer->getStatusDisplayName()
+            ));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'prepare_equipment_set_return', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'transfer_id' => $activeTransfer->getId(),
+                'return_date' => $returnDate
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił nieoczekiwany błąd podczas przygotowywania zwrotu.');
+            $this->logger->error('Failed to prepare equipment set return', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+    }
+
+    #[Route('/transfer/{id}/return', name: 'asekuracja_transfer_return', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function prepareReturnForTransfer(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'TRANSFER', $request);
+        
+        $transfer = $this->entityManager->find(AsekuracyjnyTransfer::class, $id);
+        if (!$transfer) {
+            throw $this->createNotFoundException('Przekazanie nie zostało znalezione.');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('prepare_return', $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            if (!$transfer->canBeReturned()) {
+                throw new BusinessLogicException('Zwrot nie może być przygotowany w aktualnym stanie.');
+            }
+            
+            $returnDate = $request->request->get('return_date');
+            $returnNotes = $request->request->get('return_notes');
+            
+            // Start return process
+            $transfer->startReturn($returnNotes);
+            
+            $this->entityManager->flush();
+            
+            // Generate return protocol PDF
+            try {
+                $pdfContent = $this->generateReturnProtocolPDF($transfer);
+                $filename = 'return_protocol_' . $transfer->getTransferNumber() . '.pdf';
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/';
+                
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                file_put_contents($uploadDir . $filename, $pdfContent);
+                $transfer->setReturnProtocolFilename($filename);
+                $this->entityManager->flush();
+                
+            } catch (\Exception $e) {
+                $this->logger->error('Failed to generate return protocol PDF', [
+                    'transfer_id' => $transfer->getId(),
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the return if PDF generation fails
+            }
+            
+            $this->addFlash('success', sprintf(
+                'Zwrot %s został przygotowany. Status: %s', 
+                $transfer->getTransferNumber(),
+                $transfer->getStatusDisplayName()
+            ));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'prepare_transfer_return', [
+                'transfer_id' => $transfer->getId(),
+                'equipment_set_id' => $transfer->getEquipmentSet()->getId(),
+                'return_date' => $returnDate
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił nieoczekiwany błąd podczas przygotowywania zwrotu.');
+            $this->logger->error('Failed to prepare transfer return', [
+                'transfer_id' => $transfer->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $transfer->getEquipmentSet()->getId()]);
+    }
+
+    #[Route('/return/{id}/complete', name: 'asekuracja_return_complete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function completeReturn(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'TRANSFER', $request);
+        
+        $transfer = $this->entityManager->find(AsekuracyjnyTransfer::class, $id);
+        if (!$transfer) {
+            throw $this->createNotFoundException('Zwrot nie został znaleziony.');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('complete_return', $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            if (!$transfer->canReturnBeCompleted()) {
+                throw new BusinessLogicException('Zwrot nie może być zakończony w aktualnym stanie.');
+            }
+            
+            $returnProtocolFile = $request->files->get('return_protocol_file');
+            if (!$returnProtocolFile || !$returnProtocolFile->isValid()) {
+                throw new BusinessLogicException('Wymagany jest poprawny plik protokołu zwrotu PDF.');
+            }
+            
+            // Validate file type
+            if ($returnProtocolFile->getMimeType() !== 'application/pdf') {
+                throw new BusinessLogicException('Protokół zwrotu musi być w formacie PDF.');
+            }
+            
+            // Validate file size (10MB max)
+            if ($returnProtocolFile->getSize() > 10 * 1024 * 1024) {
+                throw new BusinessLogicException('Plik protokołu zwrotu jest za duży (maksymalnie 10MB).');
+            }
+            
+            // Upload return protocol file
+            $filename = 'signed_return_protocol_' . $transfer->getTransferNumber() . '_' . uniqid() . '.pdf';
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            $returnProtocolFile->move($uploadDir, $filename);
+            
+            // Complete return and unassign equipment set
+            $transfer->completeReturn($user, $filename);
+            
+            $this->entityManager->flush();
+            
+            $this->addFlash('success', sprintf(
+                'Zwrot %s został zakończony. Zestaw został odłączony od użytkownika.', 
+                $transfer->getTransferNumber()
+            ));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'complete_equipment_set_return', [
+                'transfer_id' => $transfer->getId(),
+                'equipment_set_id' => $transfer->getEquipmentSet()->getId(),
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił nieoczekiwany błąd podczas kończenia zwrotu.');
+            $this->logger->error('Failed to complete equipment set return', [
+                'transfer_id' => $transfer->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $transfer->getEquipmentSet()->getId()]);
+    }
+
+    #[Route('/return/{id}/protocol/download', name: 'asekuracja_return_protocol_download', requirements: ['id' => '\d+'])]
+    public function downloadReturnProtocol(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
+        
+        $transfer = $this->entityManager->find(AsekuracyjnyTransfer::class, $id);
+        if (!$transfer) {
+            throw $this->createNotFoundException('Zwrot nie został znaleziony.');
+        }
+        
+        // Check if user can view this transfer
+        if (!$this->canUserViewEquipmentSet($user, $transfer->getEquipmentSet())) {
+            throw $this->createAccessDeniedException('Brak uprawnień do pobrania tego protokołu zwrotu.');
+        }
+        
+        if (!$transfer->hasReturnProtocolScan()) {
+            throw $this->createNotFoundException('Protokół zwrotu nie został jeszcze wygenerowany lub przesłany.');
+        }
+        
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/' . $transfer->getReturnProtocolFilename();
+        
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Plik protokołu zwrotu nie został znaleziony na serwerze.');
+        }
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'download_return_protocol', [
+            'transfer_id' => $transfer->getId(),
+            'equipment_set_id' => $transfer->getEquipmentSet()->getId(),
+            'filename' => $transfer->getReturnProtocolFilename()
+        ], $request);
+        
+        $response = new BinaryFileResponse($filePath);
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT, 
+            'protokol_zwrotu_' . $transfer->getTransferNumber() . '.pdf'
+        );
+        
+        return $response;
+    }
+
+    private function generateReturnProtocolPDF(AsekuracyjnyTransfer $transfer): string
+    {
+        $equipmentSet = $transfer->getEquipmentSet();
+        $recipient = $transfer->getRecipient();
+        $handedBy = $transfer->getHandedBy();
+        
+        // Create new PDF document
+        $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        
+        // Set document information
+        $pdf->SetCreator('AssetHub System');
+        $pdf->SetAuthor('AssetHub');
+        $pdf->SetTitle('Protokół zwrotu zestawu asekuracyjnego');
+        $pdf->SetSubject('Protokół zwrotu - ' . $transfer->getTransferNumber());
+        
+        // Set margins
+        $pdf->SetMargins(15, 27, 15);
+        $pdf->SetHeaderMargin(5);
+        $pdf->SetFooterMargin(10);
+        
+        // Set auto page breaks
+        $pdf->SetAutoPageBreak(TRUE, 25);
+        
+        // Set font
+        $pdf->SetFont('dejavusans', '', 10);
+        
+        // Add a page
+        $pdf->AddPage();
+        
+        // Title
+        $pdf->SetFont('dejavusans', 'B', 16);
+        $pdf->Cell(0, 15, 'PROTOKÓŁ ZWROTU ZESTAWU ASEKURACYJNEGO', 0, 1, 'C');
+        $pdf->Ln(5);
+        
+        // Protocol number and date
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(60, 8, 'Numer protokołu:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 12);
+        $pdf->Cell(0, 8, $transfer->getTransferNumber() . ' - ZWROT', 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(60, 8, 'Data zwrotu:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 12);
+        $pdf->Cell(0, 8, (new \DateTime())->format('d.m.Y'), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(60, 8, 'Data przekazania:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 12);
+        $pdf->Cell(0, 8, $transfer->getTransferDate()->format('d.m.Y'), 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        // Equipment set information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'DANE ZESTAWU', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Nazwa:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $equipmentSet->getName(), 0, 1, 'L');
+        
+        if ($equipmentSet->getSetType()) {
+            $pdf->SetFont('dejavusans', 'B', 11);
+            $pdf->Cell(40, 6, 'Typ:', 0, 0, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->Cell(0, 6, $equipmentSet->getSetType(), 0, 1, 'L');
+        }
+        $pdf->Ln(5);
+        
+        // Return information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'ZWRACAJĄCY', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Imię i nazwisko:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $recipient->getFullName(), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Email:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $recipient->getEmail(), 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        // Receiving back information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'PRZYJMUJĄCY ZWROT', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Imię i nazwisko:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $handedBy->getFullName(), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Email:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $handedBy->getEmail(), 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        // Equipment list
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'ELEMENTY ZESTAWU', 0, 1, 'L');
+        
+        // Table header
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(10, 8, 'Lp.', 1, 0, 'C');
+        $pdf->Cell(60, 8, 'Nazwa', 1, 0, 'C');
+        $pdf->Cell(35, 8, 'Numer inwentarzowy', 1, 0, 'C');
+        $pdf->Cell(25, 8, 'Typ', 1, 0, 'C');
+        $pdf->Cell(35, 8, 'Producent', 1, 0, 'C');
+        $pdf->Cell(20, 8, 'Status', 1, 1, 'C');
+        
+        // Equipment items
+        $pdf->SetFont('dejavusans', '', 8);
+        $counter = 1;
+        foreach ($equipmentSet->getEquipment() as $equipment) {
+            $pdf->Cell(10, 6, $counter++, 1, 0, 'C');
+            $pdf->Cell(60, 6, $equipment->getName(), 1, 0, 'L');
+            $pdf->Cell(35, 6, $equipment->getInventoryNumber(), 1, 0, 'C');
+            $pdf->Cell(25, 6, $equipment->getEquipmentType() ?? '', 1, 0, 'L');
+            $pdf->Cell(35, 6, $equipment->getManufacturer() ?? '', 1, 0, 'L');
+            $pdf->Cell(20, 6, $equipment->getStatusDisplayName(), 1, 1, 'C');
+        }
+        $pdf->Ln(5);
+        
+        // Return notes
+        if ($transfer->getReturnNotes()) {
+            $pdf->SetFont('dejavusans', 'B', 12);
+            $pdf->Cell(0, 8, 'Uwagi dotyczące zwrotu:', 0, 1, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->MultiCell(0, 6, $transfer->getReturnNotes(), 0, 'L');
+            $pdf->Ln(3);
+        }
+        
+        // Signatures
+        $pdf->Ln(10);
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(90, 8, 'Podpis zwracającego:', 0, 0, 'L');
+        $pdf->Cell(90, 8, 'Podpis przyjmującego:', 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        $pdf->SetFont('dejavusans', '', 10);
+        $pdf->Cell(90, 6, '_________________________________', 0, 0, 'C');
+        $pdf->Cell(90, 6, '_________________________________', 0, 1, 'C');
+        $pdf->Cell(90, 6, $recipient->getFullName(), 0, 0, 'C');
+        $pdf->Cell(90, 6, $handedBy->getFullName(), 0, 1, 'C');
+        
+        $pdf->Ln(10);
+        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->Cell(0, 4, 'Data i miejsce:', 0, 1, 'L');
+        $pdf->Cell(0, 4, '_________________________________', 0, 1, 'L');
+        
+        // Return PDF as string
+        return $pdf->Output('', 'S');
+    }
+
     private function generateTransferProtocolPDF(AsekuracyjnyTransfer $transfer): string
     {
         $equipmentSet = $transfer->getEquipmentSet();

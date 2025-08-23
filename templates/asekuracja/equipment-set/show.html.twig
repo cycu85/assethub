@@ -310,11 +310,19 @@
                 {% endif %}
                 
                 {% if can_transfer %}
-                <button class="btn btn-outline-success w-100 mb-2" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#prepareTransferModal">
-                    <i class="ri-send-plane-line me-1"></i>Przygotuj przekazanie
-                </button>
+                    {% if equipment_set.isAssigned %}
+                    <button class="btn btn-outline-warning w-100 mb-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#prepareReturnModal">
+                        <i class="ri-arrow-left-line me-1"></i>Przygotuj zwrot
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-success w-100 mb-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#prepareTransferModal">
+                        <i class="ri-send-plane-line me-1"></i>Przygotuj przekazanie
+                    </button>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -523,16 +531,26 @@
                                 <td>
                                     {% set transfer_status_class = transfer.status == 'transferred' ? 'success' : 
                                                                   (transfer.status == 'in_progress' ? 'warning' : 
-                                                                  (transfer.status == 'cancelled' ? 'danger' : 'secondary')) %}
+                                                                  (transfer.status == 'return_in_progress' ? 'info' :
+                                                                  (transfer.status == 'returned' ? 'primary' :
+                                                                  (transfer.status == 'cancelled' ? 'danger' : 'secondary')))) %}
                                     <span class="badge bg-{{ transfer_status_class }}">{{ transfer.statusDisplayName }}</span>
                                 </td>
                                 <td>
                                     {% if transfer.protocolScanFilename %}
                                     <a href="{{ path('asekuracja_transfer_protocol_download', {id: transfer.id}) }}" 
-                                       class="btn btn-sm btn-outline-primary" target="_blank">
-                                        <i class="ri-file-pdf-line me-1"></i>Pobierz PDF
+                                       class="btn btn-sm btn-outline-primary mb-1" target="_blank">
+                                        <i class="ri-file-pdf-line me-1"></i>Protokół przekazania
                                     </a>
-                                    {% else %}
+                                    {% endif %}
+                                    {% if transfer.returnProtocolFilename %}
+                                    <br>
+                                    <a href="{{ path('asekuracja_return_protocol_download', {id: transfer.id}) }}" 
+                                       class="btn btn-sm btn-outline-info" target="_blank">
+                                        <i class="ri-file-pdf-line me-1"></i>Protokół zwrotu
+                                    </a>
+                                    {% endif %}
+                                    {% if not transfer.protocolScanFilename and not transfer.returnProtocolFilename %}
                                     <span class="text-muted">Brak</span>
                                     {% endif %}
                                 </td>
@@ -544,6 +562,22 @@
                                             data-transfer-id="{{ transfer.id }}"
                                             data-transfer-number="{{ transfer.transferNumber }}">
                                         <i class="ri-check-line me-1"></i>Zakończ przekazanie
+                                    </button>
+                                    {% elseif transfer.isTransferred() and can_transfer %}
+                                    <button class="btn btn-sm btn-warning" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#prepareReturnForTransferModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-arrow-left-line me-1"></i>Przygotuj zwrot
+                                    </button>
+                                    {% elseif transfer.isReturnInProgress() and can_transfer %}
+                                    <button class="btn btn-sm btn-info" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#completeReturnModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-check-double-line me-1"></i>Zakończ zwrot
                                     </button>
                                     {% endif %}
                                 </td>
@@ -750,6 +784,133 @@
     </div>
 </div>
 
+<!-- Modal przygotowania zwrotu dla całego zestawu -->
+<div class="modal fade" id="prepareReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-arrow-left-line me-2"></i>Przygotuj zwrot zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('asekuracja_return_prepare', {setId: equipment_set.id}) }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz zwrot zestawu <strong>{{ equipment_set.name }}</strong>
+                        {% if equipment_set.assignedTo %}
+                        <br>obecnie przypisanego do: <strong>{{ equipment_set.assignedTo.fullName }}</strong>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_date" class="form-label">Data zwrotu</label>
+                        <input type="date" class="form-control" id="return_date" name="return_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_notes" class="form-label">Uwagi dotyczące zwrotu (opcjonalnie)</label>
+                        <textarea class="form-control" id="return_notes" name="return_notes" rows="3"
+                                  placeholder="Powód zwrotu, stan sprzętu, dodatkowe uwagi..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('prepare_return_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ri-arrow-left-line me-1"></i>Wykonaj zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal przygotowania zwrotu dla konkretnego przekazania -->
+<div class="modal fade" id="prepareReturnForTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-arrow-left-line me-2"></i>Przygotuj zwrot
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="prepareReturnForTransferForm">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz zwrot dla przekazania <strong id="returnTransferNumberDisplay"></strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_date_transfer" class="form-label">Data zwrotu</label>
+                        <input type="date" class="form-control" id="return_date_transfer" name="return_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_notes_transfer" class="form-label">Uwagi dotyczące zwrotu (opcjonalnie)</label>
+                        <textarea class="form-control" id="return_notes_transfer" name="return_notes" rows="3"
+                                  placeholder="Powód zwrotu, stan sprzętu, dodatkowe uwagi..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="" id="prepareReturnForTransferToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ri-arrow-left-line me-1"></i>Wykonaj zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal zakończenia zwrotu -->
+<div class="modal fade" id="completeReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-check-double-line me-2"></i>Zakończ zwrot
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="completeReturnForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="ri-information-line me-2"></i>
+                        Zakończenie zwrotu <strong id="returnCompleteTransferNumberDisplay"></strong>
+                        spowoduje odłączenie zestawu od aktualnego użytkownika.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_protocol_file" class="form-label">Podpisany protokół zwrotu PDF</label>
+                        <input type="file" class="form-control" id="return_protocol_file" name="return_protocol_file" 
+                               accept=".pdf" required>
+                        <div class="form-text">
+                            Wymagany jest podpisany protokół zwrotu w formacie PDF (maks. 10MB).
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('complete_return') }}" id="completeReturnToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 // Handle complete transfer modal data
 document.addEventListener('DOMContentLoaded', function() {
@@ -765,6 +926,35 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('completeTransferForm').action = '{{ path("asekuracja_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
             document.getElementById('completeTransferToken').name = '_token';
             document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer") }}';
+        });
+    }
+
+    // Handle prepare return for transfer modal
+    const prepareReturnForTransferModal = document.getElementById('prepareReturnForTransferModal');
+    if (prepareReturnForTransferModal) {
+        prepareReturnForTransferModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('returnTransferNumberDisplay').textContent = transferNumber;
+            document.getElementById('prepareReturnForTransferForm').action = '{{ path("asekuracja_transfer_return", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('prepareReturnForTransferToken').value = '{{ csrf_token("prepare_return") }}';
+        });
+    }
+
+    // Handle complete return modal
+    const completeReturnModal = document.getElementById('completeReturnModal');
+    if (completeReturnModal) {
+        completeReturnModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('returnCompleteTransferNumberDisplay').textContent = transferNumber;
+            document.getElementById('completeReturnForm').action = '{{ path("asekuracja_return_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
         });
     }
 });

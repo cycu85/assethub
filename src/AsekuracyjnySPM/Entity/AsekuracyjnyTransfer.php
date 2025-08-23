@@ -65,6 +65,15 @@ class AsekuracyjnyTransfer
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $protocolUploadedAt = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $returnProtocolFilename = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $returnProtocolUploadedAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $returnNotes = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $handedBy = null;
@@ -90,12 +99,16 @@ class AsekuracyjnyTransfer
     public const STATUS_DRAFT = 'draft';
     public const STATUS_IN_PROGRESS = 'in_progress';
     public const STATUS_TRANSFERRED = 'transferred';
+    public const STATUS_RETURN_IN_PROGRESS = 'return_in_progress';
+    public const STATUS_RETURNED = 'returned';
     public const STATUS_CANCELLED = 'cancelled';
 
     public const STATUSES = [
         self::STATUS_DRAFT => 'Projekt',
         self::STATUS_IN_PROGRESS => 'W trakcie',
         self::STATUS_TRANSFERRED => 'Przekazany',
+        self::STATUS_RETURN_IN_PROGRESS => 'Zwrot w trakcie',
+        self::STATUS_RETURNED => 'Zwrócony',
         self::STATUS_CANCELLED => 'Anulowany'
     ];
 
@@ -364,6 +377,16 @@ class AsekuracyjnyTransfer
         return $this->status === self::STATUS_TRANSFERRED;
     }
 
+    public function isReturnInProgress(): bool
+    {
+        return $this->status === self::STATUS_RETURN_IN_PROGRESS;
+    }
+
+    public function isReturned(): bool
+    {
+        return $this->status === self::STATUS_RETURNED;
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_CANCELLED;
@@ -377,6 +400,16 @@ class AsekuracyjnyTransfer
     public function canBeCompleted(): bool
     {
         return $this->status === self::STATUS_IN_PROGRESS;
+    }
+
+    public function canBeReturned(): bool
+    {
+        return $this->status === self::STATUS_TRANSFERRED;
+    }
+
+    public function canReturnBeCompleted(): bool
+    {
+        return $this->status === self::STATUS_RETURN_IN_PROGRESS;
     }
 
     public function canBeCancelled(): bool
@@ -407,6 +440,37 @@ class AsekuracyjnyTransfer
         if ($this->equipmentSet) {
             $this->equipmentSet->setAssignedTo($this->recipient);
             $this->equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_ASSIGNED);
+        }
+        
+        return $this;
+    }
+
+    public function startReturn(string $returnNotes = null): self
+    {
+        if (!$this->canBeReturned()) {
+            throw new \InvalidArgumentException('Zwrot nie może być rozpoczęty w aktualnym stanie');
+        }
+
+        $this->status = self::STATUS_RETURN_IN_PROGRESS;
+        $this->returnNotes = $returnNotes;
+        return $this;
+    }
+
+    public function completeReturn(User $returnedBy, string $filename): self
+    {
+        if (!$this->canReturnBeCompleted()) {
+            throw new \InvalidArgumentException('Zwrot nie może być zakończony w aktualnym stanie');
+        }
+
+        $this->status = self::STATUS_RETURNED;
+        $this->returnDate = new \DateTime();
+        $this->returnedBy = $returnedBy;
+        $this->returnProtocolFilename = $filename;
+        $this->returnProtocolUploadedAt = new \DateTime();
+        
+        if ($this->equipmentSet) {
+            $this->equipmentSet->setAssignedTo(null);
+            $this->equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_AVAILABLE);
         }
         
         return $this;
@@ -487,6 +551,44 @@ class AsekuracyjnyTransfer
         }
         
         return $this;
+    }
+
+    public function getReturnProtocolFilename(): ?string
+    {
+        return $this->returnProtocolFilename;
+    }
+
+    public function setReturnProtocolFilename(?string $returnProtocolFilename): self
+    {
+        $this->returnProtocolFilename = $returnProtocolFilename;
+        return $this;
+    }
+
+    public function getReturnProtocolUploadedAt(): ?\DateTimeInterface
+    {
+        return $this->returnProtocolUploadedAt;
+    }
+
+    public function setReturnProtocolUploadedAt(?\DateTimeInterface $returnProtocolUploadedAt): self
+    {
+        $this->returnProtocolUploadedAt = $returnProtocolUploadedAt;
+        return $this;
+    }
+
+    public function getReturnNotes(): ?string
+    {
+        return $this->returnNotes;
+    }
+
+    public function setReturnNotes(?string $returnNotes): self
+    {
+        $this->returnNotes = $returnNotes;
+        return $this;
+    }
+
+    public function hasReturnProtocolScan(): bool
+    {
+        return $this->returnProtocolFilename !== null;
     }
 
     public function __toString(): string
