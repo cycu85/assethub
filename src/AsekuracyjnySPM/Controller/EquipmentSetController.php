@@ -604,7 +604,7 @@ class EquipmentSetController extends AbstractController
                         'original_name' => $originalName,
                         'size' => $fileSize,
                         'mime_type' => $mimeType,
-                        'uploaded_at' => new \DateTime(),
+                        'uploaded_at' => (new \DateTime())->format('Y-m-d H:i:s'),
                         'uploaded_by' => $user->getFullName(),
                         'description' => $description
                     ];
