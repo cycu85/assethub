@@ -88,17 +88,15 @@ class AsekuracyjnyTransfer
     private ?User $updatedBy = null;
 
     public const STATUS_DRAFT = 'draft';
-    public const STATUS_GENERATED = 'generated';
-    public const STATUS_ACTIVE = 'active';
-    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_IN_PROGRESS = 'in_progress';
+    public const STATUS_TRANSFERRED = 'transferred';
     public const STATUS_CANCELLED = 'cancelled';
 
     public const STATUSES = [
         self::STATUS_DRAFT => 'Projekt',
-        self::STATUS_GENERATED => 'Wygenerowane',
-        self::STATUS_ACTIVE => 'Aktywne',
-        self::STATUS_COMPLETED => 'Zakończone',
-        self::STATUS_CANCELLED => 'Anulowane'
+        self::STATUS_IN_PROGRESS => 'W trakcie',
+        self::STATUS_TRANSFERRED => 'Przekazany',
+        self::STATUS_CANCELLED => 'Anulowany'
     ];
 
     public function __construct()
@@ -356,19 +354,14 @@ class AsekuracyjnyTransfer
         return $this->status === self::STATUS_DRAFT;
     }
 
-    public function isGenerated(): bool
+    public function isInProgress(): bool
     {
-        return $this->status === self::STATUS_GENERATED;
+        return $this->status === self::STATUS_IN_PROGRESS;
     }
 
-    public function isActive(): bool
+    public function isTransferred(): bool
     {
-        return $this->status === self::STATUS_ACTIVE;
-    }
-
-    public function isCompleted(): bool
-    {
-        return $this->status === self::STATUS_COMPLETED;
+        return $this->status === self::STATUS_TRANSFERRED;
     }
 
     public function isCancelled(): bool
@@ -376,43 +369,28 @@ class AsekuracyjnyTransfer
         return $this->status === self::STATUS_CANCELLED;
     }
 
-    public function canBeGenerated(): bool
+    public function canBeStarted(): bool
     {
         return $this->status === self::STATUS_DRAFT;
     }
 
-    public function canBeActivated(): bool
-    {
-        return $this->status === self::STATUS_GENERATED;
-    }
-
     public function canBeCompleted(): bool
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return $this->status === self::STATUS_IN_PROGRESS;
     }
 
     public function canBeCancelled(): bool
     {
-        return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_GENERATED, self::STATUS_ACTIVE]);
+        return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_IN_PROGRESS]);
     }
 
-    public function generateProtocol(): self
+    public function startTransfer(): self
     {
-        if (!$this->canBeGenerated()) {
-            throw new \InvalidArgumentException('Protokół nie może być wygenerowany w aktualnym stanie');
+        if (!$this->canBeStarted()) {
+            throw new \InvalidArgumentException('Przekazanie nie może być rozpoczęte w aktualnym stanie');
         }
 
-        $this->status = self::STATUS_GENERATED;
-        return $this;
-    }
-
-    public function activate(): self
-    {
-        if (!$this->canBeActivated()) {
-            throw new \InvalidArgumentException('Przekazanie nie może być aktywowane w aktualnym stanie');
-        }
-
-        $this->status = self::STATUS_ACTIVE;
+        $this->status = self::STATUS_IN_PROGRESS;
         return $this;
     }
 
@@ -422,9 +400,15 @@ class AsekuracyjnyTransfer
             throw new \InvalidArgumentException('Przekazanie nie może być zakończone w aktualnym stanie');
         }
 
-        $this->status = self::STATUS_COMPLETED;
+        $this->status = self::STATUS_TRANSFERRED;
         $this->returnDate = new \DateTime();
         $this->returnedBy = $returnedBy;
+        
+        if ($this->equipmentSet) {
+            $this->equipmentSet->setAssignedTo($this->recipient);
+            $this->equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_ASSIGNED);
+        }
+        
         return $this;
     }
 
@@ -493,13 +477,13 @@ class AsekuracyjnyTransfer
         return new \DateTime() > $this->returnDate;
     }
 
-    public function uploadProtocolScan(string $filename): self
+    public function uploadProtocolScan(string $filename, User $returnedBy): self
     {
         $this->protocolScanFilename = $filename;
         $this->protocolUploadedAt = new \DateTime();
         
-        if ($this->isGenerated()) {
-            $this->activate();
+        if ($this->isInProgress()) {
+            $this->complete($returnedBy);
         }
         
         return $this;

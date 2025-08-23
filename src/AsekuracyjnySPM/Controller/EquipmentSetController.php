@@ -4,6 +4,7 @@ namespace App\AsekuracyjnySPM\Controller;
 
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
+use App\AsekuracyjnySPM\Entity\AsekuracyjnyTransfer;
 use App\AsekuracyjnySPM\Service\AsekuracyjnyService;
 use App\AsekuracyjnySPM\Form\AsekuracyjnyEquipmentSetType;
 use App\Entity\User;
@@ -156,6 +157,9 @@ class EquipmentSetController extends AbstractController
         $canTransfer = $this->authorizationService->hasPermission($user, 'asekuracja', 'TRANSFER');
         $canManageEquipment = $this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT');
 
+        // Get active users for transfer modal
+        $users = $this->entityManager->getRepository(User::class)->findBy(['isActive' => true]);
+
         // Audit
         $this->auditService->logUserAction($user, 'view_asekuracja_equipment_set', [
             'equipment_set_id' => $equipmentSet->getId(),
@@ -171,6 +175,7 @@ class EquipmentSetController extends AbstractController
             'can_review' => $canReview,
             'can_transfer' => $canTransfer,
             'can_manage_equipment' => $canManageEquipment,
+            'users' => $users,
         ]);
     }
 
@@ -764,6 +769,273 @@ class EquipmentSetController extends AbstractController
         }
         
         return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+    }
+
+    // === TRANSFER MANAGEMENT ===
+
+    #[Route('/transfer/{setId}/prepare', name: 'asekuracja_transfer_prepare', requirements: ['setId' => '\d+'], methods: ['POST'])]
+    public function prepareTransfer(int $setId, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'TRANSFER', $request);
+        
+        $equipmentSet = $this->entityManager->find(AsekuracyjnyEquipmentSet::class, $setId);
+        if (!$equipmentSet) {
+            throw $this->createNotFoundException('Zestaw nie został znaleziony.');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('prepare_transfer_' . $equipmentSet->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            $recipientId = $request->request->get('recipient_id');
+            $transferDate = $request->request->get('transfer_date');
+            $purpose = $request->request->get('purpose');
+            $notes = $request->request->get('notes');
+            
+            // Validate recipient
+            $recipient = $this->entityManager->find(User::class, $recipientId);
+            if (!$recipient) {
+                throw new BusinessLogicException('Wybrany odbiorca nie został znaleziony.');
+            }
+            
+            // Create transfer
+            $transfer = new AsekuracyjnyTransfer();
+            $transfer->setEquipmentSet($equipmentSet)
+                    ->setRecipient($recipient)
+                    ->setTransferDate(new \DateTime($transferDate))
+                    ->setPurpose($purpose)
+                    ->setNotes($notes)
+                    ->setHandedBy($user)
+                    ->setCreatedBy($user);
+            
+            // Start the transfer (set to "W trakcie")
+            $transfer->startTransfer();
+            
+            $this->entityManager->persist($transfer);
+            $this->entityManager->flush();
+            
+            // Generate PDF protocol
+            try {
+                $pdfContent = $this->generateTransferProtocolPDF($transfer);
+                $filename = 'protocol_' . $transfer->getTransferNumber() . '.pdf';
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/';
+                
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                file_put_contents($uploadDir . $filename, $pdfContent);
+                $transfer->setProtocolScanFilename($filename);
+                $this->entityManager->flush();
+                
+            } catch (\Exception $e) {
+                $this->logger->error('Failed to generate transfer protocol PDF', [
+                    'transfer_id' => $transfer->getId(),
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the transfer if PDF generation fails
+            }
+            
+            $this->addFlash('success', sprintf(
+                'Przekazanie %s zostało przygotowane. Status: %s', 
+                $transfer->getTransferNumber(),
+                $transfer->getStatusDisplayName()
+            ));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'prepare_equipment_set_transfer', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'transfer_id' => $transfer->getId(),
+                'recipient_id' => $recipient->getId(),
+                'transfer_date' => $transferDate
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił nieoczekiwany błąd podczas przygotowywania przekazania.');
+            $this->logger->error('Failed to prepare equipment set transfer', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $equipmentSet->getId()]);
+    }
+
+    #[Route('/transfer/{id}/complete', name: 'asekuracja_transfer_complete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function completeTransfer(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'asekuracja', 'TRANSFER', $request);
+        
+        $transfer = $this->entityManager->find(AsekuracyjnyTransfer::class, $id);
+        if (!$transfer) {
+            throw $this->createNotFoundException('Przekazanie nie zostało znalezione.');
+        }
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('complete_transfer_' . $transfer->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            if (!$transfer->canBeCompleted()) {
+                throw new BusinessLogicException('Przekazanie nie może być zakończone w aktualnym stanie.');
+            }
+            
+            $protocolFile = $request->files->get('protocol_file');
+            if (!$protocolFile || !$protocolFile->isValid()) {
+                throw new BusinessLogicException('Wymagany jest poprawny plik protokołu PDF.');
+            }
+            
+            // Validate file type
+            if ($protocolFile->getMimeType() !== 'application/pdf') {
+                throw new BusinessLogicException('Protokół musi być w formacie PDF.');
+            }
+            
+            // Validate file size (10MB max)
+            if ($protocolFile->getSize() > 10 * 1024 * 1024) {
+                throw new BusinessLogicException('Plik protokołu jest za duży (maksymalnie 10MB).');
+            }
+            
+            // Upload protocol file
+            $filename = 'signed_protocol_' . $transfer->getTransferNumber() . '_' . uniqid() . '.pdf';
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            $protocolFile->move($uploadDir, $filename);
+            
+            // Complete transfer and assign equipment set
+            $transfer->uploadProtocolScan($filename, $user);
+            
+            $this->entityManager->flush();
+            
+            $this->addFlash('success', sprintf(
+                'Przekazanie %s zostało zakończone. Zestaw został przypisany do odbiorcy.', 
+                $transfer->getTransferNumber()
+            ));
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'complete_equipment_set_transfer', [
+                'transfer_id' => $transfer->getId(),
+                'equipment_set_id' => $transfer->getEquipmentSet()->getId(),
+                'recipient_id' => $transfer->getRecipient()->getId(),
+            ], $request);
+            
+        } catch (BusinessLogicException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Wystąpił nieoczekiwany błąd podczas kończenia przekazania.');
+            $this->logger->error('Failed to complete equipment set transfer', [
+                'transfer_id' => $transfer->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+        }
+        
+        return $this->redirectToRoute('asekuracja_equipment_set_show', ['id' => $transfer->getEquipmentSet()->getId()]);
+    }
+
+    #[Route('/transfer/{id}/protocol/download', name: 'asekuracja_transfer_protocol_download', requirements: ['id' => '\d+'])]
+    public function downloadTransferProtocol(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
+        
+        $transfer = $this->entityManager->find(AsekuracyjnyTransfer::class, $id);
+        if (!$transfer) {
+            throw $this->createNotFoundException('Przekazanie nie zostało znalezione.');
+        }
+        
+        // Check if user can view this transfer
+        if (!$this->canUserViewEquipmentSet($user, $transfer->getEquipmentSet())) {
+            throw $this->createAccessDeniedException('Brak uprawnień do pobrania tego protokołu.');
+        }
+        
+        if (!$transfer->hasProtocolScan()) {
+            throw $this->createNotFoundException('Protokół nie został jeszcze wygenerowany lub przesłany.');
+        }
+        
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/asekuracja/transfers/' . $transfer->getProtocolScanFilename();
+        
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Plik protokołu nie został znaleziony na serwerze.');
+        }
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'download_transfer_protocol', [
+            'transfer_id' => $transfer->getId(),
+            'equipment_set_id' => $transfer->getEquipmentSet()->getId(),
+            'filename' => $transfer->getProtocolScanFilename()
+        ], $request);
+        
+        $response = new BinaryFileResponse($filePath);
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT, 
+            'protokol_' . $transfer->getTransferNumber() . '.pdf'
+        );
+        
+        return $response;
+    }
+
+    private function generateTransferProtocolPDF(AsekuracyjnyTransfer $transfer): string
+    {
+        // TODO: Implement proper PDF generation using a library like TCPDF or mPDF
+        // For now, return a simple PDF structure
+        
+        $equipmentSet = $transfer->getEquipmentSet();
+        $recipient = $transfer->getRecipient();
+        $handedBy = $transfer->getHandedBy();
+        
+        $content = "PROTOKÓŁ PRZEKAZANIA ZESTAWU ASEKURACYJNEGO\n\n";
+        $content .= "Numer protokołu: " . $transfer->getTransferNumber() . "\n";
+        $content .= "Data przekazania: " . $transfer->getTransferDate()->format('d.m.Y') . "\n\n";
+        
+        $content .= "ZESTAW:\n";
+        $content .= "Nazwa: " . $equipmentSet->getName() . "\n";
+        $content .= "Typ: " . $equipmentSet->getSetType() . "\n";
+        $content .= "Lokalizacja: " . $equipmentSet->getLocation() . "\n\n";
+        
+        $content .= "ODBIORCA:\n";
+        $content .= "Imię i nazwisko: " . $recipient->getFullName() . "\n";
+        $content .= "Email: " . $recipient->getEmail() . "\n\n";
+        
+        $content .= "PRZEKAZAŁ:\n";
+        $content .= "Imię i nazwisko: " . $handedBy->getFullName() . "\n";
+        $content .= "Email: " . $handedBy->getEmail() . "\n\n";
+        
+        $content .= "ELEMENTY ZESTAWU:\n";
+        foreach ($equipmentSet->getEquipment() as $equipment) {
+            $content .= "- " . $equipment->getName() . " (" . $equipment->getInventoryNumber() . ")\n";
+        }
+        
+        if ($transfer->getPurpose()) {
+            $content .= "\nCel przekazania: " . $transfer->getPurpose() . "\n";
+        }
+        
+        if ($transfer->getNotes()) {
+            $content .= "\nUwagi: " . $transfer->getNotes() . "\n";
+        }
+        
+        $content .= "\n\nPodpis odbiorcy: ____________________\n";
+        $content .= "Podpis przekazującego: ____________________\n";
+        
+        // This is a very basic text-based PDF. In production, use proper PDF library
+        return $content;
     }
 
     // === PRIVATE HELPER METHODS ===

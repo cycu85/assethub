@@ -310,9 +310,10 @@
                 {% endif %}
                 
                 {% if can_transfer %}
-                <button class="btn btn-outline-success w-100 mb-2" disabled>
-                    <i class="ri-arrow-right-line me-1"></i>Transfer
-                    <small class="d-block">W rozwoju</small>
+                <button class="btn btn-outline-success w-100 mb-2" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#prepareTransferModal">
+                    <i class="ri-send-plane-line me-1"></i>Przygotuj przekazanie
                 </button>
                 {% endif %}
             </div>
@@ -468,6 +469,101 @@
     </div>
 </div>
 
+<!-- Historia przekazań -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="ri-arrow-right-line me-2"></i>Przekazania ({{ equipment_set.transfers|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.transfers|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Numer przekazania</th>
+                                <th>Odbiorca</th>
+                                <th>Data przekazania</th>
+                                <th>Status</th>
+                                <th>Protokół PDF</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transfer in equipment_set.transfers %}
+                            <tr>
+                                <td>
+                                    <strong>{{ transfer.transferNumber }}</strong>
+                                    {% if transfer.purpose %}
+                                    <br><small class="text-muted">{{ transfer.purpose }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-2">
+                                            <i class="ri-user-line text-primary fs-14"></i>
+                                        </div>
+                                        <div>
+                                            <span>{{ transfer.recipient.fullName }}</span>
+                                            {% if transfer.recipient.branch %}
+                                            <br><small class="text-muted">{{ transfer.recipient.branch }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ transfer.transferDate|date('d.m.Y') }}
+                                    {% if transfer.returnDate %}
+                                    <br><small class="text-muted">Zwrócone: {{ transfer.returnDate|date('d.m.Y') }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set transfer_status_class = transfer.status == 'transferred' ? 'success' : 
+                                                                  (transfer.status == 'in_progress' ? 'warning' : 
+                                                                  (transfer.status == 'cancelled' ? 'danger' : 'secondary')) %}
+                                    <span class="badge bg-{{ transfer_status_class }}">{{ transfer.statusDisplayName }}</span>
+                                </td>
+                                <td>
+                                    {% if transfer.protocolScanFilename %}
+                                    <a href="{{ path('asekuracja_transfer_protocol_download', {id: transfer.id}) }}" 
+                                       class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="ri-file-pdf-line me-1"></i>Pobierz PDF
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if transfer.isInProgress() and can_transfer %}
+                                    <button class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#completeTransferModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-check-line me-1"></i>Zakończ przekazanie
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-arrow-right-line text-muted fs-48"></i>
+                    <h6 class="mt-3">Brak historii przekazań</h6>
+                    <p class="text-muted mb-0">Ten zestaw nie został jeszcze nikomu przekazany.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Uwagi -->
 {% if equipment_set.notes %}
 <div class="row mt-4">
@@ -552,4 +648,124 @@
         </div>
     </div>
 </div>
+
+<!-- Modal przygotowania przekazania -->
+<div class="modal fade" id="prepareTransferModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-send-plane-line me-2"></i>Przygotuj przekazanie zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('asekuracja_transfer_prepare', {setId: equipment_set.id}) }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz przekazanie zestawu <strong>{{ equipment_set.name }}</strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_recipient" class="form-label">Odbiorca</label>
+                        <select class="form-select" id="transfer_recipient" name="recipient_id" required>
+                            <option value="">Wybierz odbiorcy...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.fullName }}
+                                {% if user.branch %} - {{ user.branch }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_date" class="form-label">Data przekazania</label>
+                        <input type="date" class="form-control" id="transfer_date" name="transfer_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_purpose" class="form-label">Cel przekazania (opcjonalnie)</label>
+                        <textarea class="form-control" id="transfer_purpose" name="purpose" rows="2"
+                                  placeholder="Opisz cel przekazania sprzętu..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_notes" class="form-label">Uwagi (opcjonalnie)</label>
+                        <textarea class="form-control" id="transfer_notes" name="notes" rows="2"
+                                  placeholder="Dodatkowe uwagi dotyczące przekazania..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('prepare_transfer_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-send-plane-line me-1"></i>Wykonaj przekazanie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal zakończenia przekazania -->
+<div class="modal fade" id="completeTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-check-double-line me-2"></i>Zakończ przekazanie
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="completeTransferForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-information-line me-2"></i>
+                        Zakończenie przekazania <strong id="transferNumberDisplay"></strong>
+                        spowoduje przypisanie zestawu do odbiorcy.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="protocol_file" class="form-label">Podpisany protokół PDF</label>
+                        <input type="file" class="form-control" id="protocol_file" name="protocol_file" 
+                               accept=".pdf" required>
+                        <div class="form-text">
+                            Wymagany jest podpisany protokół w formacie PDF (maks. 10MB).
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="" id="completeTransferToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ przekazanie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle complete transfer modal data
+document.addEventListener('DOMContentLoaded', function() {
+    const completeTransferModal = document.getElementById('completeTransferModal');
+    if (completeTransferModal) {
+        completeTransferModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('transferNumberDisplay').textContent = transferNumber;
+            document.getElementById('completeTransferForm').action = '{{ path("asekuracja_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer_") }}' + transferId;
+        });
+    }
+});
+</script>
 {% endblock %}
