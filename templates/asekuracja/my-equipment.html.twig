@@ -252,7 +252,7 @@
                                     {% if set.equipmentItems|length > 0 %}
                                     <div class="mt-1">
                                         {% for item in set.equipmentItems|slice(0, 3) %}
-                                        <small class="badge bg-light text-dark me-1">{{ item.equipment.equipmentType }}</small>
+                                        <small class="badge bg-light text-dark me-1">{{ item.equipmentType }}</small>
                                         {% endfor %}
                                         {% if set.equipmentItems|length > 3 %}
                                         <small class="text-muted">+{{ set.equipmentItems|length - 3 }} więcej</small>
