@@ -10,6 +10,7 @@ use App\Repository\ModuleRepository;
 use App\Service\AuthorizationService;
 use App\Service\AdminService;
 use App\Service\AuditService;
+use App\Service\EmailService;
 use App\Service\PermissionService;
 use App\Service\SettingService;
 use Psr\Log\LoggerInterface;
@@ -37,6 +38,7 @@ class AdminController extends AbstractController
         private ModuleRepository $moduleRepository,
         private SettingService $settingService,
         private MailerInterface $mailer,
+        private EmailService $emailService,
         private LoggerInterface $logger,
         private UserRepository $userRepository,
         private EntityManagerInterface $entityManager
@@ -650,55 +652,43 @@ class AdminController extends AbstractController
 
     private function sendTestEmail(string $testEmail, array $smtpSettings): void
     {
-        // Pobierz hasło z bazy danych jeśli nie zostało podane w formularzu
-        $password = $smtpSettings['smtp_password'];
-        if (empty($password)) {
-            $password = $this->settingService->get('smtp_password', '');
-        }
+        $subject = 'Test wiadomości z AssetHub';
+        $htmlBody = '
+            <h2>Test połączenia SMTP</h2>
+            <p>Gratulacje! Konfiguracja SMTP działa prawidłowo.</p>
+            <p><strong>Szczegóły połączenia:</strong></p>
+            <ul>
+                <li>Serwer: ' . htmlspecialchars($smtpSettings['smtp_host']) . '</li>
+                <li>Port: ' . htmlspecialchars($smtpSettings['smtp_port']) . '</li>
+                <li>Szyfrowanie: ' . htmlspecialchars($smtpSettings['smtp_encryption']) . '</li>
+                <li>Użytkownik: ' . htmlspecialchars($smtpSettings['smtp_username']) . '</li>
+            </ul>
+            <p><em>Wiadomość wysłana z systemu AssetHub</em></p>
+        ';
         
-        // Buduj DSN na podstawie ustawień SMTP
-        $encryption = $smtpSettings['smtp_encryption'] !== 'none' ? $smtpSettings['smtp_encryption'] : null;
-        $dsnParts = [
-            'smtp://',
-            urlencode($smtpSettings['smtp_username']),
-            ':',
-            urlencode($password),
-            '@',
-            $smtpSettings['smtp_host'],
-            ':',
-            $smtpSettings['smtp_port']
+        $textBody = strip_tags(str_replace(['<li>', '</li>', '<ul>', '</ul>', '<h2>', '</h2>', '<p>', '</p>'], ["\n- ", '', "\n", "\n", "\n", "\n", "\n", "\n"], $htmlBody));
+        
+        $metadata = [
+            'test_email' => true,
+            'smtp_host' => $smtpSettings['smtp_host'],
+            'smtp_port' => $smtpSettings['smtp_port'],
+            'smtp_encryption' => $smtpSettings['smtp_encryption']
         ];
-        
-        if ($encryption) {
-            $dsnParts[] = '?encryption=' . $encryption;
-        }
-        
-        $dsn = implode('', $dsnParts);
-        
-        // Utwórz transport SMTP na podstawie konfiguracji
-        $transport = Transport::fromDsn($dsn);
-        $mailer = new Mailer($transport);
-        
-        // Utwórz wiadomość
-        $email = (new Email())
-            ->from($smtpSettings['from_email'])
-            ->to($testEmail)
-            ->subject('Test wiadomości z AssetHub')
-            ->html('
-                <h2>Test połączenia SMTP</h2>
-                <p>Gratulacje! Konfiguracja SMTP działa prawidłowo.</p>
-                <p><strong>Szczegóły połączenia:</strong></p>
-                <ul>
-                    <li>Serwer: ' . htmlspecialchars($smtpSettings['smtp_host']) . '</li>
-                    <li>Port: ' . htmlspecialchars($smtpSettings['smtp_port']) . '</li>
-                    <li>Szyfrowanie: ' . htmlspecialchars($smtpSettings['smtp_encryption']) . '</li>
-                    <li>Użytkownik: ' . htmlspecialchars($smtpSettings['smtp_username']) . '</li>
-                </ul>
-                <p><em>Wiadomość wysłana z systemu AssetHub</em></p>
-            ');
 
-        // Wyślij przez skonfigurowany transport
-        $mailer->send($email);
+        // Użyj EmailService aby mail został zalogowany w historii
+        $success = $this->emailService->sendHtmlEmail(
+            $testEmail,
+            $subject,
+            $htmlBody,
+            $textBody,
+            null, // recipient name
+            'email_test',
+            $metadata
+        );
+        
+        if (!$success) {
+            throw new \Exception('Nie udało się wysłać wiadomości testowej');
+        }
     }
 
     private function getLdapSettings(): array
