@@ -8,6 +8,8 @@ use App\Repository\EmailHistoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Address;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -38,8 +40,9 @@ class EmailService
         try {
             $email = $this->createEmail($to, $subject, $body, $toName);
             
-            // Wyślij mail
-            $this->mailer->send($email);
+            // Wyślij mail przez dynamiczny mailer
+            $mailer = $this->createMailerFromSettings();
+            $mailer->send($email);
             
             // Zaloguj do historii jako udany
             $this->logEmailToHistory($email, 'sent', null, $emailType, $metadata);
@@ -83,8 +86,9 @@ class EmailService
             $email = $this->createEmail($to, $subject, $textBody ?? strip_tags($htmlBody), $toName);
             $email->html($htmlBody);
             
-            // Wyślij mail
-            $this->mailer->send($email);
+            // Wyślij mail przez dynamiczny mailer
+            $mailer = $this->createMailerFromSettings();
+            $mailer->send($email);
             
             // Zaloguj do historii jako udany
             $this->logEmailToHistory($email, 'sent', null, $emailType, $metadata);
@@ -243,8 +247,8 @@ class EmailService
      */
     private function createEmail(string $to, string $subject, string $body, ?string $toName = null): Email
     {
-        $fromEmail = $this->settingService->get('mail_from_address', 'noreply@assethub.local');
-        $fromName = $this->settingService->get('mail_from_name', 'AssetHub System');
+        $fromEmail = $this->settingService->get('from_email', 'noreply@assethub.local');
+        $fromName = $this->settingService->get('from_name', 'AssetHub System');
         
         $email = (new Email())
             ->from(new Address($fromEmail, $fromName))
@@ -296,8 +300,8 @@ class EmailService
                 $history->setSubject($fallbackSubject ?? 'No subject');
                 $history->setBodyText($fallbackBody);
                 
-                $fromEmail = $this->settingService->get('mail_from_address', 'noreply@assethub.local');
-                $fromName = $this->settingService->get('mail_from_name', 'AssetHub System');
+                $fromEmail = $this->settingService->get('from_email', 'noreply@assethub.local');
+                $fromName = $this->settingService->get('from_name', 'AssetHub System');
                 $history->setSenderEmail($fromEmail);
                 $history->setSenderName($fromName);
             }
@@ -323,6 +327,58 @@ class EmailService
                 'error' => $e->getMessage(),
                 'recipient' => $fallbackTo ?? 'unknown'
             ]);
+        }
+    }
+
+    /**
+     * Tworzy mailer z ustawień z bazy danych
+     */
+    private function createMailerFromSettings(): MailerInterface
+    {
+        // Pobierz ustawienia SMTP z bazy danych
+        $host = $this->settingService->get('smtp_host', 'localhost');
+        $port = $this->settingService->get('smtp_port', '25');
+        $encryption = $this->settingService->get('smtp_encryption', 'none');
+        $username = $this->settingService->get('smtp_username', '');
+        $password = $this->settingService->get('smtp_password', '');
+
+        // Sprawdź czy mamy kompletną konfigurację SMTP
+        if (empty($host) || empty($username)) {
+            $this->logger->warning('Incomplete SMTP configuration, falling back to default mailer', [
+                'host' => $host,
+                'username' => $username
+            ]);
+            return $this->mailer; // Użyj domyślnego mailera
+        }
+
+        // Buduj DSN na podstawie ustawień SMTP
+        $dsnParts = [
+            'smtp://',
+            urlencode($username),
+            ':',
+            urlencode($password),
+            '@',
+            $host,
+            ':',
+            $port
+        ];
+        
+        if ($encryption !== 'none') {
+            $dsnParts[] = '?encryption=' . $encryption;
+        }
+        
+        $dsn = implode('', $dsnParts);
+        
+        try {
+            // Utwórz transport SMTP na podstawie konfiguracji
+            $transport = Transport::fromDsn($dsn);
+            return new Mailer($transport);
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to create SMTP transport from settings, falling back to default mailer', [
+                'dsn' => preg_replace('/:[^:@]*@/', ':***@', $dsn), // Ukryj hasło w logu
+                'error' => $e->getMessage()
+            ]);
+            return $this->mailer; // Użyj domyślnego mailera w razie błędu
         }
     }
 }
