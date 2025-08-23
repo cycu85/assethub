@@ -467,6 +467,12 @@ class AsekuracyjnyController extends AbstractController
         }
         
         try {
+            // Ensure entity is managed by entity manager
+            $equipment = $this->entityManager->find(AsekuracyjnyEquipment::class, $equipment->getId());
+            if (!$equipment) {
+                throw new \RuntimeException('Equipment not found');
+            }
+            
             $uploadedFiles = $request->files->get('attachments', []);
             $description = $request->request->get('description', '');
             
@@ -507,17 +513,21 @@ class AsekuracyjnyController extends AbstractController
                         continue;
                     }
                     
-                    // Generate unique filename
+                    // Generate unique filename and get file info before moving
                     $filename = uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
+                    $originalName = $uploadedFile->getClientOriginalName();
+                    $fileSize = $uploadedFile->getSize();
+                    $mimeType = $uploadedFile->getMimeType();
+                    
                     $uploadedFile->move($uploadDir, $filename);
                     
                     // Add to equipment attachments
                     $equipment->addAttachment([
                         'filename' => $filename,
-                        'original_name' => $uploadedFile->getClientOriginalName(),
-                        'size' => $uploadedFile->getSize(),
-                        'mime_type' => $uploadedFile->getMimeType(),
-                        'uploaded_at' => new \DateTime(),
+                        'original_name' => $originalName,
+                        'size' => $fileSize,
+                        'mime_type' => $mimeType,
+                        'uploaded_at' => (new \DateTime())->format('Y-m-d H:i:s'),
                         'uploaded_by' => $user->getFullName(),
                         'description' => $description
                     ]);
@@ -527,6 +537,11 @@ class AsekuracyjnyController extends AbstractController
             }
             
             if ($uploadedCount > 0) {
+                // Set updated by and updated at
+                $equipment->setUpdatedBy($user);
+                $equipment->setUpdatedAt(new \DateTime());
+                
+                $this->entityManager->persist($equipment);
                 $this->entityManager->flush();
                 
                 $this->addFlash('success', sprintf('Przesłano %d załączników pomyślnie.', $uploadedCount));
