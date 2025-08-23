@@ -513,12 +513,28 @@ class EquipmentSetController extends AbstractController
         
         // CSRF protection
         if (!$this->isCsrfTokenValid('upload_equipment_set_attachment_' . $equipmentSet->getId(), $request->request->get('_token'))) {
+            $this->logger->warning('Invalid CSRF token for attachment upload', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'user' => $user->getUsername()
+            ]);
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
         
         try {
+            // Ensure entity is managed by entity manager
+            $equipmentSet = $this->entityManager->find(AsekuracyjnyEquipmentSet::class, $equipmentSet->getId());
+            if (!$equipmentSet) {
+                throw new \RuntimeException('Equipment set not found');
+            }
+            
             $uploadedFiles = $request->files->get('attachments', []);
             $description = $request->request->get('description', '');
+            
+            $this->logger->info('Processing attachment upload', [
+                'equipment_set_id' => $equipmentSet->getId(),
+                'files_count' => count($uploadedFiles),
+                'description' => $description
+            ]);
             
             if (empty($uploadedFiles)) {
                 $this->addFlash('error', 'Nie wybrano żadnych plików do przesłania.');
@@ -530,10 +546,17 @@ class EquipmentSetController extends AbstractController
             
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
+                $this->logger->info('Created upload directory', ['path' => $uploadDir]);
             }
             
             foreach ($uploadedFiles as $uploadedFile) {
                 if ($uploadedFile instanceof UploadedFile && $uploadedFile->isValid()) {
+                    $this->logger->info('Processing file', [
+                        'filename' => $uploadedFile->getClientOriginalName(),
+                        'size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType()
+                    ]);
+                    
                     // Validate file size (10MB max)
                     if ($uploadedFile->getSize() > 10 * 1024 * 1024) {
                         $this->addFlash('warning', sprintf('Plik "%s" jest za duży (max 10MB).', $uploadedFile->getClientOriginalName()));
@@ -554,6 +577,10 @@ class EquipmentSetController extends AbstractController
                     
                     if (!in_array($uploadedFile->getMimeType(), $allowedMimeTypes)) {
                         $this->addFlash('warning', sprintf('Typ pliku "%s" nie jest dozwolony.', $uploadedFile->getClientOriginalName()));
+                        $this->logger->warning('File type not allowed', [
+                            'filename' => $uploadedFile->getClientOriginalName(),
+                            'mime_type' => $uploadedFile->getMimeType()
+                        ]);
                         continue;
                     }
                     
@@ -561,8 +588,14 @@ class EquipmentSetController extends AbstractController
                     $filename = uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
                     $uploadedFile->move($uploadDir, $filename);
                     
+                    $this->logger->info('File moved successfully', [
+                        'original_name' => $uploadedFile->getClientOriginalName(),
+                        'new_filename' => $filename,
+                        'path' => $uploadDir . $filename
+                    ]);
+                    
                     // Add to equipment set attachments
-                    $equipmentSet->addAttachment([
+                    $attachmentData = [
                         'filename' => $filename,
                         'original_name' => $uploadedFile->getClientOriginalName(),
                         'size' => $uploadedFile->getSize(),
@@ -570,14 +603,35 @@ class EquipmentSetController extends AbstractController
                         'uploaded_at' => new \DateTime(),
                         'uploaded_by' => $user->getFullName(),
                         'description' => $description
-                    ]);
+                    ];
                     
+                    $equipmentSet->addAttachment($attachmentData);
                     $uploadedCount++;
+                    
+                    $this->logger->info('Attachment added to entity', [
+                        'attachment_data' => $attachmentData,
+                        'current_attachments_count' => count($equipmentSet->getAttachments())
+                    ]);
+                } else {
+                    $this->logger->warning('Invalid uploaded file', [
+                        'file_error' => $uploadedFile ? $uploadedFile->getError() : 'File is null'
+                    ]);
                 }
             }
             
             if ($uploadedCount > 0) {
+                // Set updated by and updated at
+                $equipmentSet->setUpdatedBy($user);
+                $equipmentSet->setUpdatedAt(new \DateTime());
+                
+                $this->entityManager->persist($equipmentSet);
                 $this->entityManager->flush();
+                
+                $this->logger->info('Attachments persisted to database', [
+                    'equipment_set_id' => $equipmentSet->getId(),
+                    'uploaded_count' => $uploadedCount,
+                    'total_attachments' => count($equipmentSet->getAttachments())
+                ]);
                 
                 $this->addFlash('success', sprintf('Przesłano %d załączników pomyślnie.', $uploadedCount));
                 
@@ -587,6 +641,8 @@ class EquipmentSetController extends AbstractController
                     'files_count' => $uploadedCount,
                     'description' => $description
                 ], $request);
+            } else {
+                $this->logger->warning('No files were uploaded successfully');
             }
             
         } catch (\Exception $e) {
@@ -594,6 +650,7 @@ class EquipmentSetController extends AbstractController
             $this->logger->error('Failed to upload equipment set attachment', [
                 'equipment_set_id' => $equipmentSet->getId(),
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'user' => $user->getUsername()
             ]);
         }
