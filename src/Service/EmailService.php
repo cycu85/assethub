@@ -216,39 +216,39 @@ class EmailService
     {
         $subject = 'Przygotowany przegląd zestawu asekuracyjnego - wymagane dostarczenie';
         
-        $body = "Witaj {$recipientName}!\n\n";
-        $body .= "Informujemy, że został przygotowany przegląd dla przypisanego do Ciebie zestawu sprzętu asekuracyjnego.\n\n";
+        $body = "Witaj {$recipientName}!\r\n\r\n";
+        $body .= "Informujemy, że został przygotowany przegląd dla przypisanego do Ciebie zestawu sprzętu asekuracyjnego.\r\n\r\n";
         
-        $body .= "SZCZEGÓŁY PRZEGLĄDU:\n";
-        $body .= "• Numer przeglądu: {$reviewData['review_number']}\n";
-        $body .= "• Zestaw: {$reviewData['set_name']}\n";
-        $body .= "• Typ przeglądu: {$reviewData['review_type']}\n";
-        $body .= "• Planowana data przeglądu: {$reviewData['planned_date']}\n";
-        $body .= "• Firma przeprowadzająca przegląd: {$reviewData['review_company']}\n\n";
+        $body .= "SZCZEGÓŁY PRZEGLĄDU:\r\n";
+        $body .= "• Numer przeglądu: {$reviewData['review_number']}\r\n";
+        $body .= "• Zestaw: {$reviewData['set_name']}\r\n";
+        $body .= "• Typ przeglądu: {$reviewData['review_type']}\r\n";
+        $body .= "• Planowana data przeglądu: {$reviewData['planned_date']}\r\n";
+        $body .= "• Firma przeprowadzająca przegląd: {$reviewData['review_company']}\r\n\r\n";
         
         if (!empty($reviewData['notes'])) {
-            $body .= "• Uwagi: {$reviewData['notes']}\n\n";
+            $body .= "• Uwagi: {$reviewData['notes']}\r\n\r\n";
         }
         
-        $body .= "ELEMENTY ZESTAWU DO DOSTARCZENIA:\n";
+        $body .= "ELEMENTY ZESTAWU DO DOSTARCZENIA:\r\n";
         if (!empty($reviewData['equipment_list'])) {
             foreach ($reviewData['equipment_list'] as $equipment) {
                 $body .= "• {$equipment['name']} (nr inwentarzowy: {$equipment['inventory_number']}";
                 if (!empty($equipment['serial_number'])) {
                     $body .= ", nr seryjny: {$equipment['serial_number']}";
                 }
-                $body .= ")\n";
+                $body .= ")\r\n";
             }
         }
-        $body .= "\n";
+        $body .= "\r\n";
         
-        $body .= "WAŻNE INFORMACJE:\n";
-        $body .= "• Prosimy o dostarczenie kompletnego zestawu na przegląd w wyznaczonym terminie\n";
-        $body .= "• Sprzęt powinien być czysty i gotowy do przeglądu technicznego\n";
-        $body .= "• W przypadku pytań lub problemów prosimy o kontakt z administratorem systemu\n";
-        $body .= "• Status przeglądu można śledzić w systemie AssetHub\n\n";
+        $body .= "WAŻNE INFORMACJE:\r\n";
+        $body .= "• Prosimy o dostarczenie kompletnego zestawu na przegląd w wyznaczonym terminie\r\n";
+        $body .= "• Sprzęt powinien być czysty i gotowy do przeglądu technicznego\r\n";
+        $body .= "• W przypadku pytań lub problemów prosimy o kontakt z administratorem systemu\r\n";
+        $body .= "• Status przeglądu można śledzić w systemie AssetHub\r\n\r\n";
         
-        $body .= "Pozdrawiamy,\n";
+        $body .= "Pozdrawiamy,\r\n";
         $body .= "Zespół " . $this->settingService->get('app_name', 'AssetHub');
 
         return $this->sendEmail(
