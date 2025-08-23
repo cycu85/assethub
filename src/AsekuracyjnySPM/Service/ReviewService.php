@@ -146,6 +146,8 @@ class ReviewService
             'user' => $user->getUsername()
         ]);
 
+        // Powiadomienie email będzie wysłane automatycznie przez AsekuracyjnyEventSubscriber
+
         return $review;
     }
 
@@ -769,4 +771,5 @@ class ReviewService
             'user' => $user->getUsername()
         ]);
     }
+
 }

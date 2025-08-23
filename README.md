@@ -49,18 +49,21 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 - Historia użytkowania i napraw
 - Zarządzanie dokumentacją i certyfikatami
 
-### 🛡️ Moduł Asekuracja (Sprzęt Wysokościowy)
+### 🛡️ Moduł Asekuracja (Sprzęt Wysokościowy) - **KOMPLETNY**
 - **Zarządzanie sprzętem asekuracyjnym** - szelki, liny, kaski, zaciski, blokady z pełnymi metadanymi
-- **System przeglądów i certyfikacji** - okresowe, po uszkodzeniu, po naprawie, początkowe
-- **Zestawy sprzętu** - tworzenie kompletnych zestawów z wielokrotnym wyborem elementów
-- **Modal zakończenia przeglądu** - upload załączników (PDF, DOC, JPG, XLS), wyniki, certyfikaty
-- **Automatyczne statusy** - sprzęt/zestaw automatycznie zmienia status podczas procesu przeglądu
-- **Historia przeglądów z snapshot** - sztywne powiązania elementów z przeglądami, niezależne od zmian w zestawach
-- **System uprawnień** - granularne role (ADMIN, EDITOR, VIEWER, LIST) z pełną kontrolą dostępu
-- **Załączniki przeglądów** - bezpieczne przechowywanie w katalogach `public/uploads/asekuracja/`
-- **Dashboard z metrykami** - karty sprzętu, statystyki przeglądów, alerty terminów
-- **Słowniki konfiguracyjne** - typy sprzętu, statusy, typy zestawów i przeglądów
-- **Indywidualne wyniki w zestawach** - różne wyniki dla poszczególnych elementów w przeglądach zestawów
+- **System przeglądów i certyfikacji** - okresowe, po uszkodzeniu, po naprawie, początkowe z generowaniem protokołów PDF
+- **Zestawy sprzętu** - tworzenie kompletnych zestawów z wielokrotnym wyborem elementów i kontrolą kompletności
+- **System przekazań i zwrotów** - pełny workflow z protokołami PDF:
+  - **Przekazania** - przygotowanie → protokół PDF → "W trakcie" → upload podpisanego → "Przekazany"
+  - **Zwroty** - analogiczny proces z protokołami zwrotu i statusami "Zwrot w trakcie" → "Zwrócony"
+- **Generowanie protokołów PDF** - profesjonalne protokóły TCPDF z nagłówkami, tabelami, miejscami na podpisy
+- **Historia przekazań i zwrotów** - sekcja "Przekazania" w widoku zestawów z pełną historią i linkami do PDF
+- **Automatyczne statusy** - sprzęt/zestaw automatycznie zmienia status podczas procesów przeglądu/przekazania
+- **System uprawnień** - granularne role (ASSEK_ADMIN, ASSEK_EDITOR, ASSEK_VIEWER, ASSEK_LIST) z uprawnieniami TRANSFER
+- **Załączniki i protokóły** - bezpieczne przechowywanie w `public/uploads/asekuracja/` z walidacją PDF
+- **Dashboard z metrykami** - karty sprzętu, statystyki przeglądów, alerty terminów, widok "Moje przypisania"
+- **Słowniki konfiguracyjne** - 8 typów słowników dla pełnej konfiguracji modułu
+- **Interface użytkownika** - modalne okna Bootstrap, responsywny design, upload plików z walidacją
 
 ### 🛡️ Moduł Środków Ochrony Osobistej (ŚOP)
 - Kontrola wydawania ŚOP zgodnie z normami
@@ -117,10 +120,12 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 ### Service Layer Pattern
 Wszystkie operacje biznesowe realizowane przez dedykowane serwisy:
 - **EquipmentService** - Zarządzanie sprzętem z pełną logiką biznesową
-- **AsekuracyjnyService** - Kompletne zarządzanie sprzętem asekuracyjnym, zestawami i przeglądami
+- **AsekuracyjnyEquipmentService** - Kompletne zarządzanie sprzętem asekuracyjnym i zestawami
+- **AsekuracyjnyReviewService** - System przeglądów z protokołami PDF i workflow
 - **AuthorizationService** - Centralizowana autoryzacja zastępująca stary PermissionService
 - **AuditService** - Kompleksowy system audytu z wielopoziomowym logowaniem
 - **AdminService** - Operacje administracyjne, backup, maintenance
+- **EmailService** - Centralizowany system wysyłania maili z historią
 
 ### CQRS (Command Query Responsibility Segregation)
 Separacja komend i zapytań dla lepszej architektury:
@@ -258,14 +263,15 @@ System zdarzeń domenowych z subskrybentami:
    # Tworzenie katalogów logów (system automatycznie utworzy pliki logów)
    sudo -u www-data mkdir -p var/log
    
-   # Tworzenie katalogów dla uploads i backupów
+   # Tworzenie katalogów dla uploads, protokołów PDF i backupów
    sudo -u www-data mkdir -p public/uploads/avatars
    sudo -u www-data mkdir -p public/uploads/reviews
    sudo -u www-data mkdir -p public/uploads/asekuracja/equipment
    sudo -u www-data mkdir -p public/uploads/asekuracja/sets
+   sudo -u www-data mkdir -p public/uploads/asekuracja/transfers  # Protokóły PDF przekazań
    sudo -u www-data mkdir -p var/backups
    sudo chmod 755 public/uploads/avatars public/uploads/reviews public/uploads/asekuracja var/backups
-   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
+   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets public/uploads/asekuracja/transfers
    sudo chown -R www-data:www-data public/uploads var/backups
    ```
 
@@ -386,11 +392,11 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    sudo chmod -R 775 var/cache var/log
    sudo chown -R www-data:www-data var/
    
-   # Tworzenie katalogów
+   # Tworzenie katalogów dla Ubuntu 24.04
    sudo -u www-data mkdir -p var/log public/uploads/avatars public/uploads/reviews var/backups
-   sudo -u www-data mkdir -p public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
+   sudo -u www-data mkdir -p public/uploads/asekuracja/equipment public/uploads/asekuracja/sets public/uploads/asekuracja/transfers
    sudo chmod 755 public/uploads/avatars public/uploads/reviews public/uploads/asekuracja var/backups
-   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets
+   sudo chmod 755 public/uploads/asekuracja/equipment public/uploads/asekuracja/sets public/uploads/asekuracja/transfers
    ```
 
 5. **Konfiguracja Apache dla Ubuntu 24.04**
@@ -599,23 +605,33 @@ MAILER_DSN=gmail://username:password@default
    - **Reset do domyślnych** - przycisk przywracający wszystkie ustawienia z modalem potwierdzenia:
      - AssetHub, #405189, #2a3042, #ffffff, #405189, logo domyślne
 
-7. **🛡️ Testowanie modułu Asekuracja**
-   Po zalogowaniu jako `admin` sprawdź następujące funkcjonalności:
+7. **🛡️ Testowanie modułu Asekuracja - KOMPLETNY SYSTEM**
+   Po zalogowaniu jako `admin` sprawdź pełną funkcjonalność:
    
-   - **`/asekuracja/`** - Dashboard modułu z kartami sprzętu i statystykami przeglądów
-   - **`/asekuracja/equipment/`** - Lista sprzętu asekuracyjnego (3 przykładowe elementy)
-     - Szelki robocze Petzl AVAO (ASK-001-2024)
-     - Lina dynamiczna Edelrid Boa (ASK-002-2024)  
-     - Kask Black Diamond Vector (ASK-003-2024)
-   - **`/asekuracja/equipment-sets/`** - Zestawy sprzętu (1 przykładowy zestaw podstawowy)
-   - **`/asekuracja/reviews/`** - System przeglądów z modalami zakończenia
-   - **`/asekuracja/reviews/new`** - Tworzenie nowego przeglądu z wyborem sprzętu/zestawu
+   **📊 Dashboard i sprzęt:**
+   - **`/asekuracja/`** - Dashboard z kartami sprzętu, statystykami, alertami terminów
+   - **`/asekuracja/equipment/`** - Lista sprzętu (8 przykładowych elementów od ASK-001 do ASK-008)
+   - **`/asekuracja/equipment-sets/`** - Zestawy sprzętu z zarządzaniem kompletności
+   - **`/asekuracja/my-equipment`** - Widok "Moje przypisania" z przypisanym sprzętem
    
-   **🔧 Testowanie funkcjonalności:**
-   - Utwórz nowy przegląd dla sprzętu
-   - Wyślij przegląd (zmiana statusu na "in_review") 
-   - Zakończ przegląd przez modal z załącznikami
-   - Sprawdź odnośniki w widoku sprzętu do historii przeglądów
+   **🔍 System przeglądów:**
+   - **`/asekuracja/reviews/`** - Lista przeglądów z filtrowaniem i statusami
+   - **`/asekuracja/reviews/new`** - Tworzenie przeglądu dla sprzętu/zestawu
+   - **Modal zakończenia** - upload załączników (PDF, JPG, DOC, XLS), wyniki, certyfikaty
+   
+   **📦 Przekazania i zwroty:**
+   - **Przygotowanie przekazania** - modal z wyborem odbiorcy i daty
+   - **Protokół przekazania PDF** - profesjonalny dokument TCPDF z podpisami
+   - **Zakończenie przekazania** - upload podpisanego protokołu
+   - **System zwrotów** - analogiczny workflow ze statusami i protokołami PDF
+   - **Historia przekazań** - sekcja w widoku zestawów z linkami do protokołów
+   
+   **🔧 Testowanie workflow:**
+   - Utwórz zestaw sprzętu i przypisz elementy
+   - Przygotuj przekazanie → pobierz protokół PDF → zakończ z uploadem
+   - Przygotuj zwrot → pobierz protokół zwrotu → zakończ proces
+   - Sprawdź sekcję "Przekazania" w szczegółach zestawu
+   - Przetestuj uprawnienia dla różnych ról (VIEWER, EDITOR, ADMIN)
 
 8. **🔗 Integracja LDAP/Active Directory**
    - Panel Administracyjny → Ustawienia → LDAP
@@ -761,11 +777,11 @@ assethub/
 │   ├── Form/        # Formularze Symfony
 │   ├── Repository/  # Repozytoria danych
 │   ├── Service/     # Usługi biznesowe
-│   └── AsekuracyjnySPM/  # Moduł Asekuracja
-│       ├── Controller/   # Kontrolery modułu
-│       ├── Entity/      # Encje: Equipment, Review, ReviewEquipment
-│       ├── Repository/  # Repozytoria z zaawansowanymi zapytaniami
-│       └── Service/     # Serwisy biznesowe modułu
+│   └── AsekuracyjnySPM/  # Moduł Asekuracja - KOMPLETNY
+│       ├── Controller/   # EquipmentController, EquipmentSetController, ReviewController
+│       ├── Entity/      # AsekuracyjnyEquipment, AsekuracyjnyEquipmentSet, AsekuracyjnyReview, AsekuracyjnyTransfer
+│       ├── Repository/  # Repozytoria z zaawansowanymi zapytaniami i metrykami
+│       └── Service/     # AsekuracyjnyEquipmentService, AsekuracyjnyReviewService
 ├── templates/       # Szablony Twig
 │   └── asekuracja/  # Szablony modułu Asekuracja
 ├── tests/          # Testy automatyczne

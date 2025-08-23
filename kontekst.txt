@@ -1124,4 +1124,185 @@ $this->emailService->sendEmail(...); // ✅ Automatyczna historia + SMTP z bazy
 - ✅ Kompatybilność z Symfony 6+ (Security bundle)
 - ✅ Gotowe szablony maili (powitalne, reset hasła, powiadomienia)
 
+## MODUŁ ASEKURACJA - KOMPLETNE ROZWIĄZANIE
+
+### AsekuracyjnySPM - System Zarządzania Sprzętem Asekuracyjnym
+Moduł asekuracja to zaawansowany system zarządzania sprzętem do prac na wysokości i asekuracji przemysłowej:
+
+#### Główne funkcjonalności
+1. **Zarządzanie sprzętem asekuracyjnym**
+   - Kompletny system inwentarzowy z numerami inwentarzowymi
+   - Typy sprzętu: szelki, liny, kaski, zaciski, blokady
+   - Szczegółowe informacje: producent, model, numer seryjny, data produkcji
+   - Automatyczne śledzenie terminów przeglądów i certyfikacji
+   - Status sprzętu: dostępny, przypisany, uszkodzony, na przeglądzie
+   - System załączników (zdjęcia, certyfikaty, instrukcje)
+
+2. **System przeglądów**
+   - Typy przeglądów: okresowy, kontrola po uszkodzeniu, po naprawie, początkowy
+   - Zarządzanie statusem: przygotowanie, na przeglądzie, zakończone, anulowane
+   - Generowanie protokołów PDF z pełną dokumentacją
+   - Automatyczne powiadomienia email o zbliżających się terminach
+   - Historia wszystkich przeglądów z możliwością wersjonowania
+
+3. **Zestawy sprzętu**
+   - Grupowanie sprzętu w zestawy tematyczne (podstawowy, zaawansowany, specjalistyczny, ratowniczy)
+   - Kontrola kompletności zestawów
+   - Przypisywanie całych zestawów do pracowników
+   - Zarządzanie statusem zestawów
+
+4. **System przekazań i zwrotów**
+   - **Przekazania**: Pełny workflow od przygotowania do zakończenia
+     - Przygotowanie przekazania z wyborem odbiorcy i datą
+     - Generowanie protokołu przekazania PDF (format profesjonalny)
+     - Status "W trakcie" → "Przekazany"
+     - Upload podpisanego protokołu po zakończeniu
+   
+   - **Zwroty**: Lustrzany proces dla zwrotów sprzętu
+     - Przygotowanie zwrotu z datą i uwagami
+     - Generowanie protokołu zwrotu PDF
+     - Status "Zwrot w trakcie" → "Zwrócony"  
+     - Upload podpisanego protokołu zwrotu
+
+5. **Zarządzanie użytkownikami i uprawnieniami**
+   - Role: ASSEK_ADMIN, ASSEK_EDITOR, ASSEK_VIEWER, ASSEK_LIST
+   - Szczegółowe uprawnienia: VIEW, CREATE, EDIT, DELETE, ASSIGN, REVIEW, TRANSFER
+   - Przypisywanie sprzętu do użytkowników z datami i uwagami
+   - Widok "Moje przypisania" dla pracowników
+
+#### Architektura techniczna
+
+**Encje główne:**
+- `AsekuracyjnyEquipment` - sprzęt asekuracyjny
+- `AsekuracyjnyEquipmentSet` - zestawy sprzętu  
+- `AsekuracyjnyReview` - przeglądy sprzętu
+- `AsekuracyjnyTransfer` - przekazania i zwroty
+
+**Kontrolery i serwisy:**
+```php
+// Główny kontroler z pełnym API
+src/AsekuracyjnySPM/Controller/EquipmentController.php
+src/AsekuracyjnySPM/Controller/EquipmentSetController.php
+src/AsekuracyjnySPM/Controller/ReviewController.php
+
+// Serwisy biznesowe (wzorzec Service Layer)
+src/AsekuracyjnySPM/Service/AsekuracyjnyEquipmentService.php
+src/AsekuracyjnySPM/Service/AsekuracyjnyReviewService.php
+```
+
+**Generowanie PDF:**
+- Biblioteka TCPDF dla profesjonalnych protokołów
+- Szablony PDF z nagłówkami, tabelami, miejscami na podpisy
+- Protokóły przekazań z szczegółami sprzętu i odbiorców
+- Protokóły zwrotów z uwagami i datami
+
+**Słowniki systemowe:**
+```sql
+-- Typy sprzętu, statusy przeglądów, typy zestawów
+INSERT INTO dictionaries (type, name, value) VALUES
+('assek_equipment_types', 'Szelki', 'harness'),
+('assek_review_status', 'Na przeglądzie', 'sent'),
+('assek_set_types', 'Podstawowy', 'basic');
+```
+
+#### Interfejs użytkownika
+
+**Główne widoki:**
+- `/asekuracja/` - lista sprzętu z filtrowaniem i wyszukiwaniem
+- `/asekuracja/equipment/{id}` - szczegóły sprzętu z historią
+- `/asekuracja/equipment-sets/` - zarządzanie zestawami
+- `/asekuracja/equipment-sets/{id}` - szczegóły zestawu z sekcją przekazań
+- `/asekuracja/reviews/` - zarządzanie przeglądami
+- `/asekuracja/my-equipment` - moje przypisania
+
+**Funkcjonalności UI:**
+- Modalne okna Bootstrap do przekazań i zwrotów
+- Dinamiczne tabele z paginacją
+- System notyfikacji (alerty o terminach)
+- Upload plików z walidacją (protokóły PDF)
+- Responsywny design na wszystkich urządzeniach
+
+**Menu boczne:**
+```twig
+{% set is_asekuracja_section = current_route starts with 'asekuracja_' %}
+<li class="nav-item">
+    <a class="nav-link menu-link {{ is_asekuracja_section ? 'active' : '' }}"
+       href="#sidebarAsekuracja">
+        <i class="ri-shield-line"></i> <span>Asekuracja</span>
+    </a>
+    <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}">
+        <!-- podmenu -->
+    </div>
+</li>
+```
+
+#### Bezpieczeństwo i audyt
+
+**Pełna integracja z systemem Enterprise:**
+```php
+// Wszystkie akcje używają AuthorizationService
+$this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
+
+// Kompleksowy audit log
+$this->auditService->logUserAction($user, 'equipment_assigned', [
+    'equipment_id' => $equipment->getId(),
+    'assignee_id' => $assignee->getId()
+], $request);
+
+// Event-driven architecture
+$event = new AsekuracyjnyEquipmentAssignedEvent($equipment, $user, $assignee);
+$this->eventDispatcher->dispatch($event);
+```
+
+**Walidacje bezpieczeństwa:**
+- CSRF protection na wszystkich formularzach
+- Walidacja typów plików (tylko PDF dla protokołów)  
+- Ograniczenia rozmiaru plików
+- Sanityzacja danych wejściowych
+- Rate limiting na wyszukiwanie
+
+#### Migration i deployment
+
+**Migracje bazy danych:**
+```php
+// Automatyczne migracje Doctrine
+php bin/console doctrine:migrations:diff
+php bin/console doctrine:migrations:migrate
+```
+
+**Fixtures dla development:**
+```php
+// Przykładowe dane sprzętu asekuracyjnego
+php bin/console doctrine:fixtures:load --append
+```
+
+#### Status implementacji
+
+**✅ ZREALIZOWANE:**
+- Kompletny CRUD dla sprzętu asekuracyjnego
+- System przeglądów z workflow i PDF
+- Zestawy sprzętu z zarządzaniem kompletności  
+- Pełny system przekazań z PDF protokołami
+- System zwrotów z lustrzanym procesem przekazań
+- Autoryzacja i audit trail
+- Interface użytkownika z modal dialogs
+- Upload podpisanych protokołów
+- Email notifications dla przeglądów
+- Historia przekazań w szczegółach zestawów
+- Responsywny UI z Bootstrap 5.3
+- Integracja z systemem słowników
+- Pełne testy funkcjonalne
+
+**📈 METRYKI:**
+- 4 główne encje z relacjami
+- 15+ kontrolerów akcji
+- 3 serwisy biznesowe
+- 12 szablonów Twig
+- 8 typów słowników systemowych  
+- 4 poziomy uprawnień
+- PDF protocols z TCPDF
+- 20+ walidacji biznesowych
+
+Moduł Asekuracja stanowi kompletne rozwiązanie enterprise dla zarządzania sprzętem do prac na wysokości, z pełną integracją z architekturą AssetHub i profesjonalnymi procesami biznesowymi.
+
 System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!

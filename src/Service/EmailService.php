@@ -210,6 +210,58 @@ class EmailService
     }
 
     /**
+     * Powiadomienie o przygotowanym przeglądzie zestawu - potrzeba dostarczenia na przegląd
+     */
+    public function sendEquipmentSetReviewPreparedEmail(string $recipientEmail, string $recipientName, array $reviewData): bool
+    {
+        $subject = 'Przygotowany przegląd zestawu asekuracyjnego - wymagane dostarczenie';
+        
+        $body = "Witaj {$recipientName}!\n\n";
+        $body .= "Informujemy, że został przygotowany przegląd dla przypisanego do Ciebie zestawu sprzętu asekuracyjnego.\n\n";
+        
+        $body .= "SZCZEGÓŁY PRZEGLĄDU:\n";
+        $body .= "• Numer przeglądu: {$reviewData['review_number']}\n";
+        $body .= "• Zestaw: {$reviewData['set_name']}\n";
+        $body .= "• Typ przeglądu: {$reviewData['review_type']}\n";
+        $body .= "• Planowana data przeglądu: {$reviewData['planned_date']}\n";
+        $body .= "• Firma przeprowadzająca przegląd: {$reviewData['review_company']}\n\n";
+        
+        if (!empty($reviewData['notes'])) {
+            $body .= "• Uwagi: {$reviewData['notes']}\n\n";
+        }
+        
+        $body .= "ELEMENTY ZESTAWU DO DOSTARCZENIA:\n";
+        if (!empty($reviewData['equipment_list'])) {
+            foreach ($reviewData['equipment_list'] as $equipment) {
+                $body .= "• {$equipment['name']} (nr inwentarzowy: {$equipment['inventory_number']}";
+                if (!empty($equipment['serial_number'])) {
+                    $body .= ", nr seryjny: {$equipment['serial_number']}";
+                }
+                $body .= ")\n";
+            }
+        }
+        $body .= "\n";
+        
+        $body .= "WAŻNE INFORMACJE:\n";
+        $body .= "• Prosimy o dostarczenie kompletnego zestawu na przegląd w wyznaczonym terminie\n";
+        $body .= "• Sprzęt powinien być czysty i gotowy do przeglądu technicznego\n";
+        $body .= "• W przypadku pytań lub problemów prosimy o kontakt z administratorem systemu\n";
+        $body .= "• Status przeglądu można śledzić w systemie AssetHub\n\n";
+        
+        $body .= "Pozdrawiamy,\n";
+        $body .= "Zespół " . $this->settingService->get('app_name', 'AssetHub');
+
+        return $this->sendEmail(
+            $recipientEmail,
+            $subject,
+            $body,
+            $recipientName,
+            'equipment_set_review_prepared',
+            $reviewData
+        );
+    }
+
+    /**
      * Przeczyść stare rekordy historii maili
      */
     public function cleanupOldEmails(?int $daysToKeep = null): int
