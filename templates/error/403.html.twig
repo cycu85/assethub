@@ -1,5 +1,8 @@
 {% extends 'base.html.twig' %}
 
+{# Debug variables passed by ExceptionListener #}
+{# Available: status_code, message, environment #}
+
 {% block title %}Brak dostępu - {{ app_name() }}{% endblock %}
 {% block page_title %}Brak dostępu{% endblock %}
 
@@ -22,7 +25,11 @@
                     <h1 class="text-danger display-4 fw-bold">403</h1>
                     <h3 class="text-uppercase mb-3">Brak dostępu</h3>
                     <p class="text-muted mb-4 fs-16">
-                        Nie masz uprawnień do przeglądania tej strony.<br>
+                        {% if message is defined %}
+                            {{ message }}<br>
+                        {% else %}
+                            Nie masz uprawnień do przeglądania tej strony.<br>
+                        {% endif %}
                         Skontaktuj się z administratorem aby otrzymać dostęp.
                     </p>
                     
@@ -242,6 +249,14 @@ if (currentUrl !== '/error/access-denied') {
     urlInfo.innerHTML = `<small class="text-muted">Próba dostępu do: <code>${currentUrl}</code></small>`;
     document.querySelector('.text-center').appendChild(urlInfo);
 }
+
+// Debug info for dev environment
+{% if environment is defined and environment == 'dev' %}
+const debugInfo = document.createElement('div');
+debugInfo.className = 'mt-3';
+debugInfo.innerHTML = `<small class="text-muted">Debug: status_code={{ status_code|default('unknown') }}, env={{ environment }}</small>`;
+document.querySelector('.text-center').appendChild(debugInfo);
+{% endif %}
 
 // Auto logout warning for inactive sessions
 {% if app.user %}
