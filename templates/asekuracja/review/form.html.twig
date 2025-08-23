@@ -270,6 +270,73 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const plannedDateField = document.getElementById('{{ form.plannedDate.vars.id }}');
+    const reviewTypeField = document.getElementById('{{ form.reviewType.vars.id }}');
+    
+    // Walidacja formularza przed wysłaniem
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Sprawdzenie czy data przeglądu jest uzupełniona
+        if (!plannedDateField.value.trim()) {
+            e.preventDefault();
+            isValid = false;
+            
+            // Pokazanie błędu
+            plannedDateField.classList.add('is-invalid');
+            let errorElement = plannedDateField.parentNode.querySelector('.invalid-feedback');
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                plannedDateField.parentNode.appendChild(errorElement);
+            }
+            errorElement.textContent = 'Data planowanego przeglądu jest wymagana';
+        } else {
+            plannedDateField.classList.remove('is-invalid');
+        }
+        
+        // Sprawdzenie czy typ przeglądu jest wybrany
+        if (!reviewTypeField.value.trim()) {
+            e.preventDefault();
+            isValid = false;
+            
+            // Pokazanie błędu
+            reviewTypeField.classList.add('is-invalid');
+            let errorElement = reviewTypeField.parentNode.querySelector('.invalid-feedback');
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                reviewTypeField.parentNode.appendChild(errorElement);
+            }
+            errorElement.textContent = 'Typ przeglądu jest wymagany';
+        } else {
+            reviewTypeField.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) {
+            // Przewiń do pierwszego błędu
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Usuwanie błędów przy wpisywaniu
+    plannedDateField.addEventListener('input', function() {
+        if (this.value.trim()) {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    reviewTypeField.addEventListener('change', function() {
+        if (this.value.trim()) {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
     // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
     {% if form.equipment is defined and form.equipmentSet is defined %}
     const equipmentField = document.getElementById('{{ form.equipment.vars.id }}');
