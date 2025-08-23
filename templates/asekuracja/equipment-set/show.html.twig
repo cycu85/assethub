@@ -763,7 +763,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update modal content
             document.getElementById('transferNumberDisplay').textContent = transferNumber;
             document.getElementById('completeTransferForm').action = '{{ path("asekuracja_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
-            document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer_") }}' + transferId;
+            document.getElementById('completeTransferToken').name = '_token';
+            document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer") }}';
         });
     }
 });

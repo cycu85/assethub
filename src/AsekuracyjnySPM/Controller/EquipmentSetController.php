@@ -883,7 +883,7 @@ class EquipmentSetController extends AbstractController
         }
         
         // CSRF protection
-        if (!$this->isCsrfTokenValid('complete_transfer_' . $transfer->getId(), $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('complete_transfer', $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
         
