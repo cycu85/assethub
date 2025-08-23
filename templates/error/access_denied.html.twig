@@ -1,87 +1,204 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Brak uprawnień - {{ app_name() }}{% endblock %}
-{% block page_title %}Brak uprawnień{% endblock %}
+{% block title %}Brak dostępu - {{ app_name() }}{% endblock %}
+{% block page_title %}Brak dostępu{% endblock %}
 
 {% block breadcrumb %}
     <li class="breadcrumb-item"><a href="/">Strona główna</a></li>
-    <li class="breadcrumb-item active">Brak uprawnień</li>
+    <li class="breadcrumb-item active">Błąd 403</li>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-xxl-6 col-lg-8">
+    <div class="col-xxl-8 col-lg-10">
         <div class="card overflow-hidden">
             <div class="card-body p-4">
                 <div class="text-center">
-                    <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-danger-subtle text-danger display-4 rounded-circle">
-                            <i class="ri-shield-cross-line"></i>
+                    <div class="avatar-xl mx-auto mb-4">
+                        <div class="avatar-title bg-danger-subtle text-danger display-3 rounded-circle">
+                            <i class="ri-lock-line"></i>
                         </div>
                     </div>
-                    <h1 class="text-danger display-6 fw-medium">403</h1>
-                    <h4 class="text-uppercase">Brak uprawnień</h4>
-                    <p class="text-muted mb-4">
+                    <h1 class="text-danger display-4 fw-bold">403</h1>
+                    <h3 class="text-uppercase mb-3">Brak dostępu</h3>
+                    <p class="text-muted mb-4 fs-16">
                         Nie masz uprawnień do przeglądania tej strony.<br>
-                        Skontaktuj się z administratorem, aby uzyskać odpowiednie uprawnienia.
+                        Skontaktuj się z administratorem aby otrzymać dostęp.
                     </p>
                     
-                    <div class="d-flex justify-content-center gap-2 flex-wrap">
-                        <a href="/" class="btn btn-success">
-                            <i class="ri-home-line me-1"></i>Powrót do strony głównej
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
+                        <a href="/" class="btn btn-success btn-lg">
+                            <i class="ri-home-line me-1"></i>Strona główna
                         </a>
-                        
+                        <button onclick="history.back()" class="btn btn-outline-primary btn-lg">
+                            <i class="ri-arrow-left-line me-1"></i>Wstecz
+                        </button>
                         {% if app.user %}
-                        <a href="{{ path('app_logout') }}" class="btn btn-outline-primary">
+                        <a href="{{ path('app_logout') }}" class="btn btn-outline-secondary btn-lg">
                             <i class="ri-logout-box-line me-1"></i>Wyloguj się
-                        </a>
-                        {% else %}
-                        <a href="{{ path('app_login') }}" class="btn btn-outline-primary">
-                            <i class="ri-login-box-line me-1"></i>Zaloguj się
                         </a>
                         {% endif %}
                     </div>
+
+                    {% if app.user %}
+                    <!-- User info section -->
+                    <div class="alert alert-warning border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Informacje o użytkowniku
+                        </h6>
+                        <div class="d-flex flex-column gap-1">
+                            <div><strong>Zalogowany jako:</strong> {{ app.user.username }}</div>
+                            {% if app.user.fullName %}
+                            <div><strong>Imię i nazwisko:</strong> {{ app.user.fullName }}</div>
+                            {% endif %}
+                            {% if app.user.roles|length > 0 %}
+                            <div><strong>Role:</strong> 
+                                {% for role in app.user.roles %}
+                                    <span class="badge bg-secondary">{{ role }}</span>{% if not loop.last %} {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <hr>
+                        <div class="mb-0">
+                            <small>Jeśli uważasz, że powinieneś mieć dostęp do tej strony, skontaktuj się z administratorem.</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Login suggestion for guests -->
+                    <div class="alert alert-info border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Nie jesteś zalogowany
+                        </h6>
+                        <div class="mb-3">
+                            Aby uzyskać dostęp do tej strony, musisz się zalogować odpowiednim kontem użytkownika.
+                        </div>
+                        <a href="{{ path('app_login') }}" class="btn btn-info">
+                            <i class="ri-login-box-line me-1"></i>Zaloguj się
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
-        <!-- Additional info card -->
-        <div class="card mt-4">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-lg-4 col-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <i class="ri-user-settings-line text-primary fs-20"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">Administrator</h6>
-                                <p class="text-muted mb-0">Pełne uprawnienia</p>
+        <!-- Quick links -->
+        <div class="row mt-4">
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                                <i class="ri-dashboard-line fs-18"></i>
                             </div>
                         </div>
+                        <h6 class="mb-1">Dashboard</h6>
+                        <p class="text-muted mb-2 fs-13">Główny panel</p>
+                        <a href="/" class="btn btn-sm btn-outline-primary">Przejdź</a>
                     </div>
-                    <div class="col-lg-4 col-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <i class="ri-team-line text-success fs-20"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">Zarządzanie</h6>
-                                <p class="text-muted mb-0">Edycja danych</p>
+                </div>
+            </div>
+            
+            {% if app.user %}
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                                <i class="ri-tools-line fs-18"></i>
                             </div>
                         </div>
+                        <h6 class="mb-1">Sprzęt</h6>
+                        <p class="text-muted mb-2 fs-13">Zarządzanie sprzętem</p>
+                        <a href="/equipment" class="btn btn-sm btn-outline-info">Przejdź</a>
                     </div>
-                    <div class="col-lg-4 col-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <i class="ri-eye-line text-info fs-20"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">Przeglądanie</h6>
-                                <p class="text-muted mb-0">Tylko odczyt</p>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                                <i class="ri-shield-line fs-18"></i>
                             </div>
                         </div>
+                        <h6 class="mb-1">Asekuracja</h6>
+                        <p class="text-muted mb-2 fs-13">Sprzęt asekuracyjny</p>
+                        <a href="/asekuracja" class="btn btn-sm btn-outline-success">Przejdź</a>
                     </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                                <i class="ri-user-settings-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Profil</h6>
+                        <p class="text-muted mb-2 fs-13">Twoje ustawienia</p>
+                        <a href="/profile" class="btn btn-sm btn-outline-warning">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                                <i class="ri-login-box-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Logowanie</h6>
+                        <p class="text-muted mb-2 fs-13">Zaloguj się</p>
+                        <a href="{{ path('app_login') }}" class="btn btn-sm btn-outline-success">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                                <i class="ri-question-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Pomoc</h6>
+                        <p class="text-muted mb-2 fs-13">Instrukcje</p>
+                        <a href="#" class="btn btn-sm btn-outline-info" onclick="showHelp()">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Contact section -->
+        <div class="card mt-4 bg-light border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title text-muted">
+                    <i class="ri-customer-service-2-line me-2"></i>Potrzebujesz dostępu?
+                </h5>
+                <p class="card-text text-muted mb-3">
+                    Aby uzyskać dostęp do tej części systemu, skontaktuj się z administratorem.<br>
+                    <small>Pamiętaj o podaniu swojej nazwy użytkownika i opisu potrzebnych uprawnień.</small>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <span class="badge bg-danger-subtle text-danger">
+                        <i class="ri-mail-line me-1"></i>admin@assethub.local
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning">
+                        <i class="ri-phone-line me-1"></i>+48 123 456 789
+                    </span>
+                    {% if app.user %}
+                    <span class="badge bg-info-subtle text-info">
+                        <i class="ri-user-line me-1"></i>Twoje ID: {{ app.user.id }}
+                    </span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -91,25 +208,82 @@
 
 {% block javascript %}
 <script>
-// Auto redirect after 10 seconds
-setTimeout(function() {
-    window.location.href = '/';
-}, 10000);
-
-// Show countdown
-let countdown = 10;
-const countdownElement = document.createElement('p');
-countdownElement.className = 'text-muted mt-3';
-countdownElement.innerHTML = '<i class="ri-time-line me-1"></i>Automatyczne przekierowanie za <span id="countdown">10</span> sekund';
-document.querySelector('.text-center').appendChild(countdownElement);
-
-const countdownInterval = setInterval(function() {
-    countdown--;
-    document.getElementById('countdown').textContent = countdown;
-    
-    if (countdown <= 0) {
-        clearInterval(countdownInterval);
+// Fun animation for the 403 number
+document.addEventListener('DOMContentLoaded', function() {
+    const number403 = document.querySelector('.display-4');
+    if (number403) {
+        number403.style.transform = 'scale(0.8) rotate(-5deg)';
+        number403.style.transition = 'transform 0.6s ease';
+        
+        setTimeout(function() {
+            number403.style.transform = 'scale(1) rotate(0deg)';
+        }, 300);
     }
-}, 1000);
+    
+    // Shake animation for lock icon
+    const lockIcon = document.querySelector('.ri-lock-line');
+    if (lockIcon) {
+        setTimeout(function() {
+            lockIcon.style.animation = 'shake 0.5s ease-in-out';
+        }, 800);
+    }
+});
+
+// Help function
+function showHelp() {
+    alert('Instrukcja logowania:\n\n1. Użyj prawidłowej nazwy użytkownika i hasła\n2. Upewnij się, że masz przydzielone odpowiednie uprawnienia\n3. W razie problemów skontaktuj się z administratorem\n\nKonta testowe:\n• admin / admin123 (pełen dostęp)\n• user / user123 (ograniczony dostęp)');
+}
+
+// Show attempted URL (for debugging)
+const currentUrl = window.location.pathname;
+if (currentUrl !== '/error/access-denied') {
+    const urlInfo = document.createElement('div');
+    urlInfo.className = 'mt-3';
+    urlInfo.innerHTML = `<small class="text-muted">Próba dostępu do: <code>${currentUrl}</code></small>`;
+    document.querySelector('.text-center').appendChild(urlInfo);
+}
+
+// Auto logout warning for inactive sessions
+{% if app.user %}
+let warningShown = false;
+setTimeout(function() {
+    if (!warningShown) {
+        warningShown = true;
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'alert alert-warning alert-dismissible fade show mt-3';
+        warningDiv.innerHTML = `
+            <i class="ri-time-line me-2"></i>
+            <strong>Wskazówka:</strong> Jeśli często widzisz ten błąd, może Twoja sesja wygasła lub nie masz wystarczających uprawnień.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.card-body').appendChild(warningDiv);
+    }
+}, 3000);
+{% endif %}
 </script>
+
+<style>
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px) rotate(5deg); }
+    75% { transform: translateX(5px) rotate(-5deg); }
+}
+
+.avatar-title .ri-lock-line {
+    transition: all 0.3s ease;
+}
+
+.avatar-title .ri-lock-line:hover {
+    transform: scale(1.1);
+}
+
+.display-4 {
+    text-shadow: 2px 2px 4px rgba(220,53,69,0.3);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+</style>
 {% endblock %}
