@@ -584,12 +584,16 @@ class EquipmentSetController extends AbstractController
                         continue;
                     }
                     
-                    // Generate unique filename
+                    // Generate unique filename and get file info before moving
                     $filename = uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
+                    $originalName = $uploadedFile->getClientOriginalName();
+                    $fileSize = $uploadedFile->getSize();
+                    $mimeType = $uploadedFile->getMimeType();
+                    
                     $uploadedFile->move($uploadDir, $filename);
                     
                     $this->logger->info('File moved successfully', [
-                        'original_name' => $uploadedFile->getClientOriginalName(),
+                        'original_name' => $originalName,
                         'new_filename' => $filename,
                         'path' => $uploadDir . $filename
                     ]);
@@ -597,9 +601,9 @@ class EquipmentSetController extends AbstractController
                     // Add to equipment set attachments
                     $attachmentData = [
                         'filename' => $filename,
-                        'original_name' => $uploadedFile->getClientOriginalName(),
-                        'size' => $uploadedFile->getSize(),
-                        'mime_type' => $uploadedFile->getMimeType(),
+                        'original_name' => $originalName,
+                        'size' => $fileSize,
+                        'mime_type' => $mimeType,
                         'uploaded_at' => new \DateTime(),
                         'uploaded_by' => $user->getFullName(),
                         'description' => $description
