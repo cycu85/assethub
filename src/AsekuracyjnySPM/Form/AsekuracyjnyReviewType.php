@@ -32,10 +32,12 @@ class AsekuracyjnyReviewType extends AbstractType
         $builder
             ->add('plannedDate', DateType::class, [
                 'label' => 'Planowana data przeglądu',
-                'required' => false,
                 'widget' => 'single_text',
                 'attr' => [
                     'class' => 'form-control'
+                ],
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'Data planowanego przeglądu jest wymagana'])
                 ]
             ])
             
