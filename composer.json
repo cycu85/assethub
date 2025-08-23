@@ -32,7 +32,8 @@
         "symfony/security-bundle": "7.0.*",
         "symfony/twig-bundle": "7.0.*",
         "symfony/validator": "7.0.*",
-        "symfony/yaml": "7.0.*"
+        "symfony/yaml": "7.0.*",
+        "tecnickcom/tcpdf": "^6.10"
     },
     "config": {
         "allow-plugins": {

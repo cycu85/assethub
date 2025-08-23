@@ -994,48 +994,177 @@ class EquipmentSetController extends AbstractController
 
     private function generateTransferProtocolPDF(AsekuracyjnyTransfer $transfer): string
     {
-        // TODO: Implement proper PDF generation using a library like TCPDF or mPDF
-        // For now, return a simple PDF structure
-        
         $equipmentSet = $transfer->getEquipmentSet();
         $recipient = $transfer->getRecipient();
         $handedBy = $transfer->getHandedBy();
         
-        $content = "PROTOKÓŁ PRZEKAZANIA ZESTAWU ASEKURACYJNEGO\n\n";
-        $content .= "Numer protokołu: " . $transfer->getTransferNumber() . "\n";
-        $content .= "Data przekazania: " . $transfer->getTransferDate()->format('d.m.Y') . "\n\n";
+        // Create new PDF document
+        $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         
-        $content .= "ZESTAW:\n";
-        $content .= "Nazwa: " . $equipmentSet->getName() . "\n";
-        $content .= "Typ: " . $equipmentSet->getSetType() . "\n";
-        $content .= "Lokalizacja: " . $equipmentSet->getLocation() . "\n\n";
+        // Set document information
+        $pdf->SetCreator('AssetHub System');
+        $pdf->SetAuthor('AssetHub');
+        $pdf->SetTitle('Protokół przekazania zestawu asekuracyjnego');
+        $pdf->SetSubject('Protokół przekazania - ' . $transfer->getTransferNumber());
         
-        $content .= "ODBIORCA:\n";
-        $content .= "Imię i nazwisko: " . $recipient->getFullName() . "\n";
-        $content .= "Email: " . $recipient->getEmail() . "\n\n";
+        // Set margins
+        $pdf->SetMargins(15, 27, 15);
+        $pdf->SetHeaderMargin(5);
+        $pdf->SetFooterMargin(10);
         
-        $content .= "PRZEKAZAŁ:\n";
-        $content .= "Imię i nazwisko: " . $handedBy->getFullName() . "\n";
-        $content .= "Email: " . $handedBy->getEmail() . "\n\n";
+        // Set auto page breaks
+        $pdf->SetAutoPageBreak(TRUE, 25);
         
-        $content .= "ELEMENTY ZESTAWU:\n";
-        foreach ($equipmentSet->getEquipment() as $equipment) {
-            $content .= "- " . $equipment->getName() . " (" . $equipment->getInventoryNumber() . ")\n";
+        // Set font
+        $pdf->SetFont('dejavusans', '', 10);
+        
+        // Add a page
+        $pdf->AddPage();
+        
+        // Title
+        $pdf->SetFont('dejavusans', 'B', 16);
+        $pdf->Cell(0, 15, 'PROTOKÓŁ PRZEKAZANIA ZESTAWU ASEKURACYJNEGO', 0, 1, 'C');
+        $pdf->Ln(5);
+        
+        // Protocol number and date
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(60, 8, 'Numer protokołu:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 12);
+        $pdf->Cell(0, 8, $transfer->getTransferNumber(), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(60, 8, 'Data przekazania:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 12);
+        $pdf->Cell(0, 8, $transfer->getTransferDate()->format('d.m.Y'), 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        // Equipment set information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'DANE ZESTAWU', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Nazwa:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $equipmentSet->getName(), 0, 1, 'L');
+        
+        if ($equipmentSet->getSetType()) {
+            $pdf->SetFont('dejavusans', 'B', 11);
+            $pdf->Cell(40, 6, 'Typ:', 0, 0, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->Cell(0, 6, $equipmentSet->getSetType(), 0, 1, 'L');
         }
         
+        if ($equipmentSet->getLocation()) {
+            $pdf->SetFont('dejavusans', 'B', 11);
+            $pdf->Cell(40, 6, 'Lokalizacja:', 0, 0, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->Cell(0, 6, $equipmentSet->getLocation(), 0, 1, 'L');
+        }
+        $pdf->Ln(5);
+        
+        // Recipient information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'ODBIORCA', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Imię i nazwisko:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $recipient->getFullName(), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Email:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $recipient->getEmail(), 0, 1, 'L');
+        
+        if ($recipient->getBranch()) {
+            $pdf->SetFont('dejavusans', 'B', 11);
+            $pdf->Cell(40, 6, 'Oddział:', 0, 0, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->Cell(0, 6, $recipient->getBranch(), 0, 1, 'L');
+        }
+        $pdf->Ln(5);
+        
+        // Handler information
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'PRZEKAZAŁ', 0, 1, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Imię i nazwisko:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $handedBy->getFullName(), 0, 1, 'L');
+        
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(40, 6, 'Email:', 0, 0, 'L');
+        $pdf->SetFont('dejavusans', '', 11);
+        $pdf->Cell(0, 6, $handedBy->getEmail(), 0, 1, 'L');
+        $pdf->Ln(5);
+        
+        // Equipment list
+        $pdf->SetFont('dejavusans', 'B', 14);
+        $pdf->Cell(0, 10, 'ELEMENTY ZESTAWU', 0, 1, 'L');
+        
+        // Table header
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(10, 8, 'Lp.', 1, 0, 'C');
+        $pdf->Cell(60, 8, 'Nazwa', 1, 0, 'C');
+        $pdf->Cell(35, 8, 'Numer inwentarzowy', 1, 0, 'C');
+        $pdf->Cell(25, 8, 'Typ', 1, 0, 'C');
+        $pdf->Cell(35, 8, 'Producent', 1, 0, 'C');
+        $pdf->Cell(20, 8, 'Status', 1, 1, 'C');
+        
+        // Equipment items
+        $pdf->SetFont('dejavusans', '', 8);
+        $counter = 1;
+        foreach ($equipmentSet->getEquipment() as $equipment) {
+            $pdf->Cell(10, 6, $counter++, 1, 0, 'C');
+            $pdf->Cell(60, 6, $equipment->getName(), 1, 0, 'L');
+            $pdf->Cell(35, 6, $equipment->getInventoryNumber(), 1, 0, 'C');
+            $pdf->Cell(25, 6, $equipment->getEquipmentType() ?? '', 1, 0, 'L');
+            $pdf->Cell(35, 6, $equipment->getManufacturer() ?? '', 1, 0, 'L');
+            $pdf->Cell(20, 6, $equipment->getStatusDisplayName(), 1, 1, 'C');
+        }
+        $pdf->Ln(5);
+        
+        // Purpose and notes
         if ($transfer->getPurpose()) {
-            $content .= "\nCel przekazania: " . $transfer->getPurpose() . "\n";
+            $pdf->SetFont('dejavusans', 'B', 12);
+            $pdf->Cell(0, 8, 'Cel przekazania:', 0, 1, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->MultiCell(0, 6, $transfer->getPurpose(), 0, 'L');
+            $pdf->Ln(3);
         }
         
         if ($transfer->getNotes()) {
-            $content .= "\nUwagi: " . $transfer->getNotes() . "\n";
+            $pdf->SetFont('dejavusans', 'B', 12);
+            $pdf->Cell(0, 8, 'Uwagi:', 0, 1, 'L');
+            $pdf->SetFont('dejavusans', '', 11);
+            $pdf->MultiCell(0, 6, $transfer->getNotes(), 0, 'L');
+            $pdf->Ln(3);
         }
         
-        $content .= "\n\nPodpis odbiorcy: ____________________\n";
-        $content .= "Podpis przekazującego: ____________________\n";
+        // Signatures
+        $pdf->Ln(10);
+        $pdf->SetFont('dejavusans', 'B', 12);
+        $pdf->Cell(90, 8, 'Podpis odbiorcy:', 0, 0, 'L');
+        $pdf->Cell(90, 8, 'Podpis przekazującego:', 0, 1, 'L');
+        $pdf->Ln(5);
         
-        // This is a very basic text-based PDF. In production, use proper PDF library
-        return $content;
+        $pdf->SetFont('dejavusans', '', 10);
+        $pdf->Cell(90, 6, '_________________________________', 0, 0, 'C');
+        $pdf->Cell(90, 6, '_________________________________', 0, 1, 'C');
+        $pdf->Cell(90, 6, $recipient->getFullName(), 0, 0, 'C');
+        $pdf->Cell(90, 6, $handedBy->getFullName(), 0, 1, 'C');
+        
+        $pdf->Ln(10);
+        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->Cell(0, 4, 'Data i miejsce:', 0, 1, 'L');
+        $pdf->Cell(0, 4, '_________________________________', 0, 1, 'L');
+        
+        // Return PDF as string
+        return $pdf->Output('', 'S');
     }
 
     // === PRIVATE HELPER METHODS ===
