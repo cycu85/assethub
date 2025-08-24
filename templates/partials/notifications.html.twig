@@ -295,18 +295,29 @@ class NotificationManager {
         const badge = document.getElementById('notification-badge');
         const newCountSpan = document.getElementById('new-notifications-count');
         
-        if (this.unreadCount > 0) {
-            badge.textContent = this.unreadCount;
-            badge.classList.remove('d-none');
-            newCountSpan.textContent = `${this.unreadCount} nowych`;
-        } else {
-            badge.classList.add('d-none');
-            newCountSpan.textContent = '0 nowych';
+        if (badge) {
+            if (this.unreadCount > 0) {
+                badge.textContent = this.unreadCount;
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+        }
+        
+        if (newCountSpan) {
+            if (this.unreadCount > 0) {
+                newCountSpan.textContent = `${this.unreadCount} nowych`;
+            } else {
+                newCountSpan.textContent = '0 nowych';
+            }
         }
     }
 
     updateCounts() {
-        document.getElementById('all-count').textContent = this.notifications.length;
+        const allCountElement = document.getElementById('all-count');
+        if (allCountElement) {
+            allCountElement.textContent = this.notifications.length;
+        }
     }
 
     renderNotifications() {
@@ -314,17 +325,22 @@ class NotificationManager {
         const noNotifications = document.getElementById('no-notifications');
         const viewAllSection = document.getElementById('view-all-section');
         
+        if (!container) {
+            console.error('Container all-notifications-content not found');
+            return;
+        }
+        
         // Remove any theme-generated empty notification elements
         container.querySelectorAll('.empty-notification-elem').forEach(elem => elem.remove());
         
         if (this.notifications.length === 0) {
-            noNotifications.classList.remove('d-none');
-            viewAllSection.classList.add('d-none');
+            if (noNotifications) noNotifications.classList.remove('d-none');
+            if (viewAllSection) viewAllSection.classList.add('d-none');
             return;
         }
 
-        noNotifications.classList.add('d-none');
-        viewAllSection.classList.remove('d-none');
+        if (noNotifications) noNotifications.classList.add('d-none');
+        if (viewAllSection) viewAllSection.classList.remove('d-none');
         
         // Clear existing notifications except template
         const existingNotifications = container.querySelectorAll('.notification-item');
@@ -333,7 +349,9 @@ class NotificationManager {
         // Add notifications
         this.notifications.forEach(notification => {
             const notificationElement = this.createNotificationElement(notification);
-            container.appendChild(notificationElement);
+            if (notificationElement) {
+                container.appendChild(notificationElement);
+            }
         });
     }
 
@@ -367,9 +385,19 @@ class NotificationManager {
 
     createNotificationElement(notification) {
         const template = document.getElementById('notification-template');
-        const element = template.content.cloneNode(true);
+        if (!template) {
+            console.error('Notification template not found');
+            return null;
+        }
         
+        const element = template.content.cloneNode(true);
         const item = element.querySelector('.notification-item');
+        
+        if (!item) {
+            console.error('Notification item not found in template');
+            return null;
+        }
+        
         item.dataset.notificationId = notification.id;
         
         // Set icon and color
@@ -391,11 +419,16 @@ class NotificationManager {
         
         // Set checkbox
         const checkbox = element.querySelector('.notification-check input');
-        checkbox.value = notification.id;
-        checkbox.id = `notification-check-${notification.id}`;
-        
         const label = element.querySelector('.notification-check label');
-        label.setAttribute('for', `notification-check-${notification.id}`);
+        
+        if (checkbox) {
+            checkbox.value = notification.id;
+            checkbox.id = `notification-check-${notification.id}`;
+        }
+        
+        if (label) {
+            label.setAttribute('for', `notification-check-${notification.id}`);
+        }
         
         // Add unread styling
         if (!notification.is_read) {
@@ -572,19 +605,23 @@ class NotificationManager {
     showError(message) {
         const container = document.getElementById('all-notifications-content');
         if (container) {
-            container.innerHTML = `
-                <div class="text-center py-4">
-                    <div class="avatar-md mx-auto mb-4">
-                        <div class="avatar-title bg-danger-subtle text-danger fs-24 rounded-circle">
-                            <i class="ri-error-warning-line"></i>
-                        </div>
+            // Remove any existing error messages first
+            container.querySelectorAll('.error-message').forEach(elem => elem.remove());
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message text-center py-4';
+            errorDiv.innerHTML = `
+                <div class="avatar-md mx-auto mb-4">
+                    <div class="avatar-title bg-danger-subtle text-danger fs-24 rounded-circle">
+                        <i class="ri-error-warning-line"></i>
                     </div>
-                    <p class="text-muted">${message}</p>
-                    <button class="btn btn-sm btn-outline-primary" onclick="notificationManager.loadNotifications()">
-                        <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
-                    </button>
                 </div>
+                <p class="text-muted">${message}</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="window.notificationManager && window.notificationManager.loadNotifications()">
+                    <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
+                </button>
             `;
+            container.appendChild(errorDiv);
         }
     }
 }
