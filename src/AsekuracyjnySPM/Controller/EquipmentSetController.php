@@ -160,6 +160,10 @@ class EquipmentSetController extends AbstractController
         // Get active users for transfer modal
         $users = $this->entityManager->getRepository(User::class)->findBy(['isActive' => true]);
 
+        // Get active reviews for this equipment set
+        $reviewRepository = $this->entityManager->getRepository(\App\AsekuracyjnySPM\Entity\AsekuracyjnyReview::class);
+        $activeReviews = $reviewRepository->getActiveReviewsForEquipmentSet($equipmentSet);
+
         // Audit
         $this->auditService->logUserAction($user, 'view_asekuracja_equipment_set', [
             'equipment_set_id' => $equipmentSet->getId(),
@@ -176,6 +180,7 @@ class EquipmentSetController extends AbstractController
             'can_transfer' => $canTransfer,
             'can_manage_equipment' => $canManageEquipment,
             'users' => $users,
+            'active_reviews' => $activeReviews,
         ]);
     }
 

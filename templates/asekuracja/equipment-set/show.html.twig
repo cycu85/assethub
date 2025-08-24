@@ -304,9 +304,22 @@
                 {% endif %}
                 
                 {% if can_review %}
-                <a href="{{ path('asekuracja_review_new_for_set', {id: equipment_set.id}) }}" class="btn btn-outline-info w-100 mb-2">
-                    <i class="ri-search-eye-line me-1"></i>Nowy przegląd
-                </a>
+                    {% if active_reviews|length > 0 %}
+                        {% set first_active_review = active_reviews[0] %}
+                        <a href="{{ path('asekuracja_review_show', {id: first_active_review.id}) }}" class="btn btn-warning w-100 mb-2">
+                            <i class="ri-eye-line me-1"></i>Przejdź do przeglądu
+                        </a>
+                        <small class="text-muted d-block text-center mb-2">
+                            Status: {{ first_active_review.statusDisplayName }}
+                            {% if first_active_review.reviewNumber %}
+                                <br>{{ first_active_review.reviewNumber }}
+                            {% endif %}
+                        </small>
+                    {% else %}
+                        <a href="{{ path('asekuracja_review_new_for_set', {id: equipment_set.id}) }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="ri-search-eye-line me-1"></i>Nowy przegląd
+                        </a>
+                    {% endif %}
                 {% endif %}
                 
                 {% if can_transfer %}
