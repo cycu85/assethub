@@ -6,6 +6,7 @@ use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\Service\AuditService;
 use App\Service\EmailService;
+use App\Service\NotificationService;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\Event\PostPersistEventArgs;
 use Doctrine\ORM\Events;
@@ -17,7 +18,8 @@ class AsekuracyjnyEventSubscriber
     public function __construct(
         private AuditService $auditService,
         private LoggerInterface $logger,
-        private ?EmailService $emailService = null // Opcjonalnie zgodnie z wzorcem
+        private ?EmailService $emailService = null, // Opcjonalnie zgodnie z wzorcem
+        private ?NotificationService $notificationService = null
     ) {}
 
     public function postPersist(PostPersistEventArgs $event): void
@@ -42,6 +44,11 @@ class AsekuracyjnyEventSubscriber
         // Email notification dla przeglądów zestawów (jeśli EmailService dostępny)
         if ($this->emailService && $review->getEquipmentSet()) {
             $this->sendEquipmentSetReviewNotification($review);
+        }
+
+        // Create notification dla przeglądów zestawów (jeśli NotificationService dostępny)
+        if ($this->notificationService && $review->getEquipmentSet()) {
+            $this->createEquipmentSetReviewNotification($review);
         }
     }
 
@@ -122,6 +129,42 @@ class AsekuracyjnyEventSubscriber
                 'review_id' => $review->getId(),
                 'equipment_set_id' => $equipmentSet->getId(),
                 'recipient_email' => $assignedUser->getEmail(),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function createEquipmentSetReviewNotification(AsekuracyjnyReview $review): void
+    {
+        $equipmentSet = $review->getEquipmentSet();
+        
+        if (!$equipmentSet || !$equipmentSet->getAssignedTo()) {
+            $this->logger->info('Review notification skipped - no assigned user', [
+                'review_id' => $review->getId(),
+                'equipment_set_id' => $equipmentSet?->getId()
+            ]);
+            return;
+        }
+
+        $assignedUser = $equipmentSet->getAssignedTo();
+
+        try {
+            $this->notificationService->createReviewNotification(
+                $assignedUser,
+                $equipmentSet->getName(),
+                $equipmentSet->getId()
+            );
+
+            $this->logger->info('Review notification created successfully', [
+                'review_id' => $review->getId(),
+                'equipment_set_id' => $equipmentSet->getId(),
+                'user_id' => $assignedUser->getId()
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Exception occurred while creating review notification', [
+                'review_id' => $review->getId(),
+                'equipment_set_id' => $equipmentSet->getId(),
+                'user_id' => $assignedUser->getId(),
                 'error' => $e->getMessage()
             ]);
         }
