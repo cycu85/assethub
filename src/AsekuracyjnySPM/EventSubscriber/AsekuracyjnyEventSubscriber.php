@@ -46,9 +46,13 @@ class AsekuracyjnyEventSubscriber
             $this->sendEquipmentSetReviewNotification($review);
         }
 
-        // Create notification dla przeglądów zestawów (jeśli NotificationService dostępny)
-        if ($this->notificationService && $review->getEquipmentSet()) {
-            $this->createEquipmentSetReviewNotification($review);
+        // Create notifications (jeśli NotificationService dostępny)
+        if ($this->notificationService) {
+            if ($review->getEquipmentSet()) {
+                $this->createEquipmentSetReviewNotification($review);
+            } elseif ($review->getEquipment()) {
+                $this->createEquipmentReviewNotification($review);
+            }
         }
     }
 
@@ -164,6 +168,42 @@ class AsekuracyjnyEventSubscriber
             $this->logger->error('Exception occurred while creating review notification', [
                 'review_id' => $review->getId(),
                 'equipment_set_id' => $equipmentSet->getId(),
+                'user_id' => $assignedUser->getId(),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function createEquipmentReviewNotification(AsekuracyjnyReview $review): void
+    {
+        $equipment = $review->getEquipment();
+        
+        if (!$equipment || !$equipment->getAssignedTo()) {
+            $this->logger->info('Equipment review notification skipped - no assigned user', [
+                'review_id' => $review->getId(),
+                'equipment_id' => $equipment?->getId()
+            ]);
+            return;
+        }
+
+        $assignedUser = $equipment->getAssignedTo();
+
+        try {
+            $this->notificationService->createEquipmentReviewNotification(
+                $assignedUser,
+                $equipment->getName(),
+                $equipment->getId()
+            );
+
+            $this->logger->info('Equipment review notification created successfully', [
+                'review_id' => $review->getId(),
+                'equipment_id' => $equipment->getId(),
+                'user_id' => $assignedUser->getId()
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Exception occurred while creating equipment review notification', [
+                'review_id' => $review->getId(),
+                'equipment_id' => $equipment->getId(),
                 'user_id' => $assignedUser->getId(),
                 'error' => $e->getMessage()
             ]);

@@ -55,13 +55,13 @@ class NotificationService
     }
 
     /**
-     * Create review notification
+     * Create review notification for equipment set
      */
     public function createReviewNotification(User $user, string $equipmentSetName, int $equipmentSetId): Notification
     {
         return $this->createNotification(
             user: $user,
-            title: 'Przegląd sprzętu przygotowany',
+            title: 'Przegląd zestawu przygotowany',
             content: sprintf('Przegląd zestawu "%s" został przygotowany i oczekuje na dostarczenie.', $equipmentSetName),
             type: Notification::TYPE_WARNING,
             category: Notification::CATEGORY_REVIEW,
@@ -70,6 +70,26 @@ class NotificationService
                 'equipment_set_name' => $equipmentSetName
             ],
             actionUrl: "/asekuracja/equipment-set/{$equipmentSetId}",
+            actionText: 'Zobacz szczegóły'
+        );
+    }
+
+    /**
+     * Create review notification for individual equipment
+     */
+    public function createEquipmentReviewNotification(User $user, string $equipmentName, int $equipmentId): Notification
+    {
+        return $this->createNotification(
+            user: $user,
+            title: 'Przegląd sprzętu przygotowany',
+            content: sprintf('Przegląd sprzętu "%s" został przygotowany i oczekuje na dostarczenie.', $equipmentName),
+            type: Notification::TYPE_WARNING,
+            category: Notification::CATEGORY_REVIEW,
+            data: [
+                'equipment_id' => $equipmentId,
+                'equipment_name' => $equipmentName
+            ],
+            actionUrl: "/asekuracja/equipment/{$equipmentId}",
             actionText: 'Zobacz szczegóły'
         );
     }
