@@ -1,0 +1,173 @@
+{% extends 'error/base.html.twig' %}
+
+{# Debug variables passed by ExceptionListener #}
+{# Available: status_code, message, environment #}
+
+{% block title %}Błąd {{ status_code|default('') }} - AssetHub{% endblock %}
+{% block page_title %}Wystąpił błąd{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/">Strona główna</a></li>
+    <li class="breadcrumb-item active">Błąd {{ status_code|default('') }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xxl-8 col-lg-10">
+        <div class="card overflow-hidden">
+            <div class="card-body p-4">
+                <div class="text-center">
+                    <div class="avatar-xl mx-auto mb-4">
+                        <div class="avatar-title bg-secondary-subtle text-secondary display-3 rounded-circle">
+                            <i class="ri-error-warning-line"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-secondary display-4 fw-bold">{{ status_code|default('Błąd') }}</h1>
+                    <h3 class="text-uppercase mb-3">Wystąpił problem</h3>
+                    <p class="text-muted mb-4 fs-16">
+                        {% if message is defined and message %}
+                            {{ message }}<br>
+                        {% else %}
+                            Wystąpił nieoczekiwany błąd podczas przetwarzania żądania.<br>
+                        {% endif %}
+                        Spróbuj ponownie za chwilę lub skontaktuj się z administratorem.
+                    </p>
+                    
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
+                        <a href="/" class="btn btn-success btn-lg">
+                            <i class="ri-home-line me-1"></i>Strona główna
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-primary btn-lg">
+                            <i class="ri-arrow-left-line me-1"></i>Wstecz
+                        </button>
+                        <button onclick="location.reload()" class="btn btn-outline-info btn-lg">
+                            <i class="ri-refresh-line me-1"></i>Odśwież
+                        </button>
+                    </div>
+
+                    {% if app.user %}
+                    <!-- User info section -->
+                    <div class="alert alert-info border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Informacje o błędzie
+                        </h6>
+                        <div class="mb-3">
+                            Jeśli błąd się powtarza, przekaż administratorowi poniższe informacje:
+                        </div>
+                        <div class="d-flex flex-column gap-1 small text-start">
+                            <div><strong>Użytkownik:</strong> {{ app.user.username }}</div>
+                            <div><strong>Czas:</strong> {{ "now"|date('Y-m-d H:i:s') }}</div>
+                            {% if status_code is defined %}
+                            <div><strong>Kod błędu:</strong> {{ status_code }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Login suggestion for guests -->
+                    <div class="alert alert-warning border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Nie jesteś zalogowany
+                        </h6>
+                        <div class="mb-3">
+                            Ten błąd może wynikać z braku uprawnień. Spróbuj się zalogować.
+                        </div>
+                        <a href="{{ path('login') }}" class="btn btn-warning">
+                            <i class="ri-login-box-line me-1"></i>Zaloguj się
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact section -->
+        <div class="card mt-4 bg-light border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title text-muted">
+                    <i class="ri-customer-service-2-line me-2"></i>Potrzebujesz pomocy?
+                </h5>
+                <p class="card-text text-muted mb-3">
+                    Jeśli błąd się powtarza, skontaktuj się z naszym zespołem technicznym.<br>
+                    <small>Podaj kod błędu i opis czynności, które do niego doprowadziły.</small>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <span class="badge bg-danger-subtle text-danger">
+                        <i class="ri-mail-line me-1"></i>admin@assethub.local
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning">
+                        <i class="ri-phone-line me-1"></i>+48 123 456 789
+                    </span>
+                    {% if status_code is defined %}
+                    <span class="badge bg-secondary-subtle text-secondary">
+                        <i class="ri-error-warning-line me-1"></i>Kod: {{ status_code }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Error animation
+document.addEventListener('DOMContentLoaded', function() {
+    const errorNumber = document.querySelector('.display-4');
+    if (errorNumber) {
+        errorNumber.style.transform = 'scale(0.9)';
+        errorNumber.style.transition = 'transform 0.5s ease';
+        
+        setTimeout(function() {
+            errorNumber.style.transform = 'scale(1)';
+        }, 200);
+    }
+    
+    // Warning icon animation
+    const warningIcon = document.querySelector('.ri-error-warning-line');
+    if (warningIcon && warningIcon.closest('.avatar-title')) {
+        setTimeout(function() {
+            warningIcon.style.animation = 'pulse 2s infinite';
+        }, 500);
+    }
+});
+
+// Debug info for dev environment
+{% if environment is defined and environment == 'dev' %}
+const debugInfo = document.createElement('div');
+debugInfo.className = 'mt-3';
+debugInfo.innerHTML = `<small class="text-muted">Debug: status_code={{ status_code|default('unknown') }}, env={{ environment }}</small>`;
+document.querySelector('.text-center').appendChild(debugInfo);
+{% endif %}
+
+// Auto-refresh suggestion for certain errors
+{% if status_code is defined and status_code >= 500 %}
+setTimeout(function() {
+    const refreshDiv = document.createElement('div');
+    refreshDiv.className = 'alert alert-info mt-3';
+    refreshDiv.innerHTML = '<i class="ri-refresh-line me-2"></i>Błędy serwera czasami rozwiązują się same. <button class="btn btn-sm btn-outline-info ms-2" onclick="location.reload()">Spróbuj ponownie</button>';
+    document.querySelector('.card-body').appendChild(refreshDiv);
+}, 3000);
+{% endif %}
+</script>
+
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.display-4 {
+    text-shadow: 2px 2px 4px rgba(108,117,125,0.3);
+}
+
+.avatar-title .ri-error-warning-line {
+    transition: all 0.3s ease;
+}
+
+.avatar-title .ri-error-warning-line:hover {
+    transform: scale(1.1);
+}
+</style>
+{% endblock %}

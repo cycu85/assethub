@@ -1,0 +1,313 @@
+{% extends 'error/base.html.twig' %}
+
+{# Debug variables passed by ExceptionListener #}
+{# Available: status_code, message, environment #}
+
+{% block title %}Błąd serwera - AssetHub{% endblock %}
+{% block page_title %}Błąd serwera{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/">Strona główna</a></li>
+    <li class="breadcrumb-item active">Błąd 500</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xxl-8 col-lg-10">
+        <div class="card overflow-hidden">
+            <div class="card-body p-4">
+                <div class="text-center">
+                    <div class="avatar-xl mx-auto mb-4">
+                        <div class="avatar-title bg-danger-subtle text-danger display-3 rounded-circle">
+                            <i class="ri-server-line"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-danger display-4 fw-bold">500</h1>
+                    <h3 class="text-uppercase mb-3">Błąd serwera</h3>
+                    <p class="text-muted mb-4 fs-16">
+                        {% if message is defined and message %}
+                            {{ message }}<br>
+                        {% else %}
+                            Wystąpił wewnętrzny błąd serwera podczas przetwarzania żądania.<br>
+                        {% endif %}
+                        Nasz zespół techniczny został powiadomiony o problemie.
+                    </p>
+                    
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
+                        <a href="/" class="btn btn-success btn-lg">
+                            <i class="ri-home-line me-1"></i>Strona główna
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-primary btn-lg">
+                            <i class="ri-arrow-left-line me-1"></i>Wstecz
+                        </button>
+                        <button onclick="location.reload()" class="btn btn-outline-warning btn-lg">
+                            <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
+                        </button>
+                    </div>
+
+                    <!-- Status information -->
+                    <div class="alert alert-warning border-0 mx-auto" style="max-width: 600px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-tools-line me-2"></i>Co możesz zrobić:
+                        </h6>
+                        <div class="text-start">
+                            <ul class="mb-3">
+                                <li>Odczekaj kilka minut i spróbuj ponownie</li>
+                                <li>Sprawdź czy problem występuje na innych stronach</li>
+                                <li>Wyczyść pamięć podręczną przeglądarki</li>
+                                <li>Jeśli problem się powtarza, skontaktuj się z administratorem</li>
+                            </ul>
+                        </div>
+                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                            <button class="btn btn-sm btn-outline-warning" onclick="clearCacheAndReload()">
+                                <i class="ri-delete-bin-line me-1"></i>Wyczyść pamięć podręczną
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="checkStatus()">
+                                <i class="ri-pulse-line me-1"></i>Sprawdź status
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if app.user %}
+                    <!-- Technical info for logged users -->
+                    <div class="alert alert-danger border-0 mx-auto mt-3" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Informacje techniczne
+                        </h6>
+                        <div class="d-flex flex-column gap-1 small text-start">
+                            <div><strong>Użytkownik:</strong> {{ app.user.username }}</div>
+                            <div><strong>Czas błędu:</strong> {{ "now"|date('Y-m-d H:i:s') }}</div>
+                            <div><strong>ID sesji:</strong> {{ app.session.id|slice(0, 8) }}...</div>
+                            <div><strong>User Agent:</strong> <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ app.request.headers.get('User-Agent') }}">{{ app.request.headers.get('User-Agent')|slice(0, 50) }}...</span></div>
+                        </div>
+                        <hr>
+                        <small class="text-muted">Przekaż te informacje administratorowi przy zgłaszaniu błędu.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- System status -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center border-danger">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-danger-subtle text-danger rounded-circle">
+                                <i class="ri-server-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Serwer</h6>
+                        <p class="text-muted mb-2 fs-13">Problem z serwerem</p>
+                        <span class="badge bg-danger">Niedostępny</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center border-warning">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                                <i class="ri-database-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Baza danych</h6>
+                        <p class="text-muted mb-2 fs-13">Status połączenia</p>
+                        <span class="badge bg-warning">Sprawdzanie...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center border-info">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                                <i class="ri-time-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Czas odpowiedzi</h6>
+                        <p class="text-muted mb-2 fs-13">Średni czas</p>
+                        <span class="badge bg-info">Mierzenie...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact section -->
+        <div class="card mt-4 bg-light border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title text-danger">
+                    <i class="ri-customer-service-2-line me-2"></i>Natychmiastowa pomoc
+                </h5>
+                <p class="card-text text-muted mb-3">
+                    Jeśli to pilny problem lub błąd się powtarza, skontaktuj się z nami.<br>
+                    <small>Podaj kod błędu <strong>500</strong> i czas wystąpienia problemu.</small>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <span class="badge bg-danger-subtle text-danger fs-6">
+                        <i class="ri-mail-line me-1"></i>admin@assethub.local
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning fs-6">
+                        <i class="ri-phone-line me-1"></i>+48 123 456 789
+                    </span>
+                    <span class="badge bg-info-subtle text-info fs-6">
+                        <i class="ri-time-line me-1"></i>{{ "now"|date('H:i:s') }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Server error animations
+document.addEventListener('DOMContentLoaded', function() {
+    const number500 = document.querySelector('.display-4');
+    if (number500) {
+        number500.style.transform = 'scale(0.8) rotate(-3deg)';
+        number500.style.transition = 'transform 0.6s ease';
+        
+        setTimeout(function() {
+            number500.style.transform = 'scale(1) rotate(0deg)';
+        }, 300);
+    }
+    
+    // Server icon animation
+    const serverIcon = document.querySelector('.ri-server-line');
+    if (serverIcon && serverIcon.closest('.avatar-title')) {
+        setTimeout(function() {
+            serverIcon.style.animation = 'serverPulse 2s infinite';
+        }, 800);
+    }
+
+    // Simulate status checks
+    setTimeout(function() {
+        updateSystemStatus();
+    }, 2000);
+    
+    // Auto-suggest refresh after 30 seconds
+    setTimeout(function() {
+        showAutoRefreshSuggestion();
+    }, 30000);
+});
+
+function clearCacheAndReload() {
+    if ('caches' in window) {
+        caches.keys().then(function(names) {
+            names.forEach(function(name) {
+                caches.delete(name);
+            });
+        });
+    }
+    
+    // Clear localStorage
+    if (typeof(Storage) !== "undefined") {
+        localStorage.clear();
+        sessionStorage.clear();
+    }
+    
+    // Force reload
+    window.location.reload(true);
+}
+
+function checkStatus() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<i class="ri-loader-4-line me-1 spinning"></i>Sprawdzanie...';
+    button.disabled = true;
+    
+    // Simulate status check
+    setTimeout(function() {
+        button.innerHTML = '<i class="ri-check-line me-1"></i>Sprawdzono';
+        button.className = button.className.replace('btn-outline-info', 'btn-outline-success');
+        
+        setTimeout(function() {
+            button.innerHTML = originalText;
+            button.className = button.className.replace('btn-outline-success', 'btn-outline-info');
+            button.disabled = false;
+        }, 2000);
+    }, 1500);
+}
+
+function updateSystemStatus() {
+    // Database status
+    const dbBadge = document.querySelector('.card:nth-child(2) .badge');
+    if (dbBadge) {
+        dbBadge.textContent = 'Sprawdzanie...';
+        setTimeout(function() {
+            dbBadge.textContent = 'Dostępna';
+            dbBadge.className = 'badge bg-success';
+        }, 1000);
+    }
+    
+    // Response time
+    const timeBadge = document.querySelector('.card:nth-child(3) .badge');
+    if (timeBadge) {
+        setTimeout(function() {
+            timeBadge.textContent = '~ 2.5s';
+            timeBadge.className = 'badge bg-warning';
+        }, 1500);
+    }
+}
+
+function showAutoRefreshSuggestion() {
+    const suggestionDiv = document.createElement('div');
+    suggestionDiv.className = 'alert alert-info mt-3';
+    suggestionDiv.innerHTML = `
+        <i class="ri-information-line me-2"></i>Problem nadal występuje? 
+        <button class="btn btn-sm btn-info ms-2" onclick="location.reload()">
+            <i class="ri-refresh-line me-1"></i>Odśwież stronę
+        </button>
+    `;
+    document.querySelector('.card-body').appendChild(suggestionDiv);
+}
+
+// Debug info for dev environment
+{% if environment is defined and environment == 'dev' %}
+const debugInfo = document.createElement('div');
+debugInfo.className = 'mt-3';
+debugInfo.innerHTML = `<small class="text-muted">Debug: status_code=500, env={{ environment }}</small>`;
+document.querySelector('.text-center').appendChild(debugInfo);
+{% endif %}
+</script>
+
+<style>
+@keyframes serverPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes spinning {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinning {
+    animation: spinning 1s linear infinite;
+}
+
+.display-4 {
+    text-shadow: 2px 2px 4px rgba(220,53,69,0.3);
+}
+
+.avatar-title .ri-server-line {
+    transition: all 0.3s ease;
+}
+
+.avatar-title .ri-server-line:hover {
+    transform: scale(1.1);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+</style>
+{% endblock %}

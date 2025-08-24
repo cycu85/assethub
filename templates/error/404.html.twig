@@ -1,0 +1,339 @@
+{% extends 'error/base.html.twig' %}
+
+{# Debug variables passed by ExceptionListener #}
+{# Available: status_code, message, environment #}
+
+{% block title %}Strona nie znaleziona - AssetHub{% endblock %}
+{% block page_title %}Strona nie znaleziona{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/">Strona główna</a></li>
+    <li class="breadcrumb-item active">Błąd 404</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xxl-8 col-lg-10">
+        <div class="card overflow-hidden">
+            <div class="card-body p-4">
+                <div class="text-center">
+                    <div class="avatar-xl mx-auto mb-4">
+                        <div class="avatar-title bg-warning-subtle text-warning display-3 rounded-circle">
+                            <i class="ri-search-line"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-warning display-4 fw-bold">404</h1>
+                    <h3 class="text-uppercase mb-3">Strona nie znaleziona</h3>
+                    <p class="text-muted mb-4 fs-16">
+                        {% if message is defined and message %}
+                            {{ message }}<br>
+                        {% else %}
+                            Niestety, strona której szukasz nie istnieje lub została przeniesiona.<br>
+                        {% endif %}
+                        Sprawdź adres URL lub wróć do strony głównej.
+                    </p>
+                    
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
+                        <a href="/" class="btn btn-success btn-lg">
+                            <i class="ri-home-line me-1"></i>Strona główna
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-primary btn-lg">
+                            <i class="ri-arrow-left-line me-1"></i>Wstecz
+                        </button>
+                        {% if app.user %}
+                        <a href="{{ path('dashboard') }}" class="btn btn-outline-info btn-lg">
+                            <i class="ri-dashboard-line me-1"></i>Dashboard
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    {% if app.user %}
+                    <!-- Search suggestions for logged users -->
+                    <div class="alert alert-info border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-lightbulb-line me-2"></i>Może szukasz:
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <a href="/equipment" class="btn btn-sm btn-outline-info">
+                                <i class="ri-tools-line me-1"></i>Sprzęt
+                            </a>
+                            {% if is_granted_module('asekuracja') %}
+                            <a href="/asekuracja" class="btn btn-sm btn-outline-success">
+                                <i class="ri-shield-line me-1"></i>Asekuracja
+                            </a>
+                            {% endif %}
+                            <a href="/profile" class="btn btn-sm btn-outline-warning">
+                                <i class="ri-user-line me-1"></i>Profil
+                            </a>
+                            {% if is_granted_module('admin') %}
+                            <a href="/admin" class="btn btn-sm btn-outline-danger">
+                                <i class="ri-settings-line me-1"></i>Admin
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Login suggestion for guests -->
+                    <div class="alert alert-primary border-0 mx-auto" style="max-width: 500px;" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Nie jesteś zalogowany
+                        </h6>
+                        <div class="mb-3">
+                            Zaloguj się, aby uzyskać dostęp do wszystkich funkcji systemu.
+                        </div>
+                        <a href="{{ path('login') }}" class="btn btn-primary">
+                            <i class="ri-login-box-line me-1"></i>Zaloguj się
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick links -->
+        <div class="row mt-4">
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                                <i class="ri-dashboard-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Dashboard</h6>
+                        <p class="text-muted mb-2 fs-13">Główny panel</p>
+                        <a href="/" class="btn btn-sm btn-outline-primary">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if app.user %}
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                                <i class="ri-tools-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Sprzęt</h6>
+                        <p class="text-muted mb-2 fs-13">Zarządzanie sprzętem</p>
+                        <a href="/equipment" class="btn btn-sm btn-outline-info">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+
+            {% if is_granted_module('asekuracja') %}
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                                <i class="ri-shield-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Asekuracja</h6>
+                        <p class="text-muted mb-2 fs-13">Sprzęt asekuracyjny</p>
+                        <a href="/asekuracja" class="btn btn-sm btn-outline-success">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-warning-subtle text-warning rounded-circle">
+                                <i class="ri-user-settings-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Profil</h6>
+                        <p class="text-muted mb-2 fs-13">Twoje ustawienia</p>
+                        <a href="/profile" class="btn btn-sm btn-outline-warning">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                                <i class="ri-login-box-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Logowanie</h6>
+                        <p class="text-muted mb-2 fs-13">Zaloguj się</p>
+                        <a href="{{ path('login') }}" class="btn btn-sm btn-outline-success">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-info-subtle text-info rounded-circle">
+                                <i class="ri-question-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Pomoc</h6>
+                        <p class="text-muted mb-2 fs-13">Wskazówki</p>
+                        <a href="#" class="btn btn-sm btn-outline-info" onclick="showSearchHelp()">Przejdź</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="card text-center border">
+                    <div class="card-body">
+                        <div class="avatar-sm mx-auto mb-3">
+                            <div class="avatar-title bg-secondary-subtle text-secondary rounded-circle">
+                                <i class="ri-search-line fs-18"></i>
+                            </div>
+                        </div>
+                        <h6 class="mb-1">Szukaj</h6>
+                        <p class="text-muted mb-2 fs-13">Wyszukaj treści</p>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="focusSearch()">Przejdź</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Contact section -->
+        <div class="card mt-4 bg-light border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title text-muted">
+                    <i class="ri-map-pin-line me-2"></i>Nie możesz znaleźć tego czego szukasz?
+                </h5>
+                <p class="card-text text-muted mb-3">
+                    Spróbuj wyszukać używając paska wyszukiwania powyżej lub skontaktuj się z nami.<br>
+                    <small>Możliwe, że strona została przeniesiona lub usunięta.</small>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <span class="badge bg-primary-subtle text-primary">
+                        <i class="ri-mail-line me-1"></i>admin@assethub.local
+                    </span>
+                    <span class="badge bg-success-subtle text-success">
+                        <i class="ri-phone-line me-1"></i>+48 123 456 789
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Fun animation for the 404 number
+document.addEventListener('DOMContentLoaded', function() {
+    const number404 = document.querySelector('.display-4');
+    if (number404) {
+        number404.style.transform = 'scale(0.8) rotate(5deg)';
+        number404.style.transition = 'transform 0.6s ease';
+        
+        setTimeout(function() {
+            number404.style.transform = 'scale(1) rotate(0deg)';
+        }, 300);
+    }
+    
+    // Bounce animation for search icon
+    const searchIcon = document.querySelector('.ri-search-line');
+    if (searchIcon && searchIcon.closest('.avatar-title')) {
+        setTimeout(function() {
+            searchIcon.style.animation = 'bounce 1s ease-in-out';
+        }, 800);
+    }
+});
+
+// Search help function
+function showSearchHelp() {
+    alert('Wskazówki wyszukiwania:\n\n• Sprawdź pisownię adresu URL\n• Użyj paska wyszukiwania w górnej części strony\n• Przejdź do strony głównej i znajdź potrzebną sekcję\n• Sprawdź czy masz odpowiednie uprawnienia do tej strony\n\nJeśli problem się powtarza, skontaktuj się z administratorem.');
+}
+
+// Focus search function
+function focusSearch() {
+    const searchInput = document.getElementById('search-options');
+    if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        alert('Pasek wyszukiwania jest dostępny po zalogowaniu się do systemu.');
+    }
+}
+
+// Show attempted URL (for debugging)
+const currentUrl = window.location.pathname;
+if (currentUrl !== '/error/not-found' && currentUrl !== '/404') {
+    const urlInfo = document.createElement('div');
+    urlInfo.className = 'mt-3';
+    urlInfo.innerHTML = `<small class="text-muted">Nie znaleziono strony: <code>${currentUrl}</code></small>`;
+    document.querySelector('.text-center').appendChild(urlInfo);
+}
+
+// Debug info for dev environment
+{% if environment is defined and environment == 'dev' %}
+const debugInfo = document.createElement('div');
+debugInfo.className = 'mt-3';
+debugInfo.innerHTML = `<small class="text-muted">Debug: status_code={{ status_code|default('unknown') }}, env={{ environment }}</small>`;
+document.querySelector('.text-center').appendChild(debugInfo);
+{% endif %}
+
+// Suggest similar pages based on URL
+setTimeout(function() {
+    const currentPath = window.location.pathname.toLowerCase();
+    let suggestion = '';
+    
+    if (currentPath.includes('sprzet') || currentPath.includes('equipment')) {
+        suggestion = 'Czy szukałeś strony ze sprzętem? <a href="/equipment" class="alert-link">Przejdź do sprzętu</a>';
+    } else if (currentPath.includes('asekuracja') || currentPath.includes('review')) {
+        suggestion = 'Czy szukałeś modułu asekuracji? <a href="/asekuracja" class="alert-link">Przejdź do asekuracji</a>';
+    } else if (currentPath.includes('admin') || currentPath.includes('users')) {
+        suggestion = 'Czy szukałeś panelu administratora? <a href="/admin" class="alert-link">Przejdź do panelu admin</a>';
+    } else if (currentPath.includes('profile') || currentPath.includes('user')) {
+        suggestion = 'Czy szukałeś swojego profilu? <a href="/profile" class="alert-link">Przejdź do profilu</a>';
+    }
+    
+    if (suggestion) {
+        const suggestionDiv = document.createElement('div');
+        suggestionDiv.className = 'alert alert-warning mt-3';
+        suggestionDiv.innerHTML = `<i class="ri-lightbulb-line me-2"></i>${suggestion}`;
+        document.querySelector('.card-body').appendChild(suggestionDiv);
+    }
+}, 1000);
+</script>
+
+<style>
+@keyframes bounce {
+    0%, 20%, 60%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    80% { transform: translateY(-5px); }
+}
+
+.avatar-title .ri-search-line {
+    transition: all 0.3s ease;
+}
+
+.avatar-title .ri-search-line:hover {
+    transform: scale(1.1);
+}
+
+.display-4 {
+    text-shadow: 2px 2px 4px rgba(255,193,7,0.3);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+
+/* Highlight effect for quick links */
+.card-body:hover .avatar-title {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+</style>
+{% endblock %}
