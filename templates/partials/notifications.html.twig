@@ -314,6 +314,9 @@ class NotificationManager {
         const noNotifications = document.getElementById('no-notifications');
         const viewAllSection = document.getElementById('view-all-section');
         
+        // Remove any theme-generated empty notification elements
+        container.querySelectorAll('.empty-notification-elem').forEach(elem => elem.remove());
+        
         if (this.notifications.length === 0) {
             noNotifications.classList.remove('d-none');
             viewAllSection.classList.add('d-none');
@@ -586,8 +589,16 @@ class NotificationManager {
     }
 }
 
+// Disable theme's notification system
+window.emptyNotification = function() {
+    // Do nothing - our system handles this
+};
+
 // Initialize notification manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Remove any theme-generated empty notifications first
+    document.querySelectorAll('.empty-notification-elem').forEach(elem => elem.remove());
+    
     window.notificationManager = new NotificationManager();
 });
 </script>
