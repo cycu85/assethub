@@ -17,124 +17,205 @@
                 <h4 class="card-title mb-0">Zarządzanie Słownikami</h4>
             </div>
             <div class="card-body">
-                <div class="row">
-                    {% for type in types %}
-                        {% set count = typeCounts[type] ?? 0 %}
-                        {% set typeConfig = {
-                            'equipment_categories': {
-                                'name': 'Kategorie Sprzętu',
-                                'description': 'Zarządzanie kategoriami sprzętu i narzędzi',
-                                'color': 'info',
-                                'icon': 'ri-tools-line'
-                            },
-                            'equipment_statuses': {
-                                'name': 'Statusy Sprzętu',
-                                'description': 'Statusy i stany sprzętu w systemie',
-                                'color': 'warning',
-                                'icon': 'ri-flag-line'
-                            },
-                            'locations': {
-                                'name': 'Lokalizacje',
-                                'description': 'Słownik lokalizacji i miejsc przechowywania',
-                                'color': 'success',
-                                'icon': 'ri-map-pin-line'
-                            },
-                            'priorities': {
-                                'name': 'Priorytety',
-                                'description': 'Poziomy priorytetów w systemie',
-                                'color': 'danger',
-                                'icon': 'ri-alert-line'
-                            },
-                            'departments': {
-                                'name': 'Działy',
-                                'description': 'Struktury organizacyjne firmy',
-                                'color': 'primary',
-                                'icon': 'ri-building-line'
-                            },
-                            'employee_branches': {
-                                'name': 'Oddziały Pracowników',
-                                'description': 'Oddziały i lokalizacje gdzie pracują pracownicy',
-                                'color': 'info',
-                                'icon': 'ri-building-2-line'
-                            },
-                            'employee_departments': {
-                                'name': 'Działy Pracowników',
-                                'description': 'Działy organizacyjne dla pracowników',
-                                'color': 'primary',
-                                'icon': 'ri-team-line'
-                            },
-                            'employee_positions': {
-                                'name': 'Stanowiska',
-                                'description': 'Stanowiska pracy i role w firmie',
-                                'color': 'secondary',
-                                'icon': 'ri-user-star-line'
-                            },
-                            'employee_statuses': {
-                                'name': 'Statusy Pracowników',
-                                'description': 'Statusy zatrudnienia pracowników',
-                                'color': 'success',
-                                'icon': 'ri-user-line'
-                            }
-                        } %}
-                        {% set config = typeConfig[type] ?? {
-                            'name': type|title,
-                            'description': 'Słownik typu ' ~ type,
-                            'color': 'secondary',
-                            'icon': 'ri-list-line'
-                        } %}
+                {% set typeConfig = {
+                    'equipment_categories': {
+                        'name': 'Kategorie Sprzętu',
+                        'description': 'Zarządzanie kategoriami sprzętu i narzędzi',
+                        'color': 'info',
+                        'icon': 'ri-tools-line',
+                        'module': 'system'
+                    },
+                    'equipment_statuses': {
+                        'name': 'Statusy Sprzętu',
+                        'description': 'Statusy i stany sprzętu w systemie',
+                        'color': 'warning',
+                        'icon': 'ri-flag-line',
+                        'module': 'system'
+                    },
+                    'locations': {
+                        'name': 'Lokalizacje',
+                        'description': 'Słownik lokalizacji i miejsc przechowywania',
+                        'color': 'success',
+                        'icon': 'ri-map-pin-line',
+                        'module': 'system'
+                    },
+                    'priorities': {
+                        'name': 'Priorytety',
+                        'description': 'Poziomy priorytetów w systemie',
+                        'color': 'danger',
+                        'icon': 'ri-alert-line',
+                        'module': 'system'
+                    },
+                    'departments': {
+                        'name': 'Działy Organizacyjne',
+                        'description': 'Struktury organizacyjne firmy',
+                        'color': 'primary',
+                        'icon': 'ri-building-line',
+                        'module': 'system'
+                    },
+                    'employee_branches': {
+                        'name': 'Oddziały Firmy',
+                        'description': 'Oddziały i lokalizacje firmy',
+                        'color': 'info',
+                        'icon': 'ri-building-2-line',
+                        'module': 'employees'
+                    },
+                    'employee_departments': {
+                        'name': 'Działy Pracowników',
+                        'description': 'Działy organizacyjne dla pracowników',
+                        'color': 'primary',
+                        'icon': 'ri-team-line',
+                        'module': 'employees'
+                    },
+                    'employee_positions': {
+                        'name': 'Stanowiska Pracy',
+                        'description': 'Stanowiska pracy i role w firmie',
+                        'color': 'secondary',
+                        'icon': 'ri-user-star-line',
+                        'module': 'employees'
+                    },
+                    'employee_statuses': {
+                        'name': 'Statusy Pracowników',
+                        'description': 'Statusy zatrudnienia pracowników',
+                        'color': 'success',
+                        'icon': 'ri-user-line',
+                        'module': 'employees'
+                    },
+                    'assek_equipment_types': {
+                        'name': 'Typy Sprzętu Asekuracyjnego',
+                        'description': 'Rodzaje sprzętu ochronnego i asekuracyjnego',
+                        'color': 'warning',
+                        'icon': 'ri-shield-line',
+                        'module': 'asekuracja'
+                    },
+                    'assek_review_status': {
+                        'name': 'Statusy Przeglądów',
+                        'description': 'Statusy procesu przeglądu sprzętu',
+                        'color': 'info',
+                        'icon': 'ri-search-eye-line',
+                        'module': 'asekuracja'
+                    },
+                    'assek_review_types': {
+                        'name': 'Typy Przeglądów',
+                        'description': 'Rodzaje przeglądów sprzętu asekuracyjnego',
+                        'color': 'primary',
+                        'icon': 'ri-list-check-line',
+                        'module': 'asekuracja'
+                    },
+                    'assek_set_types': {
+                        'name': 'Typy Zestawów',
+                        'description': 'Kategorie zestawów sprzętu asekuracyjnego',
+                        'color': 'success',
+                        'icon': 'ri-stack-line',
+                        'module': 'asekuracja'
+                    }
+                } %}
+
+                {% set moduleConfig = {
+                    'system': {
+                        'name': 'System',
+                        'description': 'Ogólne słowniki systemowe',
+                        'color': 'secondary',
+                        'icon': 'ri-settings-line'
+                    },
+                    'employees': {
+                        'name': 'Pracownicy',
+                        'description': 'Słowniki modułu zarządzania pracownikami',
+                        'color': 'primary',
+                        'icon': 'ri-team-line'
+                    },
+                    'asekuracja': {
+                        'name': 'Asekuracja',
+                        'description': 'Słowniki modułu sprzętu asekuracyjnego',
+                        'color': 'warning',
+                        'icon': 'ri-shield-check-line'
+                    }
+                } %}
+
+                {% set groupedTypes = {} %}
+                {% for type in types %}
+                    {% set config = typeConfig[type] %}
+                    {% if config %}
+                        {% set module = config.module %}
+                        {% if groupedTypes[module] is not defined %}
+                            {% set groupedTypes = groupedTypes|merge({(module): []}) %}
+                        {% endif %}
+                        {% set groupedTypes = groupedTypes|merge({(module): groupedTypes[module]|merge([type])}) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% for module, moduleTypes in groupedTypes %}
+                    {% set modConfig = moduleConfig[module] %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-sm me-3">
+                                    <span class="avatar-title bg-{{ modConfig.color }}-subtle text-{{ modConfig.color }} rounded">
+                                        <i class="{{ modConfig.icon }} fs-16"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">{{ modConfig.name }}</h5>
+                                    <p class="text-muted mb-0 fs-13">{{ modConfig.description }}</p>
+                                </div>
+                            </div>
+                        </div>
                         
-                        <div class="col-xl-4 col-sm-6">
-                            <div class="card profile-project-card shadow-none profile-project-{{ config.color }}">
-                                <div class="card-body p-4">
-                                    <div class="d-flex">
-                                        <div class="flex-grow-1 text-muted overflow-hidden">
-                                            <h5 class="fs-14 text-truncate mb-1">
-                                                <a href="{{ path('admin_dictionaries_type', {type: type}) }}" class="text-body">{{ config.name }}</a>
-                                            </h5>
-                                            <p class="text-muted text-truncate mb-0">{{ config.description }}</p>
-                                        </div>
-                                        <div class="flex-shrink-0 ms-2">
-                                            <div class="badge bg-{{ config.color }}-subtle text-{{ config.color }} fs-10">
-                                                {% if count > 0 %}Aktywny{% else %}Pusty{% endif %}
+                        {% for type in moduleTypes %}
+                            {% set count = typeCounts[type] ?? 0 %}
+                            {% set config = typeConfig[type] %}
+                            
+                            <div class="col-xl-4 col-sm-6">
+                                <div class="card profile-project-card shadow-none profile-project-{{ config.color }}">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex">
+                                            <div class="flex-grow-1 text-muted overflow-hidden">
+                                                <h5 class="fs-14 text-truncate mb-1">
+                                                    <a href="{{ path('admin_dictionaries_type', {type: type}) }}" class="text-body">{{ config.name }}</a>
+                                                </h5>
+                                                <p class="text-muted text-truncate mb-0">{{ config.description }}</p>
+                                            </div>
+                                            <div class="flex-shrink-0 ms-2">
+                                                <div class="badge bg-{{ config.color }}-subtle text-{{ config.color }} fs-10">
+                                                    {% if count > 0 %}Aktywny{% else %}Pusty{% endif %}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="d-flex mt-4">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="flex-shrink-0">
-                                                    <div class="avatar-sm">
-                                                        <span class="avatar-title bg-{{ config.color }}-subtle text-{{ config.color }} rounded fs-3">
-                                                            <i class="{{ config.icon }}"></i>
-                                                        </span>
+                                        <div class="d-flex mt-4">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="avatar-sm">
+                                                            <span class="avatar-title bg-{{ config.color }}-subtle text-{{ config.color }} rounded fs-3">
+                                                                <i class="{{ config.icon }}"></i>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">{{ count }}</h6>
+                                                        <p class="text-muted fs-13 mb-0">Rekordów</p>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <h6 class="mb-0">{{ count }}</h6>
-                                                    <p class="text-muted fs-13 mb-0">Rekordów</p>
-                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            <a href="{{ path('admin_dictionaries_type', {type: type}) }}" class="btn btn-outline-{{ config.color }} btn-sm">
-                                                <i class="ri-settings-line align-bottom"></i> Zarządzaj
-                                            </a>
+                                            <div class="flex-shrink-0">
+                                                <a href="{{ path('admin_dictionaries_type', {type: type}) }}" class="btn btn-outline-{{ config.color }} btn-sm">
+                                                    <i class="ri-settings-line align-bottom"></i> Zarządzaj
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    {% else %}
-                        <div class="col-12">
-                            <div class="text-center py-5">
-                                <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#405189,secondary:#0ab39c" style="width:72px;height:72px">
-                                </lord-icon>
-                                <h5 class="mt-4">Brak słowników</h5>
-                                <p class="text-muted">Słowniki zostaną utworzone automatycznie podczas dodawania danych.</p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#405189,secondary:#0ab39c" style="width:72px;height:72px">
+                        </lord-icon>
+                        <h5 class="mt-4">Brak słowników</h5>
+                        <p class="text-muted">Słowniki zostaną utworzone automatycznie podczas dodawania danych.</p>
+                    </div>
+                {% endfor %}
 
                 <div class="alert alert-info">
                     <div class="d-flex">
