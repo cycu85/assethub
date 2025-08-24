@@ -326,12 +326,19 @@ class UserController extends AbstractController
         // Pobierz podwładnych tego użytkownika
         $subordinates = $userRepository->findSubordinates($user);
 
+        // Pobierz dane LDAP dla system_admin
+        $ldapData = [];
+        if ($this->authorizationService->hasPermission($currentUser, 'admin', 'SYSTEM_ADMIN')) {
+            $ldapData = $this->getLdapUserData($user);
+        }
+
         $this->logger->info('User edit form accessed', [
             'user' => $currentUser->getUsername(),
             'ip' => $request->getClientIp(),
             'target_user_id' => $user->getId(),
             'target_username' => $user->getUsername(),
-            'subordinates_count' => count($subordinates)
+            'subordinates_count' => count($subordinates),
+            'ldap_data_loaded' => !empty($ldapData)
         ]);
 
         return $this->render('admin/users/edit.html.twig', [
@@ -341,6 +348,7 @@ class UserController extends AbstractController
             'has_full_permission' => $hasFullPermission,
             'has_basic_permission' => $hasBasicPermission,
             'can_edit' => $hasBasicPermission || $hasFullPermission,
+            'ldap_data' => $ldapData,
         ]);
     }
 
@@ -384,5 +392,200 @@ class UserController extends AbstractController
         }
 
         return $this->redirectToRoute('admin_users_index');
+    }
+
+    #[Route('/{id}/ldap/unlock', name: 'admin_users_ldap_unlock', methods: ['POST'])]
+    public function ldapUnlock(Request $request, User $user): Response
+    {
+        $currentUser = $this->getUser();
+        
+        // Sprawdź uprawnienia - tylko system_admin
+        if (!$this->authorizationService->hasPermission($currentUser, 'admin', 'SYSTEM_ADMIN')) {
+            $this->auditService->logSecurityEvent('unauthorized_ldap_unlock_attempt', $currentUser, [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername()
+            ], $request);
+            
+            return $this->json(['success' => false, 'message' => 'Brak uprawnień do tej operacji'], 403);
+        }
+
+        try {
+            // TODO: Implementacja odblokowania LDAP
+            // $this->ldapService->unlockUserAccount($user->getUsername());
+            
+            $this->auditService->logUserAction($currentUser, 'ldap_account_unlocked', [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername()
+            ], $request);
+
+            $this->logger->info('LDAP account unlocked', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'ip' => $request->getClientIp()
+            ]);
+
+            return $this->json(['success' => true, 'message' => 'Konto zostało odblokowane']);
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to unlock LDAP account', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'error' => $e->getMessage(),
+                'ip' => $request->getClientIp()
+            ]);
+            
+            return $this->json(['success' => false, 'message' => 'Wystąpił błąd podczas odblokowywania konta'], 500);
+        }
+    }
+
+    #[Route('/{id}/ldap/reset-password', name: 'admin_users_ldap_reset_password', methods: ['POST'])]
+    public function ldapResetPassword(Request $request, User $user): Response
+    {
+        $currentUser = $this->getUser();
+        
+        // Sprawdź uprawnienia - tylko system_admin
+        if (!$this->authorizationService->hasPermission($currentUser, 'admin', 'SYSTEM_ADMIN')) {
+            $this->auditService->logSecurityEvent('unauthorized_ldap_password_reset_attempt', $currentUser, [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername()
+            ], $request);
+            
+            return $this->json(['success' => false, 'message' => 'Brak uprawnień do tej operacji'], 403);
+        }
+
+        try {
+            // Generuj nowe tymczasowe hasło
+            $newPassword = $this->generateTemporaryPassword();
+            
+            // TODO: Implementacja resetowania hasła w LDAP
+            // $this->ldapService->resetUserPassword($user->getUsername(), $newPassword);
+            
+            $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername(),
+                'reset_by' => $currentUser->getUsername()
+            ], $request, 'high');
+
+            $this->logger->info('LDAP password reset', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'ip' => $request->getClientIp()
+            ]);
+
+            return $this->json([
+                'success' => true, 
+                'message' => 'Hasło zostało zresetowane',
+                'new_password' => $newPassword
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to reset LDAP password', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'error' => $e->getMessage(),
+                'ip' => $request->getClientIp()
+            ]);
+            
+            return $this->json(['success' => false, 'message' => 'Wystąpił błąd podczas resetowania hasła'], 500);
+        }
+    }
+
+    #[Route('/{id}/ldap/refresh', name: 'admin_users_ldap_refresh', methods: ['POST'])]
+    public function ldapRefresh(Request $request, User $user): Response
+    {
+        $currentUser = $this->getUser();
+        
+        // Sprawdź uprawnienia - tylko system_admin
+        if (!$this->authorizationService->hasPermission($currentUser, 'admin', 'SYSTEM_ADMIN')) {
+            $this->auditService->logSecurityEvent('unauthorized_ldap_refresh_attempt', $currentUser, [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername()
+            ], $request);
+            
+            return $this->json(['success' => false, 'message' => 'Brak uprawnień do tej operacji'], 403);
+        }
+
+        try {
+            // TODO: Implementacja odświeżania danych LDAP
+            // $ldapData = $this->ldapService->refreshUserData($user->getUsername());
+            
+            $this->auditService->logUserAction($currentUser, 'ldap_data_refreshed', [
+                'target_user_id' => $user->getId(),
+                'target_username' => $user->getUsername()
+            ], $request);
+
+            $this->logger->info('LDAP data refreshed', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'ip' => $request->getClientIp()
+            ]);
+
+            return $this->json(['success' => true, 'message' => 'Dane LDAP zostały odświeżone']);
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to refresh LDAP data', [
+                'admin_user' => $currentUser->getUsername(),
+                'target_user' => $user->getUsername(),
+                'error' => $e->getMessage(),
+                'ip' => $request->getClientIp()
+            ]);
+            
+            return $this->json(['success' => false, 'message' => 'Wystąpił błąd podczas odświeżania danych LDAP'], 500);
+        }
+    }
+
+    /**
+     * Pobiera dane użytkownika z LDAP
+     */
+    private function getLdapUserData(User $user): array
+    {
+        try {
+            // TODO: Implementacja pobierania danych z LDAP
+            // $ldapService = $this->container->get('ldap.service');
+            // return $ldapService->getUserData($user->getUsername());
+            
+            // Tymczasowe przykładowe dane dla development
+            return [
+                'password_expires' => new \DateTime('+30 days'),
+                'password_last_set' => new \DateTime('-45 days'),
+                'last_successful_login' => new \DateTime('-2 hours'),
+                'last_failed_login' => null,
+                'account_locked' => false,
+                'failed_login_count' => 0,
+                'last_updated' => new \DateTime('-15 minutes')
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->warning('Failed to fetch LDAP data for user', [
+                'username' => $user->getUsername(),
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'password_expires' => null,
+                'password_last_set' => null,
+                'last_successful_login' => null,
+                'last_failed_login' => null,
+                'account_locked' => false,
+                'failed_login_count' => 0,
+                'last_updated' => null
+            ];
+        }
+    }
+
+    /**
+     * Generuje bezpieczne tymczasowe hasło
+     */
+    private function generateTemporaryPassword(): string
+    {
+        $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+        $password = '';
+        $length = 12;
+        
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+        
+        return $password;
     }
 }

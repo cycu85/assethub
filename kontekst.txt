@@ -1303,6 +1303,17 @@ php bin/console doctrine:fixtures:load --append
 - PDF protocols z TCPDF
 - 20+ walidacji biznesowych
 
+**🎯 UX/UI FEATURES:**
+- Ikona pomocy z legendą w nagłówku listy zestawów
+- Modal z objaśnieniami znaczenia ikon statusów:
+  - Zielony ptaszek (ri-check-line) - zestaw kompletny
+  - Pomarańczowy wykrzyknik (ri-error-warning-line) - zestaw niekompletny
+  - Czerwony wykrzyknik (ri-error-warning-line text-danger) - elementy z przeterminowanymi przeglądami
+  - Pomarańczowy zegar (ri-time-line) - elementy wymagające przeglądu w ciągu 30 dni
+- Bootstrap modal system dla interaktywnej legendy
+- Responsywne ikony RemixIcon w całym module
+- Grid.js dla zaawansowanych tabel z paginacją
+
 Moduł Asekuracja stanowi kompletne rozwiązanie enterprise dla zarządzania sprzętem do prac na wysokości, z pełną integracją z architekturą AssetHub i profesjonalnymi procesami biznesowymi.
 
 System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!
