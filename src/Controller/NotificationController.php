@@ -29,6 +29,16 @@ class NotificationController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $user = $this->getUser();
+        
+        if (!$user) {
+            return $this->json([
+                'error' => 'User not authenticated',
+                'notifications' => [],
+                'unread_count' => 0,
+                'total' => 0
+            ], 401);
+        }
+        
         $unreadOnly = $request->query->getBoolean('unread_only', false);
         $limit = min($request->query->getInt('limit', 20), 100);
         $category = $request->query->get('category');
@@ -57,10 +67,20 @@ class NotificationController extends AbstractController
     public function count(): JsonResponse
     {
         $user = $this->getUser();
+        
+        if (!$user) {
+            return $this->json([
+                'error' => 'User not authenticated',
+                'unread_count' => 0
+            ], 401);
+        }
+        
         $unreadCount = $this->notificationService->getUnreadCount($user);
 
         return $this->json([
-            'unread_count' => $unreadCount
+            'unread_count' => $unreadCount,
+            'user_id' => $user->getId(), // Debug info
+            'user_name' => $user->getUsername() // Debug info
         ]);
     }
 

@@ -147,10 +147,37 @@ class NotificationManager {
     }
 
     init() {
+        this.loadInitialCount();
         this.loadNotifications();
         this.setupEventListeners();
         // Refresh notifications every 30 seconds
         setInterval(() => this.loadNotifications(false), 30000);
+    }
+
+    async loadInitialCount() {
+        try {
+            console.log('Loading initial count...'); // Debug
+            const response = await fetch('/api/notifications/count', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            console.log('Count response status:', response.status); // Debug
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Count data:', data); // Debug
+                
+                if (!data.error) {
+                    this.unreadCount = data.unread_count || 0;
+                    this.updateBadge();
+                }
+            }
+        } catch (error) {
+            console.error('Error loading initial count:', error);
+        }
     }
 
     setupEventListeners() {
@@ -209,15 +236,41 @@ class NotificationManager {
 
     async loadNotifications(showLoading = true) {
         try {
-            const response = await fetch('/api/notifications');
-            const data = await response.json();
+            console.log('Loading notifications...'); // Debug
+            const response = await fetch('/api/notifications', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
             
-            this.notifications = data.notifications;
-            this.unreadCount = data.unread_count;
+            console.log('Response status:', response.status); // Debug
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Loaded notifications:', data); // Debug
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            this.notifications = data.notifications || [];
+            this.unreadCount = data.unread_count || 0;
             
             this.updateUI();
         } catch (error) {
             console.error('Error loading notifications:', error);
+            
+            // Try to get unread count at least
+            if (this.unreadCount === 0) {
+                this.loadInitialCount();
+            }
+            
+            // Show error in UI
+            this.showError('Błąd podczas ładowania powiadomień');
         }
     }
 
@@ -511,6 +564,25 @@ class NotificationManager {
                 }
             }
         });
+    }
+
+    showError(message) {
+        const container = document.getElementById('all-notifications-content');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="avatar-md mx-auto mb-4">
+                        <div class="avatar-title bg-danger-subtle text-danger fs-24 rounded-circle">
+                            <i class="ri-error-warning-line"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted">${message}</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="notificationManager.loadNotifications()">
+                        <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 
