@@ -61,10 +61,6 @@ class ReviewService
         $reviewEquipment->captureEquipmentSnapshot($equipment);
 
         $this->entityManager->persist($reviewEquipment);
-
-        // Update equipment status
-        $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
-        $equipment->setUpdatedBy($user);
         $this->entityManager->flush();
 
         $this->auditService->logCrudOperation($user, 'AsekuracyjnyReview', $review->getId(), 'CREATE', array_merge($data, [
@@ -123,14 +119,8 @@ class ReviewService
 
             $this->entityManager->persist($reviewEquipment);
 
-            // Update individual equipment status
-            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
-            $equipment->setUpdatedBy($user);
         }
 
-        // Update equipment set status
-        $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW);
-        $equipmentSet->setUpdatedBy($user);
         $this->entityManager->flush();
 
         $this->auditService->logCrudOperation($user, 'AsekuracyjnyReview', $review->getId(), 'CREATE', array_merge($data, [
@@ -160,6 +150,10 @@ class ReviewService
         }
 
         $review->sendToReview($user);
+
+        // Update equipment/set status to IN_REVIEW when sent
+        $this->updateSubjectStatusForReview($review, $user);
+
         $this->entityManager->flush();
 
         $this->auditService->logUserAction($user, 'review_sent', [
@@ -770,6 +764,39 @@ class ReviewService
             'equipment_id' => $equipmentId,
             'user' => $user->getUsername()
         ]);
+    }
+
+    /**
+     * Update equipment/set status when review is sent
+     */
+    private function updateSubjectStatusForReview(AsekuracyjnyReview $review, User $user): void
+    {
+        if ($review->isForSingleEquipment()) {
+            $equipment = $review->getEquipment();
+            $equipment->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+            $equipment->setUpdatedBy($user);
+
+            // Also update individual equipments in review
+            foreach ($review->getReviewEquipments() as $reviewEquipment) {
+                if ($reviewEquipment->getEquipment()) {
+                    $reviewEquipment->getEquipment()->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+                    $reviewEquipment->getEquipment()->setUpdatedBy($user);
+                }
+            }
+
+        } elseif ($review->isForEquipmentSet()) {
+            $equipmentSet = $review->getEquipmentSet();
+            $equipmentSet->setStatus(AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW);
+            $equipmentSet->setUpdatedBy($user);
+
+            // Update individual equipments in the review
+            foreach ($review->getReviewEquipments() as $reviewEquipment) {
+                if ($reviewEquipment->getEquipment()) {
+                    $reviewEquipment->getEquipment()->setStatus(AsekuracyjnyEquipment::STATUS_IN_REVIEW);
+                    $reviewEquipment->getEquipment()->setUpdatedBy($user);
+                }
+            }
+        }
     }
 
 }
