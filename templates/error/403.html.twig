@@ -41,7 +41,7 @@
                             <i class="ri-arrow-left-line me-1"></i>Wstecz
                         </button>
                         {% if app.user %}
-                        <a href="{{ path('app_logout') }}" class="btn btn-outline-secondary btn-lg">
+                        <a href="{{ path('logout') }}" class="btn btn-outline-secondary btn-lg">
                             <i class="ri-logout-box-line me-1"></i>Wyloguj się
                         </a>
                         {% endif %}
@@ -80,7 +80,7 @@
                         <div class="mb-3">
                             Aby uzyskać dostęp do tej strony, musisz się zalogować odpowiednim kontem użytkownika.
                         </div>
-                        <a href="{{ path('app_login') }}" class="btn btn-info">
+                        <a href="{{ path('login') }}" class="btn btn-info">
                             <i class="ri-login-box-line me-1"></i>Zaloguj się
                         </a>
                     </div>
@@ -162,7 +162,7 @@
                         </div>
                         <h6 class="mb-1">Logowanie</h6>
                         <p class="text-muted mb-2 fs-13">Zaloguj się</p>
-                        <a href="{{ path('app_login') }}" class="btn btn-sm btn-outline-success">Przejdź</a>
+                        <a href="{{ path('login') }}" class="btn btn-sm btn-outline-success">Przejdź</a>
                     </div>
                 </div>
             </div>
