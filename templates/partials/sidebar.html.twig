@@ -78,6 +78,17 @@
                             </a>
                             <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}" id="sidebarAsekuracja">
                                 <ul class="nav nav-sm flex-column">
+                                    {% set user_has_basic_access = is_granted('ROLE_USER') and (
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'VIEW') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'CREATE') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'EDIT') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'DELETE') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'ASSIGN') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'REVIEW') or
+                                        authorization_service.hasPermission(app.user, 'asekuracja', 'TRANSFER')
+                                    ) %}
+                                    
+                                    {% if user_has_basic_access %}
                                     <li class="nav-item">
                                         <a href="{{ path('asekuracja_index') }}" class="nav-link {{ current_route in ['asekuracja_index', 'asekuracja_equipment_new', 'asekuracja_equipment_show', 'asekuracja_equipment_edit', 'asekuracja_equipment_assign', 'asekuracja_search'] ? 'active' : '' }}">
                                             <i class="ri-shield-line me-2"></i>Sprzęt
@@ -93,6 +104,8 @@
                                             <i class="ri-search-eye-line me-2"></i>Przeglądy
                                         </a>
                                     </li>
+                                    {% endif %}
+                                    
                                     <li class="nav-item">
                                         <a href="{{ path('asekuracja_my_equipment') }}" class="nav-link {{ current_route == 'asekuracja_my_equipment' ? 'active' : '' }}">
                                             <i class="ri-user-line me-2"></i>Moje przypisania

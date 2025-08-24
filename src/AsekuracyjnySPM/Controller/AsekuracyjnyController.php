@@ -167,6 +167,15 @@ class AsekuracyjnyController extends AbstractController
         $canAssign = $this->authorizationService->hasPermission($user, 'asekuracja', 'ASSIGN');
         $canReview = $this->authorizationService->hasPermission($user, 'asekuracja', 'REVIEW');
         $canTransfer = $this->authorizationService->hasPermission($user, 'asekuracja', 'TRANSFER');
+        
+        // Użytkownicy z rolą VIEW_OWN nie mogą edytować, usuwać ani zarządzać
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW_OWN') && 
+            !$this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT')) {
+            $canEdit = false;
+            $canDelete = false;
+            $canAssign = false;
+            $canTransfer = false;
+        }
 
         // Pobierz przeglądy posortowane chronologicznie (najnowsze pierwsze)
         // 1. Przeglądy bezpośrednio tego sprzętu
@@ -679,14 +688,19 @@ class AsekuracyjnyController extends AbstractController
             return true;
         }
         
+        // Użytkownicy z uprawnieniem VIEW mogą widzieć wszystkie
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW')) {
+            return true;
+        }
+        
         // Użytkownik może widzieć swój przypisany sprzęt
         if ($equipment->getAssignedTo() === $user) {
             return true;
         }
         
-        // Użytkownicy z uprawnieniem VIEW mogą widzieć wszystkie
-        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW')) {
-            return true;
+        // Użytkownicy z uprawnieniem VIEW_OWN mogą widzieć tylko swój przypisany sprzęt
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW_OWN')) {
+            return $equipment->getAssignedTo() === $user;
         }
         
         return false;

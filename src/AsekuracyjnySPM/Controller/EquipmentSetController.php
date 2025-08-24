@@ -156,6 +156,16 @@ class EquipmentSetController extends AbstractController
         $canReview = $this->authorizationService->hasPermission($user, 'asekuracja', 'REVIEW');
         $canTransfer = $this->authorizationService->hasPermission($user, 'asekuracja', 'TRANSFER');
         $canManageEquipment = $this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT');
+        
+        // Użytkownicy z rolą VIEW_OWN nie mogą edytować, usuwać ani zarządzać
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW_OWN') && 
+            !$this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT')) {
+            $canEdit = false;
+            $canDelete = false;
+            $canAssign = false;
+            $canTransfer = false;
+            $canManageEquipment = false;
+        }
 
         // Get active users for transfer modal
         $users = $this->entityManager->getRepository(User::class)->findBy(['isActive' => true]);
@@ -1632,14 +1642,19 @@ class EquipmentSetController extends AbstractController
             return true;
         }
         
+        // Użytkownicy z uprawnieniem VIEW mogą widzieć wszystkie
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW')) {
+            return true;
+        }
+        
         // Użytkownik może widzieć swój przypisany zestaw
         if ($equipmentSet->getAssignedTo() === $user) {
             return true;
         }
         
-        // Użytkownicy z uprawnieniem VIEW mogą widzieć wszystkie
-        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW')) {
-            return true;
+        // Użytkownicy z uprawnieniem VIEW_OWN mogą widzieć tylko swój przypisany zestaw
+        if ($this->authorizationService->hasPermission($user, 'asekuracja', 'VIEW_OWN')) {
+            return $equipmentSet->getAssignedTo() === $user;
         }
         
         return false;
