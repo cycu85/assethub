@@ -78,15 +78,7 @@
                             </a>
                             <div class="collapse menu-dropdown {{ is_asekuracja_section ? 'show' : '' }}" id="sidebarAsekuracja">
                                 <ul class="nav nav-sm flex-column">
-                                    {% set user_has_basic_access = is_granted('ROLE_USER') and (
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'VIEW') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'CREATE') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'EDIT') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'DELETE') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'ASSIGN') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'REVIEW') or
-                                        authorization_service.hasPermission(app.user, 'asekuracja', 'TRANSFER')
-                                    ) %}
+                                    {% set user_has_basic_access = is_granted('ROLE_USER') and has_any_permission('asekuracja', ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER']) %}
                                     
                                     {% if user_has_basic_access %}
                                     <li class="nav-item">
