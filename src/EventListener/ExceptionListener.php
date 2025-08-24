@@ -159,9 +159,21 @@ class ExceptionListener
 
             return new Response($content, $statusCode);
         } catch (\Exception $e) {
-            // Fallback jeśli template nie istnieje
+            // Log the template rendering error for debugging
+            $this->logger->error('Failed to render error template', [
+                'template' => $template ?? 'unknown',
+                'status_code' => $statusCode,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Fallback jeśli template nie istnieje lub nie może być wyrenderowany
             return new Response(
-                sprintf('<h1>Błąd %d</h1><p>%s</p>', $statusCode, htmlspecialchars($message)),
+                sprintf('<h1>Błąd %d</h1><p>%s</p><p><small>Template error: %s</small></p>', 
+                    $statusCode, 
+                    htmlspecialchars($message),
+                    htmlspecialchars($e->getMessage())
+                ),
                 $statusCode
             );
         }
