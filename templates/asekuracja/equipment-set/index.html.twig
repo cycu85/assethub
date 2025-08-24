@@ -158,7 +158,14 @@
         <div class="card">
             <div class="card-header">
                 <div class="d-flex align-items-center">
-                    <h5 class="card-title mb-0 flex-grow-1">Lista zestawów</h5>
+                    <h5 class="card-title mb-0 flex-grow-1">
+                        Lista zestawów
+                        <i class="ri-question-line text-muted ms-2" 
+                           style="cursor: pointer;" 
+                           data-bs-toggle="modal" 
+                           data-bs-target="#iconLegendModal" 
+                           title="Pokaż legendę ikon"></i>
+                    </h5>
                 </div>
             </div>
             <div class="card-body">
@@ -455,4 +462,61 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Modal z legendą ikon -->
+<div class="modal fade" id="iconLegendModal" tabindex="-1" aria-labelledby="iconLegendModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="iconLegendModalLabel">
+                    <i class="ri-information-line me-2"></i>Legenda ikon w kolumnie "Elementy"
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-check-line text-success me-3" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong>Zestaw kompletny</strong>
+                                    <div class="text-muted small">Wszystkie elementy zestawu są dostępne i przypisane</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center">
+                                <i class="ri-error-warning-line text-warning me-3" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong>Zestaw niekompletny</strong>
+                                    <div class="text-muted small">W zestawie brakuje niektórych elementów</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center">
+                                <i class="ri-error-warning-line text-danger me-3" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong>Elementy z przeterminowanymi przeglądami</strong>
+                                    <div class="text-muted small">W zestawie są elementy, które mają przeterminowane przeglądy</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center">
+                                <i class="ri-time-line text-warning me-3" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong>Elementy wymagające przeglądu w ciągu 30 dni</strong>
+                                    <div class="text-muted small">W zestawie są elementy, które wymagają przeglądu w najbliższym czasie</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
