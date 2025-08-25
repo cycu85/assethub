@@ -203,7 +203,7 @@
                                 </h6>
                             </div>
                             <div class="card-body">
-                                {% if ldap_data.error %}
+                                {% if ldap_data.error is defined and ldap_data.error %}
                                 <div class="alert alert-warning">
                                     <i class="ri-error-warning-line me-2"></i>
                                     <strong>Błąd połączenia z LDAP:</strong> {{ ldap_data.error }}
