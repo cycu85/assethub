@@ -540,8 +540,8 @@ class UserController extends AbstractController
                 
             $entry = $results[0];
             
-            // Ustaw nowe hasło - użyj metody szyfrowania zgodnej ze starą klasą PHP5
-            $encodedPassword = $this->encodePasswordForActiveDirectory($newPassword);
+            // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
+            $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
             
             $this->logger->info('Attempting LDAP password reset', [
                 'target_dn' => $ldapDn,
@@ -550,7 +550,7 @@ class UserController extends AbstractController
                 'user' => $currentUser->getUsername()
             ]);
             
-            // Zresetuj hasło w Active Directory
+            // Zaktualizuj tylko hasło - usuń pwdLastSet aby uniknąć constraint violation
             $ldap->getEntryManager()->update($entry, [
                 'unicodePwd' => [$encodedPassword]
             ]);
@@ -629,22 +629,6 @@ class UserController extends AbstractController
             
             return $this->json(['success' => false, 'message' => 'Wystąpił błąd podczas resetowania hasła'], 500);
         }
-    }
-
-    /**
-     * Koduje hasło do formatu Active Directory (zgodnie ze starą implementacją PHP5)
-     */
-    private function encodePasswordForActiveDirectory(string $password): string
-    {
-        $password = '"' . $password . '"';
-        $encoded = '';
-        $len = strlen($password);
-        
-        for ($i = 0; $i < $len; $i++) {
-            $encoded .= $password[$i] . "\000";
-        }
-        
-        return $encoded;
     }
 
     #[Route('/{id}/ldap/refresh', name: 'admin_users_ldap_refresh', methods: ['POST'])]
