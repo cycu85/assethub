@@ -719,6 +719,7 @@ class AdminController extends AbstractController
             
             'ldap_auto_create_users' => (bool) $this->settingService->get('ldap_auto_create_users', false),
             'ldap_update_existing_users' => (bool) $this->settingService->get('ldap_update_existing_users', false),
+            'ldap_ignore_ssl_cert' => (bool) $this->settingService->get('ldap_ignore_ssl_cert', false),
         ];
     }
 
@@ -748,6 +749,7 @@ class AdminController extends AbstractController
         
         $this->settingService->set('ldap_auto_create_users', $data['ldap_auto_create_users'] ? '1' : '0', 'ldap', 'boolean', 'Automatycznie twórz nowych użytkowników');
         $this->settingService->set('ldap_update_existing_users', $data['ldap_update_existing_users'] ? '1' : '0', 'ldap', 'boolean', 'Aktualizuj istniejących użytkowników');
+        $this->settingService->set('ldap_ignore_ssl_cert', $data['ldap_ignore_ssl_cert'] ? '1' : '0', 'ldap', 'boolean', 'Ignoruj błędny certyfikat SSL/TLS');
         
         // Zapisz hasło tylko jeśli zostało podane
         if (!empty($data['ldap_bind_password'])) {

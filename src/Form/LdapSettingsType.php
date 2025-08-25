@@ -261,6 +261,14 @@ class LdapSettingsType extends AbstractType
                     'class' => 'form-check-input'
                 ]
             ])
+            ->add('ldap_ignore_ssl_cert', CheckboxType::class, [
+                'label' => 'Ignoruj błędny certyfikat SSL/TLS',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-check-input'
+                ],
+                'help' => 'Wyłącza weryfikację certyfikatu SSL/TLS (użyj tylko w środowisku testowym)'
+            ])
             
             // Przyciski akcji
             ->add('save', SubmitType::class, [

@@ -302,6 +302,16 @@
                                         Dane istniejących użytkowników będą aktualizowane z LDAP
                                     </div>
                                 </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form_widget(form.ldap_ignore_ssl_cert) }}
+                                    {{ form_label(form.ldap_ignore_ssl_cert, null, {'label_attr': {'class': 'form-check-label ms-2'}}) }}
+                                    {{ form_errors(form.ldap_ignore_ssl_cert) }}
+                                    <div class="form-text text-warning">
+                                        <i class="ri-alert-line me-1"></i>
+                                        {{ form_help(form.ldap_ignore_ssl_cert) }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

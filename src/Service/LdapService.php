@@ -352,9 +352,18 @@ class LdapService
         $host = $settings['ldap_host'] ?? '';
         $port = (int) ($settings['ldap_port'] ?? 389);
         $encryption = $settings['ldap_encryption'] ?? 'none';
+        $ignoreSslCert = (bool) ($settings['ldap_ignore_ssl_cert'] ?? false);
 
         if (!$host) {
             throw new LdapException('Host LDAP nie został określony');
+        }
+
+        // Jeśli włączone jest ignorowanie certyfikatu SSL/TLS
+        if ($ignoreSslCert) {
+            putenv("TLS_REQCERT=never");
+            putenv("LDAPTLS_REQCERT=never");
+            putenv("LDAPTLS_CIPHER_SUITE=NORMAL:!VERS-TLS1.2");
+            $this->logger->info('SSL certificate verification disabled for LDAP connection');
         }
 
         // Usuń ewentualny prefix protokołu (jak w LdapUserProvider)

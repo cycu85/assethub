@@ -23,6 +23,7 @@ use App\Service\AuditService;
 use App\Service\LdapService;
 use App\Service\SettingService;
 use App\Service\EmailService;
+use Symfony\Component\Ldap\Ldap;
 
 #[Route('/admin/users')]
 class UserController extends AbstractController
@@ -888,6 +889,7 @@ class UserController extends AbstractController
             'ldap_map_email' => $this->settingService->get('ldap_map_email'),
             'ldap_map_firstname' => $this->settingService->get('ldap_map_firstname'),
             'ldap_map_lastname' => $this->settingService->get('ldap_map_lastname'),
+            'ldap_ignore_ssl_cert' => (bool) $this->settingService->get('ldap_ignore_ssl_cert'),
         ];
     }
     
