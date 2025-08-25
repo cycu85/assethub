@@ -718,7 +718,8 @@ class UserController extends AbstractController
                 'password_last_set' => $this->parseAdDate($pwdLastSet),
                 'last_successful_login' => $this->parseAdDate($lastLogon),
                 'last_failed_login' => $this->parseAdDate($badPasswordTime),
-                'account_locked' => $this->isAccountLocked($userAccountControl),
+                'account_locked_by_failed_logins' => $this->isAccountLockedByFailedLogins($userAccountControl),
+                'account_disabled' => $this->isAccountDisabled($userAccountControl),
                 'failed_login_count' => $badPwdCount,
                 'last_updated' => new \DateTime()
             ];
@@ -760,13 +761,21 @@ class UserController extends AbstractController
     }
 
     /**
-     * Sprawdza czy konto jest zablokowane na podstawie userAccountControl
+     * Sprawdza czy konto jest zablokowane przez błędne próby logowania
      */
-    private function isAccountLocked(int $userAccountControl): bool
+    private function isAccountLockedByFailedLogins(int $userAccountControl): bool
     {
-        // Bit 0x0002 = ACCOUNTDISABLE
-        // Bit 0x0010 = LOCKOUT  
-        return ($userAccountControl & 0x0002) || ($userAccountControl & 0x0010);
+        // Bit 0x0010 = LOCKOUT (konto zablokowane przez błędne hasła)
+        return ($userAccountControl & 0x0010) !== 0;
+    }
+
+    /**
+     * Sprawdza czy konto jest wyłączone
+     */
+    private function isAccountDisabled(int $userAccountControl): bool
+    {
+        // Bit 0x0002 = ACCOUNTDISABLE (konto wyłączone)
+        return ($userAccountControl & 0x0002) !== 0;
     }
 
     /**

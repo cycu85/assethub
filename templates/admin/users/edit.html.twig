@@ -280,19 +280,36 @@
 
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <p class="text-muted mb-1">Status blokady konta:</p>
+                                        <p class="text-muted mb-1">Blokada po błędnych próbach:</p>
                                         <p class="mb-2">
-                                            {% if ldap_data.account_locked %}
+                                            {% if ldap_data.account_locked_by_failed_logins %}
                                                 <span class="badge bg-danger-subtle text-danger">
                                                     <i class="ri-lock-line me-1"></i>Konto zablokowane
                                                 </span>
                                             {% else %}
                                                 <span class="badge bg-success-subtle text-success">
-                                                    <i class="ri-lock-unlock-line me-1"></i>Konto odblokowane
+                                                    <i class="ri-lock-unlock-line me-1"></i>Bez blokady
                                                 </span>
                                             {% endif %}
                                         </p>
                                     </div>
+                                    <div class="col-md-6">
+                                        <p class="text-muted mb-1">Status konta:</p>
+                                        <p class="mb-2">
+                                            {% if ldap_data.account_disabled %}
+                                                <span class="badge bg-danger-subtle text-danger">
+                                                    <i class="ri-user-forbid-line me-1"></i>Konto wyłączone
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-success-subtle text-success">
+                                                    <i class="ri-user-line me-1"></i>Konto aktywne
+                                                </span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="row">
                                     <div class="col-md-6">
                                         <p class="text-muted mb-1">Liczba błędnych logowań:</p>
                                         <p class="mb-2">
@@ -317,6 +334,10 @@
                                             {% endif %}
                                         </p>
                                     </div>
+                                    <div class="col-md-6">
+                                        <p class="text-muted mb-1">&nbsp;</p>
+                                        <p class="mb-2">&nbsp;</p>
+                                    </div>
                                 </div>
 
                                 {% endif %}
@@ -332,7 +353,7 @@
                                                 </button>
                                             {% else %}
                                                 <!-- Pełne akcje gdy LDAP działa -->
-                                                {% if ldap_data.account_locked is defined and ldap_data.account_locked %}
+                                                {% if ldap_data.account_locked_by_failed_logins is defined and ldap_data.account_locked_by_failed_logins %}
                                                 <button type="button" class="btn btn-warning btn-sm" onclick="unlockAccount('{{ user.id }}')">
                                                     <i class="ri-lock-unlock-line me-1"></i>Odblokuj konto
                                                 </button>
