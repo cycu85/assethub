@@ -824,18 +824,18 @@ class UserController extends AbstractController
     private function getLdapSettings(): array
     {
         return [
-            'ldap_enabled' => (bool) $this->settingService->get('ldap_enabled', false),
-            'ldap_host' => $this->settingService->get('ldap_host', 'ldap://localhost'),
-            'ldap_port' => (int) $this->settingService->get('ldap_port', '389'),
-            'ldap_encryption' => $this->settingService->get('ldap_encryption', 'none'),
-            'ldap_bind_dn' => $this->settingService->get('ldap_bind_dn', ''),
-            'ldap_bind_password' => $this->settingService->get('ldap_bind_password', ''),
-            'ldap_base_dn' => $this->settingService->get('ldap_base_dn', ''),
-            'ldap_user_filter' => $this->settingService->get('ldap_user_filter', '(&(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'),
-            'ldap_map_username' => $this->settingService->get('ldap_map_username', 'sAMAccountName'),
-            'ldap_map_email' => $this->settingService->get('ldap_map_email', 'mail'),
-            'ldap_map_firstname' => $this->settingService->get('ldap_map_firstname', 'givenName'),
-            'ldap_map_lastname' => $this->settingService->get('ldap_map_lastname', 'sn'),
+            'ldap_enabled' => (bool) $this->settingService->get('ldap_enabled'),
+            'ldap_host' => $this->settingService->get('ldap_host'),
+            'ldap_port' => (int) $this->settingService->get('ldap_port'),
+            'ldap_encryption' => $this->settingService->get('ldap_encryption'),
+            'ldap_bind_dn' => $this->settingService->get('ldap_bind_dn'),
+            'ldap_bind_password' => $this->settingService->get('ldap_bind_password'),
+            'ldap_base_dn' => $this->settingService->get('ldap_base_dn'),
+            'ldap_user_filter' => $this->settingService->get('ldap_user_filter'),
+            'ldap_map_username' => $this->settingService->get('ldap_map_username'),
+            'ldap_map_email' => $this->settingService->get('ldap_map_email'),
+            'ldap_map_firstname' => $this->settingService->get('ldap_map_firstname'),
+            'ldap_map_lastname' => $this->settingService->get('ldap_map_lastname'),
         ];
     }
     
