@@ -515,7 +515,7 @@ class UserController extends AbstractController
                 if (strlen($customPassword) < 8) {
                     return $this->json(['success' => false, 'message' => 'Hasło musi mieć co najmniej 8 znaków'], 400);
                 }
-                if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/', $customPassword)) {
+                if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/u', $customPassword)) {
                     return $this->json(['success' => false, 'message' => 'Hasło musi zawierać małą i wielką literę, cyfrę oraz znak specjalny'], 400);
                 }
                 $newPassword = $customPassword;
@@ -792,19 +792,37 @@ class UserController extends AbstractController
     }
 
     /**
-     * Generuje bezpieczne tymczasowe hasło
+     * Generuje bezpieczne tymczasowe hasło zgodne z polityką Active Directory
      */
     private function generateTemporaryPassword(): string
     {
-        $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-        $password = '';
-        $length = 12;
+        $length = 14; // Dłuższe hasło dla większej złożoności
         
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        // Kategorie znaków zgodne z AD
+        $uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lowercase = 'abcdefghijkmnpqrstuvwxyz';
+        $numbers = '23456789';
+        $symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+        
+        $password = '';
+        
+        // Zapewnij co najmniej jeden znak z każdej kategorii (wymagane przez AD)
+        $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
+        $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
+        $password .= $numbers[random_int(0, strlen($numbers) - 1)];
+        $password .= $symbols[random_int(0, strlen($symbols) - 1)];
+        
+        // Wypełnij pozostałe pozycje losowymi znakami
+        $allChars = $uppercase . $lowercase . $numbers . $symbols;
+        for ($i = 4; $i < $length; $i++) {
+            $password .= $allChars[random_int(0, strlen($allChars) - 1)];
         }
         
-        return $password;
+        // Przemieszaj znaki aby uniknąć przewidywalnej struktury
+        $passwordArray = str_split($password);
+        shuffle($passwordArray);
+        
+        return implode('', $passwordArray);
     }
     
     /**

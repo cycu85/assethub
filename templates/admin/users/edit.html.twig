@@ -598,7 +598,7 @@ function showResetPasswordModal(userId) {
                                 '</button>' +
                             '</div>' +
                             '<div class="form-text">' +
-                                '<i class="ri-information-line me-1"></i>Hasło musi mieć min. 8 znaków, zawierać małe i wielkie litery, cyfry oraz znak specjalny' +
+                                '<i class="ri-information-line me-1"></i>Hasło musi mieć min. 8 znaków, zawierać małe i wielkie litery, cyfry oraz znak specjalny (zalecane: 14+ znaków)' +
                             '</div>' +
                         '</div>' +
                         '<div class="form-check mt-3">' +
@@ -640,30 +640,38 @@ function showResetPasswordModal(userId) {
     });
 }
 
-// Generuje losowe hasło
+// Generuje losowe hasło zgodne z polityką Active Directory
 function generateRandomPassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-    const length = 12;
+    const length = 14; // Dłuższe hasło dla większej złożoności
+    
+    // Kategorie znaków zgodne z AD
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
     let password = '';
     
-    // Zapewnij przynajmniej jeden znak z każdej kategorii
-    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const lower = 'abcdefghijkmnpqrstuvwxyz';
-    const numbers = '23456789';
-    const special = '!@#$%^&*';
-    
-    password += upper[Math.floor(Math.random() * upper.length)];
-    password += lower[Math.floor(Math.random() * lower.length)];
+    // Zapewnij co najmniej jeden znak z każdej kategorii (wymagane przez AD)
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
     password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += special[Math.floor(Math.random() * special.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
     
-    // Wypełnij resztę losowymi znakami
-    for (let i = password.length; i < length; i++) {
-        password += chars[Math.floor(Math.random() * chars.length)];
+    // Wypełnij pozostałe pozycje losowymi znakami
+    const allChars = uppercase + lowercase + numbers + symbols;
+    for (let i = 4; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
     }
     
-    // Przemieszaj znaki
-    return password.split('').sort(() => Math.random() - 0.5).join('');
+    // Przemieszaj znaki aby uniknąć przewidywalnej struktury
+    const passwordArray = password.split('');
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+    }
+    
+    return passwordArray.join('');
 }
 
 // Generuje nowe hasło w modalu
