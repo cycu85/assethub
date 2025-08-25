@@ -543,6 +543,13 @@ class UserController extends AbstractController
             // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
             $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
             
+            $this->logger->info('Attempting LDAP password reset', [
+                'target_dn' => $ldapDn,
+                'password_length' => strlen($newPassword),
+                'encoded_length' => strlen($encodedPassword),
+                'user' => $currentUser->getUsername()
+            ]);
+            
             // Zaktualizuj tylko hasło - usuń pwdLastSet aby uniknąć constraint violation
             $ldap->getEntryManager()->update($entry, [
                 'unicodePwd' => [$encodedPassword]
