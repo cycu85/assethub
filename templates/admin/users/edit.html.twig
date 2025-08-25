@@ -232,7 +232,7 @@
                                                     </span>
                                                 {% else %}
                                                     <span class="badge bg-success-subtle text-success">
-                                                        <i class="ri-checkbox-circle-line me-1"></i>{{ ldap_data.password_expires|date('d.m.Y') }}
+                                                        <i class="ri-checkbox-circle-line me-1"></i>{{ ldap_data.password_expires|date('d.m.Y') }} ({{ days_to_expiry }} dni)
                                                     </span>
                                                 {% endif %}
                                             {% else %}
