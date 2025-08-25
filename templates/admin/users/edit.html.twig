@@ -205,10 +205,12 @@
                                         <p class="text-muted mb-1">Ważność hasła:</p>
                                         <p class="mb-2">
                                             {% if ldap_data.password_expires %}
-                                                {% set days_to_expiry = ldap_data.password_expires|date_diff('now')|date('%a') %}
+                                                {% set now = date() %}
+                                                {% set expires = ldap_data.password_expires %}
+                                                {% set days_to_expiry = (expires.timestamp - now.timestamp) // 86400 %}
                                                 {% if days_to_expiry < 0 %}
                                                     <span class="badge bg-danger-subtle text-danger">
-                                                        <i class="ri-error-warning-line me-1"></i>Wygasło {{ days_to_expiry|abs }} dni temu
+                                                        <i class="ri-error-warning-line me-1"></i>Wygasło {{ (-days_to_expiry) }} dni temu
                                                     </span>
                                                 {% elseif days_to_expiry < 7 %}
                                                     <span class="badge bg-warning-subtle text-warning">
