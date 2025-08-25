@@ -319,33 +319,46 @@
                                     </div>
                                 </div>
 
-                                <!-- Akcje LDAP -->
+                                {% endif %}
+                                
+                                <!-- Akcje LDAP - zawsze widoczne -->
                                 <div class="row mt-3">
                                     <div class="col-12">
                                         <div class="d-flex flex-wrap gap-2">
-                                            {% if ldap_data.account_locked %}
-                                            <button type="button" class="btn btn-warning btn-sm" onclick="unlockAccount('{{ user.id }}')">
-                                                <i class="ri-lock-unlock-line me-1"></i>Odblokuj konto
-                                            </button>
+                                            {% if ldap_data.error is defined and ldap_data.error %}
+                                                <!-- Tylko odśwież gdy jest błąd -->
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshLdapData('{{ user.id }}')">
+                                                    <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
+                                                </button>
+                                            {% else %}
+                                                <!-- Pełne akcje gdy LDAP działa -->
+                                                {% if ldap_data.account_locked is defined and ldap_data.account_locked %}
+                                                <button type="button" class="btn btn-warning btn-sm" onclick="unlockAccount('{{ user.id }}')">
+                                                    <i class="ri-lock-unlock-line me-1"></i>Odblokuj konto
+                                                </button>
+                                                {% endif %}
+                                                
+                                                <button type="button" class="btn btn-info btn-sm" onclick="resetPassword('{{ user.id }}')">
+                                                    <i class="ri-key-2-line me-1"></i>Resetuj hasło
+                                                </button>
+                                                
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshLdapData('{{ user.id }}')">
+                                                    <i class="ri-refresh-line me-1"></i>Odśwież dane LDAP
+                                                </button>
                                             {% endif %}
-                                            
-                                            <button type="button" class="btn btn-info btn-sm" onclick="resetPassword('{{ user.id }}')">
-                                                <i class="ri-key-2-line me-1"></i>Resetuj hasło
-                                            </button>
-                                            
-                                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshLdapData('{{ user.id }}')">
-                                                <i class="ri-refresh-line me-1"></i>Odśwież dane LDAP
-                                            </button>
                                         </div>
                                         
                                         <div class="form-text mt-2">
                                             <i class="ri-information-line me-1"></i>
-                                            Dane LDAP są odświeżane automatycznie co 15 minut. Ostatnia aktualizacja: 
-                                            <strong>{{ ldap_data.last_updated ? ldap_data.last_updated|date('d.m.Y H:i') : 'Nigdy' }}</strong>
+                                            {% if ldap_data.error is defined and ldap_data.error %}
+                                                Kliknij "Spróbuj ponownie" aby odświeżyć połączenie z LDAP.
+                                            {% else %}
+                                                Dane LDAP są odświeżane automatycznie co 15 minut. Ostatnia aktualizacja: 
+                                                <strong>{{ ldap_data.last_updated ? ldap_data.last_updated|date('d.m.Y H:i') : 'Nigdy' }}</strong>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                         {% endif %}
@@ -598,7 +611,7 @@ function performPasswordReset(userId) {
     confirmModal.hide();
     
     // Znajdź przycisk resetowania (dla UX)
-    const button = document.querySelector(`button[onclick="resetPassword('${userId}')"]`);
+    const button = document.querySelector(`button[onclick*="resetPassword('${userId}')"]`);
     if (button) {
         button.disabled = true;
         button.innerHTML = '<i class="ri-loader-line me-1"></i>Resetuję...';
