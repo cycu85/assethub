@@ -549,10 +549,9 @@ class UserController extends AbstractController
             // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
             $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
             
-            // Zaktualizuj hasło i ustaw flagę zmiany hasła przy następnym logowaniu
+            // Zaktualizuj tylko hasło - usuń pwdLastSet aby uniknąć constraint violation
             $ldap->getEntryManager()->update($entry, [
-                'unicodePwd' => [$encodedPassword],
-                'pwdLastSet' => [0] // Wymusi zmianę hasła przy następnym logowaniu
+                'unicodePwd' => [$encodedPassword]
             ]);
             
             $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
