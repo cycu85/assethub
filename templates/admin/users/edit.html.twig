@@ -502,9 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Funkcje LDAP - tylko dla system_admin i użytkowników LDAP
-{% if is_system_admin and is_ldap_user %}
-
+// Funkcje LDAP - dostępne zawsze (uprawnienia sprawdzane w kontrolerze)
 // Odblokowanie konta LDAP
 function unlockAccount(userId) {
     if (confirm('Czy na pewno chcesz odblokować to konto LDAP?')) {
@@ -787,6 +785,5 @@ function showAlert(type, message) {
     }, 5000);
 }
 
-{% endif %}
 </script>
 {% endblock %}
