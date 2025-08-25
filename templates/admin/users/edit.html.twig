@@ -190,16 +190,30 @@
                             </div>
                         </div>
 
-                        {% if has_permission('admin', 'SYSTEM_ADMIN') %}
-                        <!-- Sekcja Dane LDAP - tylko dla system_admin -->
+                        {% if is_system_admin and is_ldap_user %}
+                        <!-- Sekcja Dane LDAP - tylko dla system_admin i użytkowników LDAP -->
                         <div class="card border border-warning mt-3">
                             <div class="card-header">
                                 <h6 class="card-title mb-0">
                                     <i class="ri-shield-keyhole-line me-2"></i>Dane LDAP
                                     <span class="badge bg-warning-subtle text-warning ms-2">System Admin</span>
+                                    {% if user.ldapDn %}
+                                        <small class="text-muted ms-2">{{ user.ldapDn }}</small>
+                                    {% endif %}
                                 </h6>
                             </div>
                             <div class="card-body">
+                                {% if ldap_data.error %}
+                                <div class="alert alert-warning">
+                                    <i class="ri-error-warning-line me-2"></i>
+                                    <strong>Błąd połączenia z LDAP:</strong> {{ ldap_data.error }}
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="refreshLdapData('{{ user.id }}')">
+                                            <i class="ri-refresh-line me-1"></i>Spróbuj ponownie
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="text-muted mb-1">Ważność hasła:</p>
@@ -477,8 +491,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Funkcje LDAP - tylko dla system_admin
-{% if has_permission('admin', 'SYSTEM_ADMIN') %}
+// Funkcje LDAP - tylko dla system_admin i użytkowników LDAP
+{% if is_system_admin and is_ldap_user %}
 
 // Odblokowanie konta LDAP
 function unlockAccount(userId) {
