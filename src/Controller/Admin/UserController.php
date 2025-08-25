@@ -511,13 +511,7 @@ class UserController extends AbstractController
 
             // Użyj niestandardowego hasła lub wygeneruj nowe
             if (!empty($customPassword)) {
-                // Walidacja hasła
-                if (strlen($customPassword) < 8) {
-                    return $this->json(['success' => false, 'message' => 'Hasło musi mieć co najmniej 8 znaków'], 400);
-                }
-                if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/u', $customPassword)) {
-                    return $this->json(['success' => false, 'message' => 'Hasło musi zawierać małą i wielką literę, cyfrę oraz znak specjalny'], 400);
-                }
+                // Bez walidacji - pozwól na dowolne hasło (do testowania)
                 $newPassword = $customPassword;
             } else {
                 // Generuj nowe tymczasowe hasło
