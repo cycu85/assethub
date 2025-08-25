@@ -48,6 +48,11 @@ return [
         '/install/database' => [[['_route' => 'installer_database', '_controller' => 'App\\Controller\\InstallerController::database'], null, null, null, false, false, null]],
         '/install/admin' => [[['_route' => 'installer_admin', '_controller' => 'App\\Controller\\InstallerController::admin'], null, null, null, false, false, null]],
         '/install/finish' => [[['_route' => 'installer_finish', '_controller' => 'App\\Controller\\InstallerController::finish'], null, null, null, false, false, null]],
+        '/api/notifications' => [[['_route' => 'api_notifications_list', '_controller' => 'App\\Controller\\NotificationController::list'], null, ['GET' => 0], null, false, false, null]],
+        '/api/notifications/count' => [[['_route' => 'api_notifications_count', '_controller' => 'App\\Controller\\NotificationController::count'], null, ['GET' => 0], null, false, false, null]],
+        '/api/notifications/stats' => [[['_route' => 'api_notifications_stats', '_controller' => 'App\\Controller\\NotificationController::stats'], null, ['GET' => 0], null, false, false, null]],
+        '/api/notifications/mark-all-read' => [[['_route' => 'api_notifications_mark_all_read', '_controller' => 'App\\Controller\\NotificationController::markAllAsRead'], null, ['POST' => 0], null, false, false, null]],
+        '/api/notifications/mark-multiple-read' => [[['_route' => 'api_notifications_mark_multiple_read', '_controller' => 'App\\Controller\\NotificationController::markMultipleAsRead'], null, ['POST' => 0], null, false, false, null]],
         '/profile' => [[['_route' => 'profile', '_controller' => 'App\\Controller\\ProfileController::index'], null, null, null, false, false, null]],
         '/api/search' => [[['_route' => 'api_search', '_controller' => 'App\\Controller\\SearchController::search'], null, ['GET' => 0], null, false, false, null]],
         '/login' => [[['_route' => 'login', '_controller' => 'App\\Controller\\SecurityController::login'], null, null, null, false, false, null]],
@@ -117,63 +122,83 @@ return [
                         .'|(\\d+)(*:655)'
                         .'|(\\d+)/edit(*:673)'
                         .'|(\\d+)/toggle\\-status(*:701)'
+                        .'|([^/]++)/ldap/(?'
+                            .'|unlock(*:732)'
+                            .'|re(?'
+                                .'|set\\-password(*:758)'
+                                .'|fresh(*:771)'
+                            .')'
+                        .')'
                     .')'
                 .')'
                 .'|/equipment/(?'
-                    .'|(\\d+)(*:730)'
-                    .'|(\\d+)/edit(*:748)'
-                    .'|(\\d+)/delete(*:768)'
-                    .'|category/(\\d+)(*:790)'
+                    .'|(\\d+)(*:802)'
+                    .'|(\\d+)/edit(*:820)'
+                    .'|(\\d+)/delete(*:840)'
+                    .'|category/(\\d+)(*:862)'
                 .')'
-                .'|/((?!install|admin|api|login|logout|profile|asekuracja).*)(*:857)'
-                .'|/asekuracja/(?'
-                    .'|equipment(?'
-                        .'|/(?'
-                            .'|(\\d+)(*:901)'
-                            .'|(\\d+)/edit(*:919)'
-                            .'|(\\d+)/delete(*:939)'
-                            .'|(\\d+)/assign(*:959)'
-                            .'|(\\d+)/unassign(*:981)'
-                            .'|(\\d+)/attachment/upload(*:1012)'
-                            .'|(\\d+)/attachment/([^/]++)/download(*:1055)'
-                            .'|(\\d+)/attachment/([^/]++)/delete(*:1096)'
-                        .')'
-                        .'|\\-sets/(?'
-                            .'|(\\d+)(*:1121)'
-                            .'|(\\d+)/edit(*:1140)'
-                            .'|(\\d+)/delete(*:1161)'
-                            .'|(\\d+)/equipment/add(*:1189)'
-                            .'|(\\d+)/equipment/(\\d+)/remove(*:1226)'
-                            .'|(\\d+)/equipment/remove\\-bulk(*:1263)'
-                            .'|(\\d+)/attachment/upload(*:1295)'
-                            .'|(\\d+)/attachment/([^/]++)/download(*:1338)'
-                            .'|(\\d+)/attachment/([^/]++)/delete(*:1379)'
-                            .'|transfer/(?'
-                                .'|(\\d+)/prepare(*:1413)'
-                                .'|(\\d+)/complete(*:1436)'
-                                .'|(\\d+)/protocol/download(*:1468)'
-                                .'|(\\d+)/return(*:1489)'
+                .'|/((?!install|admin|api|login|logout|profile|asekuracja).*)(*:929)'
+                .'|/a(?'
+                    .'|pi/notifications/(?'
+                        .'|([^/]++)(?'
+                            .'|/(?'
+                                .'|read(*:981)'
+                                .'|unread(*:995)'
                             .')'
-                            .'|return/(?'
-                                .'|(\\d+)/prepare(*:1522)'
-                                .'|(\\d+)/complete(*:1545)'
-                                .'|(\\d+)/protocol/download(*:1577)'
-                            .')'
+                            .'|(*:1004)'
                         .')'
+                        .'|delete\\-multiple(*:1030)'
+                        .'|grouped(*:1046)'
                     .')'
-                    .'|reviews/(?'
-                        .'|(\\d+)(*:1605)'
-                        .'|(\\d+)/edit(*:1624)'
-                        .'|new/equipment(?'
-                            .'|/(\\d+)(*:1655)'
-                            .'|\\-set/(\\d+)(*:1675)'
+                    .'|sekuracja/(?'
+                        .'|equipment(?'
+                            .'|/(?'
+                                .'|(\\d+)(*:1090)'
+                                .'|(\\d+)/edit(*:1109)'
+                                .'|(\\d+)/delete(*:1130)'
+                                .'|(\\d+)/assign(*:1151)'
+                                .'|(\\d+)/unassign(*:1174)'
+                                .'|(\\d+)/attachment/upload(*:1206)'
+                                .'|(\\d+)/attachment/([^/]++)/download(*:1249)'
+                                .'|(\\d+)/attachment/([^/]++)/delete(*:1290)'
+                            .')'
+                            .'|\\-sets/(?'
+                                .'|(\\d+)(*:1315)'
+                                .'|(\\d+)/edit(*:1334)'
+                                .'|(\\d+)/delete(*:1355)'
+                                .'|(\\d+)/equipment/add(*:1383)'
+                                .'|(\\d+)/equipment/(\\d+)/remove(*:1420)'
+                                .'|(\\d+)/equipment/remove\\-bulk(*:1457)'
+                                .'|(\\d+)/attachment/upload(*:1489)'
+                                .'|(\\d+)/attachment/([^/]++)/download(*:1532)'
+                                .'|(\\d+)/attachment/([^/]++)/delete(*:1573)'
+                                .'|transfer/(?'
+                                    .'|(\\d+)/prepare(*:1607)'
+                                    .'|(\\d+)/complete(*:1630)'
+                                    .'|(\\d+)/protocol/download(*:1662)'
+                                    .'|(\\d+)/return(*:1683)'
+                                .')'
+                                .'|return/(?'
+                                    .'|(\\d+)/prepare(*:1716)'
+                                    .'|(\\d+)/complete(*:1739)'
+                                    .'|(\\d+)/protocol/download(*:1771)'
+                                .')'
+                            .')'
                         .')'
-                        .'|(\\d+)/send(*:1695)'
-                        .'|(\\d+)/delete(*:1716)'
-                        .'|(\\d+)/complete(*:1739)'
-                        .'|(\\d+)/attachment/([^/]++)(*:1773)'
-                        .'|(\\d+)/equipment/add(*:1801)'
-                        .'|(\\d+)/equipment/(\\d+)/remove(*:1838)'
+                        .'|reviews/(?'
+                            .'|(\\d+)(*:1799)'
+                            .'|(\\d+)/edit(*:1818)'
+                            .'|new/equipment(?'
+                                .'|/(\\d+)(*:1849)'
+                                .'|\\-set/(\\d+)(*:1869)'
+                            .')'
+                            .'|(\\d+)/send(*:1889)'
+                            .'|(\\d+)/delete(*:1910)'
+                            .'|(\\d+)/complete(*:1933)'
+                            .'|(\\d+)/attachment/([^/]++)(*:1967)'
+                            .'|(\\d+)/equipment/add(*:1995)'
+                            .'|(\\d+)/equipment/(\\d+)/remove(*:2032)'
+                        .')'
                     .')'
                 .')'
             .')/?$}sDu',
@@ -208,45 +233,53 @@ return [
         655 => [[['_route' => 'admin_users_show', '_controller' => 'App\\Controller\\Admin\\UserController::show'], ['id'], null, null, false, true, null]],
         673 => [[['_route' => 'admin_users_edit', '_controller' => 'App\\Controller\\Admin\\UserController::edit'], ['id'], null, null, false, false, null]],
         701 => [[['_route' => 'admin_users_toggle_status', '_controller' => 'App\\Controller\\Admin\\UserController::toggleStatus'], ['id'], ['POST' => 0], null, false, false, null]],
-        730 => [[['_route' => 'equipment_show', '_controller' => 'App\\Controller\\EquipmentController::show'], ['id'], null, null, false, true, null]],
-        748 => [[['_route' => 'equipment_edit', '_controller' => 'App\\Controller\\EquipmentController::edit'], ['id'], null, null, false, false, null]],
-        768 => [[['_route' => 'equipment_delete', '_controller' => 'App\\Controller\\EquipmentController::delete'], ['id'], ['POST' => 0], null, false, false, null]],
-        790 => [[['_route' => 'equipment_by_category', '_controller' => 'App\\Controller\\EquipmentController::byCategory'], ['id'], null, null, false, true, null]],
-        857 => [[['_route' => 'app_home_root', '_controller' => 'App\\Controller\\HomeController::root'], ['path'], null, null, false, true, null]],
-        901 => [[['_route' => 'asekuracja_equipment_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::showEquipment'], ['id'], null, null, false, true, null]],
-        919 => [[['_route' => 'asekuracja_equipment_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::editEquipment'], ['id'], null, null, false, false, null]],
-        939 => [[['_route' => 'asekuracja_equipment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::deleteEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
-        959 => [[['_route' => 'asekuracja_equipment_assign', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::assignEquipment'], ['id'], null, null, false, false, null]],
-        981 => [[['_route' => 'asekuracja_equipment_unassign', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::unassignEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
-        1012 => [[['_route' => 'asekuracja_equipment_attachment_upload', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::uploadEquipmentAttachment'], ['id'], ['POST' => 0], null, false, false, null]],
-        1055 => [[['_route' => 'asekuracja_equipment_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::downloadEquipmentAttachment'], ['id', 'filename'], null, null, false, false, null]],
-        1096 => [[['_route' => 'asekuracja_equipment_attachment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::deleteEquipmentAttachment'], ['id', 'filename'], ['POST' => 0], null, false, false, null]],
-        1121 => [[['_route' => 'asekuracja_equipment_set_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::show'], ['id'], null, null, false, true, null]],
-        1140 => [[['_route' => 'asekuracja_equipment_set_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::edit'], ['id'], null, null, false, false, null]],
-        1161 => [[['_route' => 'asekuracja_equipment_set_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::delete'], ['id'], ['POST' => 0], null, false, false, null]],
-        1189 => [[['_route' => 'asekuracja_equipment_set_add_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::addEquipment'], ['id'], null, null, false, false, null]],
-        1226 => [[['_route' => 'asekuracja_equipment_set_remove_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::removeEquipment'], ['id', 'equipmentId'], ['POST' => 0], null, false, false, null]],
-        1263 => [[['_route' => 'asekuracja_equipment_set_remove_bulk_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::removeBulkEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
-        1295 => [[['_route' => 'asekuracja_equipment_set_attachment_upload', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::uploadAttachment'], ['id'], ['POST' => 0], null, false, false, null]],
-        1338 => [[['_route' => 'asekuracja_equipment_set_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadAttachment'], ['id', 'filename'], null, null, false, false, null]],
-        1379 => [[['_route' => 'asekuracja_equipment_set_attachment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::deleteAttachment'], ['id', 'filename'], ['POST' => 0], null, false, false, null]],
-        1413 => [[['_route' => 'asekuracja_transfer_prepare', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareTransfer'], ['setId'], ['POST' => 0], null, false, false, null]],
-        1436 => [[['_route' => 'asekuracja_transfer_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::completeTransfer'], ['id'], ['POST' => 0], null, false, false, null]],
-        1468 => [[['_route' => 'asekuracja_transfer_protocol_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadTransferProtocol'], ['id'], null, null, false, false, null]],
-        1489 => [[['_route' => 'asekuracja_transfer_return', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareReturnForTransfer'], ['id'], ['POST' => 0], null, false, false, null]],
-        1522 => [[['_route' => 'asekuracja_return_prepare', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareReturn'], ['setId'], ['POST' => 0], null, false, false, null]],
-        1545 => [[['_route' => 'asekuracja_return_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::completeReturn'], ['id'], ['POST' => 0], null, false, false, null]],
-        1577 => [[['_route' => 'asekuracja_return_protocol_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadReturnProtocol'], ['id'], null, null, false, false, null]],
-        1605 => [[['_route' => 'asekuracja_review_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::show'], ['id'], null, null, false, true, null]],
-        1624 => [[['_route' => 'asekuracja_review_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::edit'], ['id'], null, null, false, false, null]],
-        1655 => [[['_route' => 'asekuracja_review_new_for_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::newForEquipment'], ['id'], null, null, false, true, null]],
-        1675 => [[['_route' => 'asekuracja_review_new_for_set', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::newForEquipmentSet'], ['id'], null, null, false, true, null]],
-        1695 => [[['_route' => 'asekuracja_review_send', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::sendReview'], ['id'], ['POST' => 0], null, false, false, null]],
-        1716 => [[['_route' => 'asekuracja_review_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::deleteReview'], ['id'], ['POST' => 0], null, false, false, null]],
-        1739 => [[['_route' => 'asekuracja_review_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::completeReview'], ['id'], ['POST' => 0], null, false, false, null]],
-        1773 => [[['_route' => 'asekuracja_review_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::downloadAttachment'], ['id', 'filename'], ['GET' => 0], null, false, true, null]],
-        1801 => [[['_route' => 'asekuracja_review_add_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::addEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
-        1838 => [
+        732 => [[['_route' => 'admin_users_ldap_unlock', '_controller' => 'App\\Controller\\Admin\\UserController::ldapUnlock'], ['id'], ['POST' => 0], null, false, false, null]],
+        758 => [[['_route' => 'admin_users_ldap_reset_password', '_controller' => 'App\\Controller\\Admin\\UserController::ldapResetPassword'], ['id'], ['POST' => 0], null, false, false, null]],
+        771 => [[['_route' => 'admin_users_ldap_refresh', '_controller' => 'App\\Controller\\Admin\\UserController::ldapRefresh'], ['id'], ['POST' => 0], null, false, false, null]],
+        802 => [[['_route' => 'equipment_show', '_controller' => 'App\\Controller\\EquipmentController::show'], ['id'], null, null, false, true, null]],
+        820 => [[['_route' => 'equipment_edit', '_controller' => 'App\\Controller\\EquipmentController::edit'], ['id'], null, null, false, false, null]],
+        840 => [[['_route' => 'equipment_delete', '_controller' => 'App\\Controller\\EquipmentController::delete'], ['id'], ['POST' => 0], null, false, false, null]],
+        862 => [[['_route' => 'equipment_by_category', '_controller' => 'App\\Controller\\EquipmentController::byCategory'], ['id'], null, null, false, true, null]],
+        929 => [[['_route' => 'app_home_root', '_controller' => 'App\\Controller\\HomeController::root'], ['path'], null, null, false, true, null]],
+        981 => [[['_route' => 'api_notifications_mark_read', '_controller' => 'App\\Controller\\NotificationController::markAsRead'], ['id'], ['POST' => 0], null, false, false, null]],
+        995 => [[['_route' => 'api_notifications_mark_unread', '_controller' => 'App\\Controller\\NotificationController::markAsUnread'], ['id'], ['POST' => 0], null, false, false, null]],
+        1004 => [[['_route' => 'api_notifications_delete', '_controller' => 'App\\Controller\\NotificationController::delete'], ['id'], ['DELETE' => 0], null, false, true, null]],
+        1030 => [[['_route' => 'api_notifications_delete_multiple', '_controller' => 'App\\Controller\\NotificationController::deleteMultiple'], [], ['POST' => 0], null, false, false, null]],
+        1046 => [[['_route' => 'api_notifications_grouped', '_controller' => 'App\\Controller\\NotificationController::grouped'], [], ['GET' => 0], null, false, false, null]],
+        1090 => [[['_route' => 'asekuracja_equipment_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::showEquipment'], ['id'], null, null, false, true, null]],
+        1109 => [[['_route' => 'asekuracja_equipment_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::editEquipment'], ['id'], null, null, false, false, null]],
+        1130 => [[['_route' => 'asekuracja_equipment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::deleteEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
+        1151 => [[['_route' => 'asekuracja_equipment_assign', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::assignEquipment'], ['id'], null, null, false, false, null]],
+        1174 => [[['_route' => 'asekuracja_equipment_unassign', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::unassignEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
+        1206 => [[['_route' => 'asekuracja_equipment_attachment_upload', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::uploadEquipmentAttachment'], ['id'], ['POST' => 0], null, false, false, null]],
+        1249 => [[['_route' => 'asekuracja_equipment_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::downloadEquipmentAttachment'], ['id', 'filename'], null, null, false, false, null]],
+        1290 => [[['_route' => 'asekuracja_equipment_attachment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\AsekuracyjnyController::deleteEquipmentAttachment'], ['id', 'filename'], ['POST' => 0], null, false, false, null]],
+        1315 => [[['_route' => 'asekuracja_equipment_set_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::show'], ['id'], null, null, false, true, null]],
+        1334 => [[['_route' => 'asekuracja_equipment_set_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::edit'], ['id'], null, null, false, false, null]],
+        1355 => [[['_route' => 'asekuracja_equipment_set_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::delete'], ['id'], ['POST' => 0], null, false, false, null]],
+        1383 => [[['_route' => 'asekuracja_equipment_set_add_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::addEquipment'], ['id'], null, null, false, false, null]],
+        1420 => [[['_route' => 'asekuracja_equipment_set_remove_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::removeEquipment'], ['id', 'equipmentId'], ['POST' => 0], null, false, false, null]],
+        1457 => [[['_route' => 'asekuracja_equipment_set_remove_bulk_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::removeBulkEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
+        1489 => [[['_route' => 'asekuracja_equipment_set_attachment_upload', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::uploadAttachment'], ['id'], ['POST' => 0], null, false, false, null]],
+        1532 => [[['_route' => 'asekuracja_equipment_set_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadAttachment'], ['id', 'filename'], null, null, false, false, null]],
+        1573 => [[['_route' => 'asekuracja_equipment_set_attachment_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::deleteAttachment'], ['id', 'filename'], ['POST' => 0], null, false, false, null]],
+        1607 => [[['_route' => 'asekuracja_transfer_prepare', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareTransfer'], ['setId'], ['POST' => 0], null, false, false, null]],
+        1630 => [[['_route' => 'asekuracja_transfer_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::completeTransfer'], ['id'], ['POST' => 0], null, false, false, null]],
+        1662 => [[['_route' => 'asekuracja_transfer_protocol_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadTransferProtocol'], ['id'], null, null, false, false, null]],
+        1683 => [[['_route' => 'asekuracja_transfer_return', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareReturnForTransfer'], ['id'], ['POST' => 0], null, false, false, null]],
+        1716 => [[['_route' => 'asekuracja_return_prepare', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::prepareReturn'], ['setId'], ['POST' => 0], null, false, false, null]],
+        1739 => [[['_route' => 'asekuracja_return_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::completeReturn'], ['id'], ['POST' => 0], null, false, false, null]],
+        1771 => [[['_route' => 'asekuracja_return_protocol_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\EquipmentSetController::downloadReturnProtocol'], ['id'], null, null, false, false, null]],
+        1799 => [[['_route' => 'asekuracja_review_show', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::show'], ['id'], null, null, false, true, null]],
+        1818 => [[['_route' => 'asekuracja_review_edit', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::edit'], ['id'], null, null, false, false, null]],
+        1849 => [[['_route' => 'asekuracja_review_new_for_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::newForEquipment'], ['id'], null, null, false, true, null]],
+        1869 => [[['_route' => 'asekuracja_review_new_for_set', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::newForEquipmentSet'], ['id'], null, null, false, true, null]],
+        1889 => [[['_route' => 'asekuracja_review_send', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::sendReview'], ['id'], ['POST' => 0], null, false, false, null]],
+        1910 => [[['_route' => 'asekuracja_review_delete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::deleteReview'], ['id'], ['POST' => 0], null, false, false, null]],
+        1933 => [[['_route' => 'asekuracja_review_complete', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::completeReview'], ['id'], ['POST' => 0], null, false, false, null]],
+        1967 => [[['_route' => 'asekuracja_review_attachment_download', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::downloadAttachment'], ['id', 'filename'], ['GET' => 0], null, false, true, null]],
+        1995 => [[['_route' => 'asekuracja_review_add_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::addEquipment'], ['id'], ['POST' => 0], null, false, false, null]],
+        2032 => [
             [['_route' => 'asekuracja_review_remove_equipment', '_controller' => 'App\\AsekuracyjnySPM\\Controller\\ReviewController::removeEquipment'], ['id', 'equipmentId'], ['POST' => 0], null, false, false, null],
             [null, null, null, null, false, false, 0],
         ],
