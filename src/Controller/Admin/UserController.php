@@ -507,9 +507,22 @@ class UserController extends AbstractController
             // Pobierz parametry z requestu
             $requestData = json_decode($request->getContent(), true);
             $sendEmail = $requestData['send_email'] ?? false;
+            $customPassword = $requestData['custom_password'] ?? null;
 
-            // Generuj nowe tymczasowe hasło
-            $newPassword = $this->generateTemporaryPassword();
+            // Użyj niestandardowego hasła lub wygeneruj nowe
+            if (!empty($customPassword)) {
+                // Walidacja hasła
+                if (strlen($customPassword) < 8) {
+                    return $this->json(['success' => false, 'message' => 'Hasło musi mieć co najmniej 8 znaków'], 400);
+                }
+                if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/', $customPassword)) {
+                    return $this->json(['success' => false, 'message' => 'Hasło musi zawierać małą i wielką literę, cyfrę oraz znak specjalny'], 400);
+                }
+                $newPassword = $customPassword;
+            } else {
+                // Generuj nowe tymczasowe hasło
+                $newPassword = $this->generateTemporaryPassword();
+            }
             
             // Resetuj hasło w LDAP/AD
             $settings = $this->getLdapSettings();

@@ -568,6 +568,9 @@ function resetPassword(userId) {
 
 // Pokaż modal potwierdzenia resetowania hasła
 function showResetPasswordModal(userId) {
+    // Wygeneruj nowe hasło
+    const newPassword = generateRandomPassword();
+    
     const modalHtml = 
         '<div class="modal fade" id="resetPasswordConfirmModal" tabindex="-1" aria-hidden="true">' +
             '<div class="modal-dialog">' +
@@ -581,9 +584,23 @@ function showResetPasswordModal(userId) {
                     '<div class="modal-body">' +
                         '<div class="alert alert-info">' +
                             '<i class="ri-information-line me-2"></i>' +
-                            '<strong>Uwaga!</strong> Zostanie wygenerowane nowe tymczasowe hasło.' +
+                            '<strong>Nowe hasło</strong> - możesz je edytować przed ustawieniem.' +
                         '</div>' +
-                        '<p>Czy na pewno chcesz zresetować hasło tego użytkownika w LDAP?</p>' +
+                        '<div class="mb-3">' +
+                            '<label for="newPasswordInput" class="form-label">Nowe hasło:</label>' +
+                            '<div class="input-group">' +
+                                '<input type="text" class="form-control font-monospace" id="newPasswordInput" value="' + newPassword + '">' +
+                                '<button class="btn btn-outline-secondary" type="button" onclick="generateNewPassword()">' +
+                                    '<i class="ri-refresh-line"></i>' +
+                                '</button>' +
+                                '<button class="btn btn-outline-secondary" type="button" onclick="copyPasswordToClipboard()">' +
+                                    '<i class="ri-file-copy-line"></i>' +
+                                '</button>' +
+                            '</div>' +
+                            '<div class="form-text">' +
+                                '<i class="ri-information-line me-1"></i>Hasło musi mieć min. 8 znaków, zawierać małe i wielkie litery, cyfry oraz znak specjalny' +
+                            '</div>' +
+                        '</div>' +
                         '<div class="form-check mt-3">' +
                             '<input class="form-check-input" type="checkbox" id="sendEmailNotification">' +
                             '<label class="form-check-label" for="sendEmailNotification">' +
@@ -597,7 +614,7 @@ function showResetPasswordModal(userId) {
                     '<div class="modal-footer">' +
                         '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>' +
                         '<button type="button" class="btn btn-warning" onclick="performPasswordReset(' + userId + ')">' +
-                            '<i class="ri-key-2-line me-1"></i>Resetuj hasło' +
+                            '<i class="ri-key-2-line me-1"></i>Ustaw hasło' +
                         '</button>' +
                     '</div>' +
                 '</div>' +
@@ -623,8 +640,56 @@ function showResetPasswordModal(userId) {
     });
 }
 
+// Generuje losowe hasło
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+    const length = 12;
+    let password = '';
+    
+    // Zapewnij przynajmniej jeden znak z każdej kategorii
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const special = '!@#$%^&*';
+    
+    password += upper[Math.floor(Math.random() * upper.length)];
+    password += lower[Math.floor(Math.random() * lower.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    // Wypełnij resztę losowymi znakami
+    for (let i = password.length; i < length; i++) {
+        password += chars[Math.floor(Math.random() * chars.length)];
+    }
+    
+    // Przemieszaj znaki
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Generuje nowe hasło w modalu
+function generateNewPassword() {
+    const passwordInput = document.getElementById('newPasswordInput');
+    if (passwordInput) {
+        passwordInput.value = generateRandomPassword();
+    }
+}
+
+// Kopiuje hasło do schowka
+function copyPasswordToClipboard() {
+    const passwordInput = document.getElementById('newPasswordInput');
+    if (passwordInput) {
+        navigator.clipboard.writeText(passwordInput.value).then(function() {
+            showAlert('success', 'Hasło zostało skopiowane do schowka');
+        }).catch(function(err) {
+            console.error('Nie udało się skopiować hasła: ', err);
+            showAlert('error', 'Nie udało się skopiować hasła');
+        });
+    }
+}
+
 // Wykonaj reset hasła
 function performPasswordReset(userId) {
+    const customPassword = document.getElementById('newPasswordInput').value;
     const sendEmail = document.getElementById('sendEmailNotification').checked;
     const confirmModal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordConfirmModal'));
     confirmModal.hide();
@@ -643,7 +708,8 @@ function performPasswordReset(userId) {
             'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({
-            send_email: sendEmail
+            send_email: sendEmail,
+            custom_password: customPassword
         })
     })
         .then(response => response.json())
