@@ -22,6 +22,7 @@ use App\Service\UserService;
 use App\Service\AuditService;
 use App\Service\LdapService;
 use App\Service\SettingService;
+use App\Service\EmailService;
 
 #[Route('/admin/users')]
 class UserController extends AbstractController
@@ -34,7 +35,8 @@ class UserController extends AbstractController
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger,
         private LdapService $ldapService,
-        private SettingService $settingService
+        private SettingService $settingService,
+        private ?EmailService $emailService = null
     ) {
     }
 
@@ -502,6 +504,10 @@ class UserController extends AbstractController
                 return $this->json(['success' => false, 'message' => 'To nie jest konto LDAP'], 400);
             }
 
+            // Pobierz parametry z requestu
+            $requestData = json_decode($request->getContent(), true);
+            $sendEmail = $requestData['send_email'] ?? false;
+
             // Generuj nowe tymczasowe hasło
             $newPassword = $this->generateTemporaryPassword();
             
@@ -548,11 +554,57 @@ class UserController extends AbstractController
                 'ip' => $request->getClientIp()
             ]);
 
-            return $this->json([
+            // Wyślij email z nowym hasłem jeśli zaznaczono checkbox i EmailService jest dostępny
+            $emailSent = false;
+            $emailError = null;
+            
+            if ($sendEmail && $this->emailService && $user->getEmail()) {
+                try {
+                    $emailSent = $this->emailService->sendEmail(
+                        to: $user->getEmail(),
+                        subject: 'Twoje hasło zostało zresetowane - ' . $this->settingService->get('app_name', 'AssetHub'),
+                        body: $this->buildPasswordResetEmailBody($user, $newPassword),
+                        toName: $user->getFullName(),
+                        emailType: 'ldap_password_reset',
+                        metadata: [
+                            'user_id' => $user->getId(),
+                            'user_username' => $user->getUsername(),
+                            'reset_by_admin' => $currentUser->getUsername(),
+                            'reset_by_id' => $currentUser->getId()
+                        ]
+                    );
+
+                    if ($emailSent) {
+                        $this->auditService->logUserAction($currentUser, 'ldap_password_reset_email_sent', [
+                            'target_user_id' => $user->getId(),
+                            'target_email' => $user->getEmail()
+                        ], $request);
+                    }
+                } catch (\Exception $e) {
+                    $emailError = $e->getMessage();
+                    $this->logger->warning('Failed to send password reset email', [
+                        'admin_user' => $currentUser->getUsername(),
+                        'target_user' => $user->getUsername(),
+                        'target_email' => $user->getEmail(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            } elseif ($sendEmail && !$user->getEmail()) {
+                $emailError = 'Użytkownik nie ma podanego adresu email';
+            }
+
+            $response = [
                 'success' => true, 
                 'message' => 'Hasło zostało zresetowane',
-                'new_password' => $newPassword
-            ]);
+                'new_password' => $newPassword,
+                'email_sent' => $emailSent
+            ];
+
+            if ($emailError) {
+                $response['email_error'] = $emailError;
+            }
+
+            return $this->json($response);
             
         } catch (\Exception $e) {
             $this->logger->error('Failed to reset LDAP password', [
@@ -767,5 +819,25 @@ class UserController extends AbstractController
         }
 
         $ldap->bind($searchDn, $searchPassword);
+    }
+
+    /**
+     * Buduje treść emaila z nowym hasłem
+     */
+    private function buildPasswordResetEmailBody(User $user, string $newPassword): string
+    {
+        $appName = $this->settingService->get('app_name', 'AssetHub');
+        
+        $body = "Witaj {$user->getFirstName()}!\n\n";
+        $body .= "Twoje hasło w systemie {$appName} zostało zresetowane przez administratora.\n\n";
+        $body .= "Nowe tymczasowe hasło: {$newPassword}\n\n";
+        $body .= "UWAGA:\n";
+        $body .= "- To hasło jest tymczasowe i musisz je zmienić przy pierwszym logowaniu\n";
+        $body .= "- Zachowaj to hasło w bezpiecznym miejscu\n";
+        $body .= "- Ten email zostanie automatycznie usunięty z serwera po 90 dniach\n\n";
+        $body .= "Jeśli nie prosiłeś o reset hasła, skontaktuj się z administratorem.\n\n";
+        $body .= "Pozdrawiamy,\nZespół {$appName}";
+
+        return $body;
     }
 }

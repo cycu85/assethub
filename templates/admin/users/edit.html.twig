@@ -529,22 +529,101 @@ function unlockAccount(userId) {
 
 // Reset hasła LDAP
 function resetPassword(userId) {
-    if (confirm('Czy na pewno chcesz zresetować hasło tego użytkownika w LDAP? Zostanie wygenerowane nowe tymczasowe hasło.')) {
-        const button = event.target.closest('button');
+    showResetPasswordModal(userId);
+}
+
+// Pokaż modal potwierdzenia resetowania hasła
+function showResetPasswordModal(userId) {
+    const modalHtml = `
+        <div class="modal fade" id="resetPasswordConfirmModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="ri-key-2-line me-2"></i>Resetowanie hasła LDAP
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="ri-information-line me-2"></i>
+                            <strong>Uwaga!</strong> Zostanie wygenerowane nowe tymczasowe hasło.
+                        </div>
+                        <p>Czy na pewno chcesz zresetować hasło tego użytkownika w LDAP?</p>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="sendEmailNotification">
+                            <label class="form-check-label" for="sendEmailNotification">
+                                <i class="ri-mail-line me-1"></i>Wyślij powiadomienie email z nowym hasłem
+                            </label>
+                            <div class="form-text">
+                                Email zostanie wysłany jeśli użytkownik ma podany adres email
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="button" class="btn btn-warning" onclick="performPasswordReset(${userId})">
+                            <i class="ri-key-2-line me-1"></i>Resetuj hasło
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Usuń istniejący modal jeśli istnieje
+    const existingModal = document.getElementById('resetPasswordConfirmModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Dodaj nowy modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Pokaż modal
+    const modal = new bootstrap.Modal(document.getElementById('resetPasswordConfirmModal'));
+    modal.show();
+    
+    // Usuń modal po zamknięciu
+    document.getElementById('resetPasswordConfirmModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+// Wykonaj reset hasła
+function performPasswordReset(userId) {
+    const sendEmail = document.getElementById('sendEmailNotification').checked;
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordConfirmModal'));
+    confirmModal.hide();
+    
+    // Znajdź przycisk resetowania (dla UX)
+    const button = document.querySelector(`button[onclick="resetPassword('${userId}')"]`);
+    if (button) {
         button.disabled = true;
         button.innerHTML = '<i class="ri-loader-line me-1"></i>Resetuję...';
-        
-        fetch(`/admin/users/${userId}/ldap/reset-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+    }
+    
+    fetch(`/admin/users/${userId}/ldap/reset-password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            send_email: sendEmail
         })
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showAlert('success', `Hasło zostało zresetowane. Nowe hasło: <strong>${data.new_password}</strong>`);
+                let message = `Hasło zostało zresetowane. Nowe hasło: <strong>${data.new_password}</strong>`;
+                if (data.email_sent) {
+                    message += '<br><i class="ri-mail-check-line me-1"></i>Powiadomienie email zostało wysłane.';
+                } else if (data.email_error) {
+                    message += '<br><i class="ri-mail-close-line me-1"></i>Błąd wysyłania emaila: ' + data.email_error;
+                }
+                showAlert('success', message);
                 // Pokaż modal z nowym hasłem
                 showPasswordResetModal(data.new_password);
             } else {
@@ -556,10 +635,11 @@ function resetPassword(userId) {
             showAlert('error', 'Wystąpił błąd podczas komunikacji z serwerem');
         })
         .finally(() => {
-            button.disabled = false;
-            button.innerHTML = '<i class="ri-key-2-line me-1"></i>Resetuj hasło';
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="ri-key-2-line me-1"></i>Resetuj hasło';
+            }
         });
-    }
 }
 
 // Odświeżenie danych LDAP
