@@ -543,17 +543,62 @@ class UserController extends AbstractController
             // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
             $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
             
+            // Sprawdź atrybuty użytkownika przed zmianą hasła
+            $userAttributes = $entry->getAttributes();
+            $userAccountControl = $userAttributes['userAccountControl'][0] ?? 0;
+            
             $this->logger->info('Attempting LDAP password reset', [
                 'target_dn' => $ldapDn,
                 'password_length' => strlen($newPassword),
                 'encoded_length' => strlen($encodedPassword),
-                'user' => $currentUser->getUsername()
+                'user' => $currentUser->getUsername(),
+                'userAccountControl' => $userAccountControl,
+                'account_disabled' => ($userAccountControl & 0x0002) ? 'yes' : 'no',
+                'password_never_expires' => ($userAccountControl & 0x10000) ? 'yes' : 'no',
+                'password_cannot_change' => ($userAccountControl & 0x0040) ? 'yes' : 'no',
+                'entry_attributes' => array_keys($userAttributes)
             ]);
             
-            // Zaktualizuj tylko hasło - usuń pwdLastSet aby uniknąć constraint violation
-            $ldap->getEntryManager()->update($entry, [
-                'unicodePwd' => [$encodedPassword]
-            ]);
+            // Spróbuj różnych podejść do resetowania hasła
+            try {
+                // Podejście 1: Tylko unicodePwd
+                $this->logger->info('Trying approach 1: unicodePwd only');
+                $ldap->getEntryManager()->update($entry, [
+                    'unicodePwd' => [$encodedPassword]
+                ]);
+                $this->logger->info('Password reset successful with approach 1');
+            } catch (\Exception $e1) {
+                $this->logger->warning('Approach 1 failed', ['error' => $e1->getMessage()]);
+                
+                try {
+                    // Podejście 2: unicodePwd + pwdLastSet = 0 (wymusza zmianę przy następnym logowaniu)
+                    $this->logger->info('Trying approach 2: unicodePwd + pwdLastSet = 0');
+                    $ldap->getEntryManager()->update($entry, [
+                        'unicodePwd' => [$encodedPassword],
+                        'pwdLastSet' => ['0']
+                    ]);
+                    $this->logger->info('Password reset successful with approach 2');
+                } catch (\Exception $e2) {
+                    $this->logger->warning('Approach 2 failed', ['error' => $e2->getMessage()]);
+                    
+                    try {
+                        // Podejście 3: unicodePwd + pwdLastSet = -1 (hasło nie wygasa)
+                        $this->logger->info('Trying approach 3: unicodePwd + pwdLastSet = -1');
+                        $ldap->getEntryManager()->update($entry, [
+                            'unicodePwd' => [$encodedPassword],
+                            'pwdLastSet' => ['-1']
+                        ]);
+                        $this->logger->info('Password reset successful with approach 3');
+                    } catch (\Exception $e3) {
+                        $this->logger->error('All approaches failed', [
+                            'approach1_error' => $e1->getMessage(),
+                            'approach2_error' => $e2->getMessage(), 
+                            'approach3_error' => $e3->getMessage()
+                        ]);
+                        throw $e3;
+                    }
+                }
+            }
             
             $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
                 'target_user_id' => $user->getId(),
