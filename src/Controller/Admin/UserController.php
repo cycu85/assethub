@@ -20,6 +20,8 @@ use Knp\Component\Pager\PaginatorInterface;
 use App\Service\AuthorizationService;
 use App\Service\UserService;
 use App\Service\AuditService;
+use App\Service\LdapService;
+use App\Service\SettingService;
 
 #[Route('/admin/users')]
 class UserController extends AbstractController
@@ -30,7 +32,9 @@ class UserController extends AbstractController
         private UserService $userService,
         private AuditService $auditService,
         private EntityManagerInterface $entityManager,
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
+        private LdapService $ldapService,
+        private SettingService $settingService
     ) {
     }
 
@@ -421,30 +425,36 @@ class UserController extends AbstractController
             }
 
             // Odblokuj konto w LDAP/AD
-            if ($this->container->has('ldap')) {
-                $ldap = $this->container->get('ldap');
-                $ldapDn = $user->getLdapDn();
-                
-                // Pobierz aktualny userAccountControl
-                $search = $ldap->query($ldapDn, '(objectClass=*)')->execute();
-                if ($search->count() > 0) {
-                    $entry = $search[0];
-                    $userAccountControlAttr = $entry->getAttribute('userAccountControl');
-                    $userAccountControl = (int)($userAccountControlAttr ? $userAccountControlAttr[0] : 0);
-                    
-                    // Usuń flagi ACCOUNTDISABLE i LOCKOUT
-                    $newUserAccountControl = $userAccountControl & ~0x0002 & ~0x0010;
-                    
-                    // Zaktualizuj LDAP
-                    $ldap->entryManager()->update($entry, [
-                        'userAccountControl' => [$newUserAccountControl]
-                    ]);
-                } else {
-                    throw new \Exception('User not found in LDAP');
-                }
-            } else {
-                throw new \Exception('LDAP service not available');
+            $settings = $this->getLdapSettings();
+            
+            if (!$settings['ldap_enabled']) {
+                throw new \Exception('LDAP integration is disabled');
             }
+            
+            $ldap = $this->ldapService->createLdapConnection($settings);
+            $this->bindServiceUser($ldap, $settings);
+            
+            $ldapDn = $user->getLdapDn();
+            
+            // Pobierz aktualny userAccountControl
+            $query = $ldap->query($ldapDn, '(objectClass=*)');
+            $results = $query->execute();
+            
+            if (count($results) === 0) {
+                throw new \Exception('User not found in LDAP');
+            }
+            
+            $entry = $results[0];
+            $userAccountControlAttr = $entry->getAttribute('userAccountControl');
+            $userAccountControl = (int)($userAccountControlAttr ? $userAccountControlAttr[0] : 0);
+            
+            // Usuń flagi ACCOUNTDISABLE i LOCKOUT
+            $newUserAccountControl = $userAccountControl & ~0x0002 & ~0x0010;
+            
+            // Zaktualizuj LDAP
+            $ldap->getEntryManager()->update($entry, [
+                'userAccountControl' => [$newUserAccountControl]
+            ]);
             
             $this->auditService->logUserAction($currentUser, 'ldap_account_unlocked', [
                 'target_user_id' => $user->getId(),
@@ -496,29 +506,35 @@ class UserController extends AbstractController
             $newPassword = $this->generateTemporaryPassword();
             
             // Resetuj hasło w LDAP/AD
-            if ($this->container->has('ldap')) {
-                $ldap = $this->container->get('ldap');
-                $ldapDn = $user->getLdapDn();
-                
-                // Pobierz entry użytkownika
-                $search = $ldap->query($ldapDn, '(objectClass=*)')->execute();
-                if ($search->count() > 0) {
-                    $entry = $search[0];
-                    
-                    // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
-                    $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
-                    
-                    // Zaktualizuj hasło i ustaw flagę zmiany hasła przy następnym logowaniu
-                    $ldap->entryManager()->update($entry, [
-                        'unicodePwd' => [$encodedPassword],
-                        'pwdLastSet' => [0] // Wymusi zmianę hasła przy następnym logowaniu
-                    ]);
-                } else {
-                    throw new \Exception('User not found in LDAP');
-                }
-            } else {
-                throw new \Exception('LDAP service not available');
+            $settings = $this->getLdapSettings();
+            
+            if (!$settings['ldap_enabled']) {
+                throw new \Exception('LDAP integration is disabled');
             }
+            
+            $ldap = $this->ldapService->createLdapConnection($settings);
+            $this->bindServiceUser($ldap, $settings);
+            
+            $ldapDn = $user->getLdapDn();
+                
+            // Pobierz entry użytkownika
+            $query = $ldap->query($ldapDn, '(objectClass=*)');
+            $results = $query->execute();
+            
+            if (count($results) === 0) {
+                throw new \Exception('User not found in LDAP');
+            }
+                
+            $entry = $results[0];
+            
+            // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
+            $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
+            
+            // Zaktualizuj hasło i ustaw flagę zmiany hasła przy następnym logowaniu
+            $ldap->getEntryManager()->update($entry, [
+                'unicodePwd' => [$encodedPassword],
+                'pwdLastSet' => [0] // Wymusi zmianę hasła przy następnym logowaniu
+            ]);
             
             $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
                 'target_user_id' => $user->getId(),
@@ -617,68 +633,53 @@ class UserController extends AbstractController
      */
     private function getLdapUserData(User $user): array
     {
+        if (!$user->getLdapDn()) {
+            return ['error' => 'User is not an LDAP user'];
+        }
+
         try {
-            // Próbuj pobrać dane z LDAP/AD
-            if ($this->container->has('ldap')) {
-                $ldap = $this->container->get('ldap');
-                $ldapDn = $user->getLdapDn();
-                
-                if ($ldapDn) {
-                    // Pobierz atrybuty LDAP
-                    $search = $ldap->query($ldapDn, '(objectClass=*)')->execute();
-                    
-                    if ($search->count() > 0) {
-                        $entry = $search[0];
-                        
-                        // Pobierz atrybuty z bezpiecznym sprawdzaniem
-                        $pwdLastSet = $entry->getAttribute('pwdLastSet');
-                        $lastLogon = $entry->getAttribute('lastLogon');
-                        $badPasswordTime = $entry->getAttribute('badPasswordTime');
-                        $userAccountControl = $entry->getAttribute('userAccountControl');
-                        $badPwdCount = $entry->getAttribute('badPwdCount');
-                        
-                        return [
-                            'password_expires' => $this->parseAdDate($pwdLastSet ? $pwdLastSet[0] : null, '+90 days'),
-                            'password_last_set' => $this->parseAdDate($pwdLastSet ? $pwdLastSet[0] : null),
-                            'last_successful_login' => $this->parseAdDate($lastLogon ? $lastLogon[0] : null),
-                            'last_failed_login' => $this->parseAdDate($badPasswordTime ? $badPasswordTime[0] : null),
-                            'account_locked' => $this->isAccountLocked($userAccountControl ? (int)$userAccountControl[0] : 0),
-                            'failed_login_count' => (int)($badPwdCount ? $badPwdCount[0] : 0),
-                            'last_updated' => new \DateTime()
-                        ];
-                    }
-                }
+            // Pobierz ustawienia LDAP
+            $settings = $this->getLdapSettings();
+            
+            if (!$settings['ldap_enabled']) {
+                return ['error' => 'LDAP integration is disabled'];
             }
             
-            // Fallback - zwróć puste dane jeśli LDAP niedostępny
+            // Pobierz dane użytkownika z LDAP
+            $ldapUserData = $this->ldapService->getLdapUser($user->getUsername(), $settings);
+            
+            if (!$ldapUserData) {
+                return ['error' => 'User not found in LDAP'];
+            }
+            
+            $attributes = $ldapUserData['attributes'];
+            
+            // Parsuj dane Active Directory z bezpiecznym dostępem
+            $pwdLastSet = isset($attributes['pwdLastSet']) ? $attributes['pwdLastSet'][0] : null;
+            $lastLogon = isset($attributes['lastLogon']) ? $attributes['lastLogon'][0] : null;
+            $badPasswordTime = isset($attributes['badPasswordTime']) ? $attributes['badPasswordTime'][0] : null;
+            $userAccountControl = isset($attributes['userAccountControl']) ? (int)$attributes['userAccountControl'][0] : 0;
+            $badPwdCount = isset($attributes['badPwdCount']) ? (int)$attributes['badPwdCount'][0] : 0;
+            
             return [
-                'password_expires' => null,
-                'password_last_set' => null,
-                'last_successful_login' => null,
-                'last_failed_login' => null,
-                'account_locked' => false,
-                'failed_login_count' => 0,
-                'last_updated' => null,
-                'error' => 'LDAP service unavailable'
+                'password_expires' => $this->parseAdDate($pwdLastSet, '+90 days'),
+                'password_last_set' => $this->parseAdDate($pwdLastSet),
+                'last_successful_login' => $this->parseAdDate($lastLogon),
+                'last_failed_login' => $this->parseAdDate($badPasswordTime),
+                'account_locked' => $this->isAccountLocked($userAccountControl),
+                'failed_login_count' => $badPwdCount,
+                'last_updated' => new \DateTime()
             ];
             
         } catch (\Exception $e) {
-            $this->logger->warning('Failed to fetch LDAP data for user', [
+            $this->logger->error('Error fetching LDAP user data', [
+                'user_id' => $user->getId(),
                 'username' => $user->getUsername(),
                 'ldap_dn' => $user->getLdapDn(),
                 'error' => $e->getMessage()
             ]);
             
-            return [
-                'password_expires' => null,
-                'password_last_set' => null,
-                'last_successful_login' => null,
-                'last_failed_login' => null,
-                'account_locked' => false,
-                'failed_login_count' => 0,
-                'last_updated' => null,
-                'error' => $e->getMessage()
-            ];
+            return ['error' => 'LDAP connection error: ' . $e->getMessage()];
         }
     }
 
@@ -730,5 +731,41 @@ class UserController extends AbstractController
         }
         
         return $password;
+    }
+    
+    /**
+     * Pobiera ustawienia LDAP z serwisu ustawień
+     */
+    private function getLdapSettings(): array
+    {
+        return [
+            'ldap_enabled' => (bool) $this->settingService->get('ldap_enabled', false),
+            'ldap_host' => $this->settingService->get('ldap_host', 'ldap://localhost'),
+            'ldap_port' => (int) $this->settingService->get('ldap_port', '389'),
+            'ldap_encryption' => $this->settingService->get('ldap_encryption', 'none'),
+            'ldap_search_dn' => $this->settingService->get('ldap_bind_dn', ''),
+            'ldap_search_password' => $this->settingService->get('ldap_bind_password', ''),
+            'ldap_base_dn' => $this->settingService->get('ldap_base_dn', ''),
+            'ldap_user_filter' => $this->settingService->get('ldap_user_filter', '(&(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'),
+            'ldap_map_username' => $this->settingService->get('ldap_map_username', 'sAMAccountName'),
+            'ldap_map_email' => $this->settingService->get('ldap_map_email', 'mail'),
+            'ldap_map_firstname' => $this->settingService->get('ldap_map_firstname', 'givenName'),
+            'ldap_map_lastname' => $this->settingService->get('ldap_map_lastname', 'sn'),
+        ];
+    }
+    
+    /**
+     * Binduje service user do LDAP
+     */
+    private function bindServiceUser($ldap, array $settings): void
+    {
+        $searchDn = $settings['ldap_search_dn'] ?? '';
+        $searchPassword = $settings['ldap_search_password'] ?? '';
+
+        if (!$searchDn || !$searchPassword) {
+            throw new \Exception('LDAP credentials not configured');
+        }
+
+        $ldap->bind($searchDn, $searchPassword);
     }
 }
