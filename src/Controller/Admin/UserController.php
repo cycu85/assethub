@@ -743,8 +743,8 @@ class UserController extends AbstractController
             'ldap_host' => $this->settingService->get('ldap_host', 'ldap://localhost'),
             'ldap_port' => (int) $this->settingService->get('ldap_port', '389'),
             'ldap_encryption' => $this->settingService->get('ldap_encryption', 'none'),
-            'ldap_search_dn' => $this->settingService->get('ldap_bind_dn', ''),
-            'ldap_search_password' => $this->settingService->get('ldap_bind_password', ''),
+            'ldap_bind_dn' => $this->settingService->get('ldap_bind_dn', ''),
+            'ldap_bind_password' => $this->settingService->get('ldap_bind_password', ''),
             'ldap_base_dn' => $this->settingService->get('ldap_base_dn', ''),
             'ldap_user_filter' => $this->settingService->get('ldap_user_filter', '(&(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'),
             'ldap_map_username' => $this->settingService->get('ldap_map_username', 'sAMAccountName'),
@@ -759,8 +759,8 @@ class UserController extends AbstractController
      */
     private function bindServiceUser($ldap, array $settings): void
     {
-        $searchDn = $settings['ldap_search_dn'] ?? '';
-        $searchPassword = $settings['ldap_search_password'] ?? '';
+        $searchDn = $settings['ldap_bind_dn'] ?? '';
+        $searchPassword = $settings['ldap_bind_password'] ?? '';
 
         if (!$searchDn || !$searchPassword) {
             throw new \Exception('LDAP credentials not configured');

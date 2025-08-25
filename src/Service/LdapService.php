@@ -357,6 +357,9 @@ class LdapService
             throw new LdapException('Host LDAP nie został określony');
         }
 
+        // Usuń ewentualny prefix protokołu (jak w LdapUserProvider)
+        $host = preg_replace('/^(ldaps?:\/\/)/', '', $host);
+
         return Ldap::create('ext_ldap', [
             'host' => $host,
             'port' => $port,
@@ -373,8 +376,8 @@ class LdapService
      */
     private function bindServiceUser(LdapInterface $ldap, array $settings): void
     {
-        $searchDn = $settings['ldap_search_dn'] ?? '';
-        $searchPassword = $settings['ldap_search_password'] ?? '';
+        $searchDn = $settings['ldap_bind_dn'] ?? '';
+        $searchPassword = $settings['ldap_bind_password'] ?? '';
 
         if (!$searchDn || !$searchPassword) {
             throw new LdapException('Nieprawidłowa konfiguracja LDAP - brak danych service user');
