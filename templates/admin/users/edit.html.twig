@@ -496,9 +496,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Automatyczne focus na pierwszym polu
-    const firstInput = form.querySelector('input[type="text"]:not([readonly])');
-    if (firstInput) {
-        firstInput.focus();
+    if (form) {
+        const firstInput = form.querySelector('input[type="text"]:not([readonly])');
+        if (firstInput) {
+            firstInput.focus();
+        }
     }
 });
 
