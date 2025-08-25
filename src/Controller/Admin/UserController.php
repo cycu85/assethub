@@ -429,7 +429,8 @@ class UserController extends AbstractController
                 $search = $ldap->query($ldapDn, '(objectClass=*)')->execute();
                 if ($search->count() > 0) {
                     $entry = $search[0];
-                    $userAccountControl = (int)($entry->getAttribute('userAccountControl')?[0] ?? 0);
+                    $userAccountControlAttr = $entry->getAttribute('userAccountControl');
+                    $userAccountControl = (int)($userAccountControlAttr ? $userAccountControlAttr[0] : 0);
                     
                     // Usuń flagi ACCOUNTDISABLE i LOCKOUT
                     $newUserAccountControl = $userAccountControl & ~0x0002 & ~0x0010;
@@ -629,13 +630,20 @@ class UserController extends AbstractController
                     if ($search->count() > 0) {
                         $entry = $search[0];
                         
+                        // Pobierz atrybuty z bezpiecznym sprawdzaniem
+                        $pwdLastSet = $entry->getAttribute('pwdLastSet');
+                        $lastLogon = $entry->getAttribute('lastLogon');
+                        $badPasswordTime = $entry->getAttribute('badPasswordTime');
+                        $userAccountControl = $entry->getAttribute('userAccountControl');
+                        $badPwdCount = $entry->getAttribute('badPwdCount');
+                        
                         return [
-                            'password_expires' => $this->parseAdDate($entry->getAttribute('pwdLastSet')?[0] ?? null, '+90 days'),
-                            'password_last_set' => $this->parseAdDate($entry->getAttribute('pwdLastSet')?[0] ?? null),
-                            'last_successful_login' => $this->parseAdDate($entry->getAttribute('lastLogon')?[0] ?? null),
-                            'last_failed_login' => $this->parseAdDate($entry->getAttribute('badPasswordTime')?[0] ?? null),
-                            'account_locked' => $this->isAccountLocked($entry->getAttribute('userAccountControl')?[0] ?? 0),
-                            'failed_login_count' => (int)($entry->getAttribute('badPwdCount')?[0] ?? 0),
+                            'password_expires' => $this->parseAdDate($pwdLastSet ? $pwdLastSet[0] : null, '+90 days'),
+                            'password_last_set' => $this->parseAdDate($pwdLastSet ? $pwdLastSet[0] : null),
+                            'last_successful_login' => $this->parseAdDate($lastLogon ? $lastLogon[0] : null),
+                            'last_failed_login' => $this->parseAdDate($badPasswordTime ? $badPasswordTime[0] : null),
+                            'account_locked' => $this->isAccountLocked($userAccountControl ? (int)$userAccountControl[0] : 0),
+                            'failed_login_count' => (int)($badPwdCount ? $badPwdCount[0] : 0),
                             'last_updated' => new \DateTime()
                         ];
                     }
