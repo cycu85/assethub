@@ -280,6 +280,13 @@ class UserController extends AbstractController
     #[Route('/{id}/edit', name: 'admin_users_edit', requirements: ['id' => '\d+'])]
     public function edit(Request $request, User $user, UserPasswordHasherInterface $passwordHasher, UserRepository $userRepository): Response
     {
+        $this->logger->info('UserController.edit method called', [
+            'user_id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'method' => $request->getMethod(),
+            'route' => $request->get('_route')
+        ]);
+        
         $currentUser = $this->getUser();
         
         if (!$this->permissionService->hasPermission($currentUser, 'admin', 'EMPLOYEES_EDIT_BASIC') && 
