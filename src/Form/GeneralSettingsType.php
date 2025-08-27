@@ -170,7 +170,7 @@ class GeneralSettingsType extends AbstractType
     {
         $timezones = [
             // Europa
-            'Europa/Warsaw' => 'Europa/Warsaw (Warszawa)',
+            'Europe/Warsaw' => 'Europe/Warsaw (Warszawa)',
             'Europe/London' => 'Europe/London (Londyn)',
             'Europe/Berlin' => 'Europe/Berlin (Berlin)', 
             'Europe/Paris' => 'Europe/Paris (Paryż)',
