@@ -339,6 +339,15 @@ class UserController extends AbstractController
         $isSystemAdmin = $this->isSystemAdmin($currentUser);
         $isLdapUser = !empty($user->getLdapDn());
         
+        $this->logger->info('LDAP data loading conditions', [
+            'current_user' => $currentUser->getUsername(),
+            'target_user' => $user->getUsername(),
+            'is_system_admin' => $isSystemAdmin,
+            'is_ldap_user' => $isLdapUser,
+            'target_ldap_dn' => $user->getLdapDn(),
+            'will_load_ldap_data' => ($isSystemAdmin && $isLdapUser)
+        ]);
+        
         if ($isSystemAdmin && $isLdapUser) {
             $ldapData = $this->getLdapUserData($user);
         }
