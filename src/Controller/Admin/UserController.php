@@ -541,8 +541,13 @@ class UserController extends AbstractController
                 
             $entry = $results[0];
             
-            // Ustaw nowe hasło (w AD hasło musi być w formacie UTF-16LE z cudzysłowami)
-            $encodedPassword = mb_convert_encoding('"' . $newPassword . '"', 'UTF-16LE');
+            // Ustaw nowe hasło (używając tej samej metody co stara aplikacja PHP)
+            $passwordWithQuotes = '"' . $newPassword . '"';
+            $len = strlen($passwordWithQuotes);
+            $encodedPassword = "";
+            for ($i = 0; $i < $len; $i++) {
+                $encodedPassword .= $passwordWithQuotes[$i] . "\000";
+            }
             
             // Sprawdź atrybuty użytkownika przed zmianą hasła
             $userAttributes = $entry->getAttributes();
@@ -551,13 +556,15 @@ class UserController extends AbstractController
             $this->logger->info('Attempting LDAP password reset', [
                 'target_dn' => $ldapDn,
                 'password_length' => strlen($newPassword),
+                'password_with_quotes_length' => strlen($passwordWithQuotes),
                 'encoded_length' => strlen($encodedPassword),
                 'user' => $currentUser->getUsername(),
                 'userAccountControl' => $userAccountControl,
                 'account_disabled' => ($userAccountControl & 0x0002) ? 'yes' : 'no',
                 'password_never_expires' => ($userAccountControl & 0x10000) ? 'yes' : 'no',
                 'password_cannot_change' => ($userAccountControl & 0x0040) ? 'yes' : 'no',
-                'entry_attributes' => array_keys($userAttributes)
+                'entry_attributes' => array_keys($userAttributes),
+                'encoding_method' => 'manual_utf16le_like_old_php_app'
             ]);
             
             // Spróbuj różnych podejść do resetowania hasła
