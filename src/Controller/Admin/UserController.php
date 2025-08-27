@@ -513,12 +513,9 @@ class UserController extends AbstractController
 
             // Użyj niestandardowego hasła lub wygeneruj nowe
             if (!empty($customPassword)) {
-                // Bez walidacji - pozwól na dowolne hasło (do testowania)
                 $newPassword = $customPassword;
             } else {
-                // Użyj prostego hasła do testów (jak w starej aplikacji)
-                $newPassword = 'asdqwe123';  // Testowe hasło
-                // $newPassword = $this->generateTemporaryPassword();  // Odkomentuj dla normalnej pracy
+                $newPassword = $this->generateTemporaryPassword();
             }
             
             // Resetuj hasło w LDAP/AD
@@ -528,14 +525,6 @@ class UserController extends AbstractController
                 throw new \Exception('LDAP integration is disabled');
             }
             
-            // Debug: log connection settings
-            $this->logger->info('LDAP connection settings for password reset', [
-                'host' => $settings['ldap_host'] ?? 'not_set',
-                'port' => $settings['ldap_port'] ?? 'not_set',
-                'encryption' => $settings['ldap_encryption'] ?? 'not_set',
-                'ignore_ssl_cert' => $settings['ldap_ignore_ssl_cert'] ?? 'not_set',
-                'bind_dn' => !empty($settings['ldap_bind_dn']) ? 'SET' : 'NOT_SET'
-            ]);
             
             $ldap = $this->ldapService->createLdapConnection($settings);
             $this->bindServiceUser($ldap, $settings);
@@ -566,101 +555,18 @@ class UserController extends AbstractController
             
             $this->logger->info('Attempting LDAP password reset', [
                 'target_dn' => $ldapDn,
-                'password_length' => strlen($newPassword),
-                'password_with_quotes_length' => strlen($passwordWithQuotes),
-                'encoded_length' => strlen($encodedPassword),
-                'user' => $currentUser->getUsername(),
-                'userAccountControl' => $userAccountControl,
-                'account_disabled' => ($userAccountControl & 0x0002) ? 'yes' : 'no',
-                'password_never_expires' => ($userAccountControl & 0x10000) ? 'yes' : 'no',
-                'password_cannot_change' => ($userAccountControl & 0x0040) ? 'yes' : 'no',
-                'entry_attributes' => array_keys($userAttributes),
-                'encoding_method' => 'manual_utf16le_like_old_php_app'
+                'user' => $currentUser->getUsername()
             ]);
             
-            // Test: sprawdź czy możemy modyfikować inne atrybuty tego użytkownika
-            $testDescription = "Test modification " . date('Y-m-d H:i:s');
-            try {
-                $this->logger->info('Testing LDAP permissions by updating description attribute');
-                $ldap->getEntryManager()->update($entry, [
-                    'description' => [$testDescription]
-                ]);
-                $this->logger->info('Test attribute update successful - LDAP permissions OK', [
-                    'test_description' => $testDescription
-                ]);
-                
-                // Przywróć oryginalny opis (jeśli był)
-                $originalDescription = $userAttributes['description'][0] ?? '';
-                if ($originalDescription !== $testDescription) {
-                    $ldap->getEntryManager()->update($entry, [
-                        'description' => $originalDescription ? [$originalDescription] : []
-                    ]);
-                }
-            } catch (\Exception $e) {
-                $this->logger->error('Test attribute update failed - LDAP permissions issue', [
-                    'error' => $e->getMessage(),
-                    'error_type' => get_class($e)
-                ]);
-                // Nie przerywamy - może problem dotyczy tylko description
-            }
             
-            // Spróbuj różnych podejść do resetowania hasła
-            try {
-                // Podejście 1: Tylko unicodePwd
-                $this->logger->info('Trying approach 1: unicodePwd only');
-                $ldap->getEntryManager()->update($entry, [
-                    'unicodePwd' => [$encodedPassword]
-                ]);
-                $this->logger->info('Password reset successful with approach 1');
-            } catch (\Exception $e1) {
-                $this->logger->warning('Approach 1 failed', ['error' => $e1->getMessage()]);
-                
-                try {
-                    // Podejście 2: unicodePwd + pwdLastSet = 0 (wymusza zmianę przy następnym logowaniu)
-                    $this->logger->info('Trying approach 2: unicodePwd + pwdLastSet = 0');
-                    $ldap->getEntryManager()->update($entry, [
-                        'unicodePwd' => [$encodedPassword],
-                        'pwdLastSet' => ['0']
-                    ]);
-                    $this->logger->info('Password reset successful with approach 2');
-                } catch (\Exception $e2) {
-                    $this->logger->warning('Approach 2 failed', ['error' => $e2->getMessage()]);
-                    
-                    try {
-                        // Podejście 3: unicodePwd + pwdLastSet = -1 (hasło nie wygasa)
-                        $this->logger->info('Trying approach 3: unicodePwd + pwdLastSet = -1');
-                        $ldap->getEntryManager()->update($entry, [
-                            'unicodePwd' => [$encodedPassword],
-                            'pwdLastSet' => ['-1']
-                        ]);
-                        $this->logger->info('Password reset successful with approach 3');
-                    } catch (\Exception $e3) {
-                        $this->logger->warning('Approach 3 failed', ['error' => $e3->getMessage()]);
-                        
-                        try {
-                            // Podejście 4: LDAP_MODIFY_BATCH_REPLACE (zgodnie z dokumentacją Microsoft)
-                            $this->logger->info('Trying approach 4: LDAP_MODIFY_BATCH_REPLACE operation');
-                            
-                            $replaceOperation = new UpdateOperation(
-                                \LDAP_MODIFY_BATCH_REPLACE,
-                                'unicodePwd', 
-                                [$encodedPassword]
-                            );
-                            
-                            $ldap->getEntryManager()->applyOperations($entry->getDn(), [$replaceOperation]);
-                            $this->logger->info('Password reset successful with approach 4 (REPLACE)');
-                        } catch (\Exception $e4) {
-                            $this->logger->error('All approaches failed', [
-                                'approach1_error' => $e1->getMessage(),
-                                'approach2_error' => $e2->getMessage(), 
-                                'approach3_error' => $e3->getMessage(),
-                                'approach4_error' => $e4->getMessage()
-                            ]);
-                            throw $e4;
-                        }
-                    }
-                }
-            }
+            // Reset hasła w LDAP/AD używając LDAP_MODIFY_BATCH_REPLACE (zgodnie z dokumentacją Microsoft)
+            $replaceOperation = new UpdateOperation(
+                \LDAP_MODIFY_BATCH_REPLACE,
+                'unicodePwd', 
+                [$encodedPassword]
+            );
+            
+            $ldap->getEntryManager()->applyOperations($entry->getDn(), [$replaceOperation]);
             
             $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
                 'target_user_id' => $user->getId(),
