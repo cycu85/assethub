@@ -560,13 +560,22 @@ class UserController extends AbstractController
             
             
             // Reset hasła w LDAP/AD używając LDAP_MODIFY_BATCH_REPLACE (zgodnie z dokumentacją Microsoft)
-            $replaceOperation = new UpdateOperation(
-                \LDAP_MODIFY_BATCH_REPLACE,
-                'unicodePwd', 
-                [$encodedPassword]
-            );
+            $operations = [
+                // Ustaw nowe hasło
+                new UpdateOperation(
+                    \LDAP_MODIFY_BATCH_REPLACE,
+                    'unicodePwd', 
+                    [$encodedPassword]
+                ),
+                // Wyłącz wymuszanie zmiany hasła przy następnym logowaniu (pwdLastSet = -1)
+                new UpdateOperation(
+                    \LDAP_MODIFY_BATCH_REPLACE,
+                    'pwdLastSet', 
+                    ['-1']
+                )
+            ];
             
-            $ldap->getEntryManager()->applyOperations($entry->getDn(), [$replaceOperation]);
+            $ldap->getEntryManager()->applyOperations($entry->getDn(), $operations);
             
             $this->auditService->logSecurityEvent('ldap_password_reset', $currentUser, [
                 'target_user_id' => $user->getId(),
