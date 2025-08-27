@@ -4,6 +4,7 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Service\SettingService;
+use App\Service\LdapService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,6 +34,7 @@ class LdapAuthenticator extends AbstractLoginFormAuthenticator
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
         private SettingService $settingService,
+        private LdapService $ldapService,
         private RateLimiterFactory $loginLimiter,
         private ?LoggerInterface $logger = null
     ) {}
@@ -113,26 +115,22 @@ class LdapAuthenticator extends AbstractLoginFormAuthenticator
     {
         $this->logger?->info('LdapAuthenticator: Attempting LDAP authentication', ['username' => $user->getUsername()]);
 
-        $host = $this->settingService->get('ldap_host');
-        $port = (int) $this->settingService->get('ldap_port', '389');
+        // Pobierz ustawienia LDAP z bazy danych (tak jak robi reset hasła)
+        $settings = [
+            'ldap_host' => $this->settingService->get('ldap_host'),
+            'ldap_port' => $this->settingService->get('ldap_port', '389'),
+            'ldap_encryption' => $this->settingService->get('ldap_encryption', 'none'),
+            'ldap_ignore_ssl_cert' => $this->settingService->get('ldap_ignore_ssl_cert', '0') === '1'
+        ];
 
-        if (!$host) {
+        if (!$settings['ldap_host']) {
             throw new \Exception('LDAP host not configured');
         }
 
-        // Usuń ewentualny prefix protokołu
-        $host = preg_replace('/^(ldaps?:\/\/)/', '', $host);
-
-        $options = [
-            'host' => $host,
-            'port' => $port,
-            'version' => 3,
-            'referrals' => false,
-        ];
-
-        $ldap = Ldap::create('ext_ldap', $options);
-
         try {
+            // Użyj LdapService do tworzenia połączenia (tak jak reset hasła)
+            $ldap = $this->ldapService->createLdapConnection($settings);
+
             // Spróbuj uwierzytelnić bezpośrednio z DN użytkownika
             $ldap->bind($user->getLdapDn(), $password);
             $this->logger?->info('LdapAuthenticator: LDAP authentication successful', ['username' => $user->getUsername()]);
