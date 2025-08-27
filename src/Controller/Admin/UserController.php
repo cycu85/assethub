@@ -280,6 +280,14 @@ class UserController extends AbstractController
     #[Route('/{id}/edit', name: 'admin_users_edit', requirements: ['id' => '\d+'])]
     public function edit(Request $request, User $user, UserPasswordHasherInterface $passwordHasher, UserRepository $userRepository): Response
     {
+        // Debug na samym początku - sprawdza czy metoda w ogóle jest wywoływana
+        file_put_contents('/tmp/edit_debug.log', 
+            date('Y-m-d H:i:s') . " EDIT METHOD CALLED: user_id=" . $user->getId() . 
+            ", username=" . $user->getUsername() . 
+            ", route=" . $request->get('_route') . "\n", 
+            FILE_APPEND
+        );
+        
         $this->logger->info('UserController.edit method called', [
             'user_id' => $user->getId(),
             'username' => $user->getUsername(),
