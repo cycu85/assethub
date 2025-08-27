@@ -720,7 +720,17 @@ class UserController extends AbstractController
      */
     private function getLdapUserData(User $user): array
     {
+        $this->logger->info('getLdapUserData called', [
+            'user_id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'ldap_dn' => $user->getLdapDn()
+        ]);
+        
         if (!$user->getLdapDn()) {
+            $this->logger->warning('User is not an LDAP user', [
+                'user_id' => $user->getId(),
+                'username' => $user->getUsername()
+            ]);
             return ['error' => 'User is not an LDAP user'];
         }
 
@@ -748,7 +758,7 @@ class UserController extends AbstractController
             $userAccountControl = isset($attributes['userAccountControl']) ? (int)$attributes['userAccountControl'][0] : 0;
             $badPwdCount = isset($attributes['badPwdCount']) ? (int)$attributes['badPwdCount'][0] : 0;
             
-            $this->logger->debug('Processing LDAP user attributes', [
+            $this->logger->info('Processing LDAP user attributes', [
                 'userAccountControl_raw' => $attributes['userAccountControl'][0] ?? 'missing',
                 'userAccountControl_int' => $userAccountControl,
                 'badPwdCount' => $badPwdCount,
@@ -810,7 +820,7 @@ class UserController extends AbstractController
         // Bit 0x0010 = LOCKOUT (konto zablokowane przez błędne hasła)
         $isLocked = ($userAccountControl & 0x0010) !== 0;
         
-        $this->logger->debug('Checking account lockout status', [
+        $this->logger->info('Checking account lockout status', [
             'userAccountControl' => $userAccountControl,
             'lockout_bit' => 0x0010,
             'bitwise_and_result' => ($userAccountControl & 0x0010),
