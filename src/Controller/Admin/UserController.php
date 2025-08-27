@@ -23,6 +23,7 @@ use App\Service\AuditService;
 use App\Service\LdapService;
 use App\Service\SettingService;
 use App\Service\EmailService;
+use Symfony\Component\Ldap\Adapter\ExtLdap\UpdateOperation;
 use Symfony\Component\Ldap\Ldap;
 
 #[Route('/admin/users')]
@@ -634,12 +635,29 @@ class UserController extends AbstractController
                         ]);
                         $this->logger->info('Password reset successful with approach 3');
                     } catch (\Exception $e3) {
-                        $this->logger->error('All approaches failed', [
-                            'approach1_error' => $e1->getMessage(),
-                            'approach2_error' => $e2->getMessage(), 
-                            'approach3_error' => $e3->getMessage()
-                        ]);
-                        throw $e3;
+                        $this->logger->warning('Approach 3 failed', ['error' => $e3->getMessage()]);
+                        
+                        try {
+                            // Podejście 4: LDAP_MODIFY_BATCH_REPLACE (zgodnie z dokumentacją Microsoft)
+                            $this->logger->info('Trying approach 4: LDAP_MODIFY_BATCH_REPLACE operation');
+                            
+                            $replaceOperation = new UpdateOperation(
+                                \LDAP_MODIFY_BATCH_REPLACE,
+                                'unicodePwd', 
+                                [$encodedPassword]
+                            );
+                            
+                            $ldap->getEntryManager()->applyOperations($entry->getDn(), [$replaceOperation]);
+                            $this->logger->info('Password reset successful with approach 4 (REPLACE)');
+                        } catch (\Exception $e4) {
+                            $this->logger->error('All approaches failed', [
+                                'approach1_error' => $e1->getMessage(),
+                                'approach2_error' => $e2->getMessage(), 
+                                'approach3_error' => $e3->getMessage(),
+                                'approach4_error' => $e4->getMessage()
+                            ]);
+                            throw $e4;
+                        }
                     }
                 }
             }
