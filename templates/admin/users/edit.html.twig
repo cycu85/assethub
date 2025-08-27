@@ -807,7 +807,7 @@ function showPasswordResetModal(newPassword) {
                                     '<h4 class="text-primary font-monospace" id="newPasswordText">' + newPassword + '</h4>' +
                                 '</div>' +
                             '</div>' +
-                            '<button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="copyToClipboard(\'' + newPassword + '\')">' +
+                            '<button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="copyToClipboard(this)" data-password="' + newPassword.replace(/"/g, '&quot;') + '">' +
                                 '<i class="ri-file-copy-line me-1"></i>Skopiuj do schowka' +
                             '</button>' +
                         '</div>' +
@@ -839,12 +839,29 @@ function showPasswordResetModal(newPassword) {
 }
 
 // Kopiuj do schowka
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(function() {
+function copyToClipboard(button) {
+    const password = button.getAttribute('data-password');
+    if (!password) {
+        showAlert('error', 'Błąd: nie znaleziono hasła do skopiowania');
+        return;
+    }
+    
+    navigator.clipboard.writeText(password).then(function() {
         showAlert('success', 'Hasło zostało skopiowane do schowka');
     }).catch(function(err) {
         console.error('Błąd kopiowania: ', err);
-        showAlert('error', 'Nie udało się skopiować hasła do schowka');
+        // Fallback dla starszych przeglądarek
+        const textArea = document.createElement('textarea');
+        textArea.value = password;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showAlert('success', 'Hasło zostało skopiowane do schowka');
+        } catch (fallbackErr) {
+            showAlert('error', 'Nie udało się skopiować hasła do schowka');
+        }
+        document.body.removeChild(textArea);
     });
 }
 

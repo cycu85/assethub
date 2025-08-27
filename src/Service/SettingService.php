@@ -87,6 +87,21 @@ class SettingService
             $this->set('sidebar_active_color', $data['sidebar_active_color'], 'general', 'color', 'Kolor aktywnego elementu w menu');
         }
 
+        // Zapisz strefę czasową
+        if (isset($data['timezone'])) {
+            $this->set('timezone', $data['timezone'], 'general', 'text', 'Strefa czasowa aplikacji');
+        }
+
+        // Zapisz format daty
+        if (isset($data['date_format'])) {
+            $this->set('date_format', $data['date_format'], 'general', 'text', 'Format daty');
+        }
+
+        // Zapisz format czasu
+        if (isset($data['time_format'])) {
+            $this->set('time_format', $data['time_format'], 'general', 'text', 'Format czasu');
+        }
+
         // Obsługa uploadu logo
         if ($logoFile) {
             $logoPath = $this->handleLogoUpload($logoFile);
@@ -149,6 +164,9 @@ class SettingService
             'sidebar_bg_color' => $this->get('sidebar_bg_color', '#2a3042'),
             'sidebar_text_color' => $this->get('sidebar_text_color', '#ffffff'),
             'sidebar_active_color' => $this->get('sidebar_active_color', '#405189'),
+            'timezone' => $this->get('timezone', 'Europe/Warsaw'),
+            'date_format' => $this->get('date_format', 'd/m/Y'),
+            'time_format' => $this->get('time_format', 'H:i'),
         ];
     }
 

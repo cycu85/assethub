@@ -114,6 +114,58 @@
                             </div>
                         </div>
 
+                        <hr class="my-4">
+                        <h5 class="mb-3">
+                            <i class="ri-time-line me-2"></i>Ustawienia daty i czasu
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ form_label(form.timezone, null, {'label_attr': {'class': 'form-label'}}) }}
+                                {{ form_widget(form.timezone) }}
+                                {{ form_errors(form.timezone) }}
+                                <div class="form-text">
+                                    <i class="ri-information-line me-1"></i>
+                                    Wybierz strefę czasową dla całej aplikacji
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form_label(form.date_format, null, {'label_attr': {'class': 'form-label'}}) }}
+                                {{ form_widget(form.date_format) }}
+                                {{ form_errors(form.date_format) }}
+                                <div class="form-text">
+                                    <i class="ri-information-line me-1"></i>
+                                    Format wyświetlania dat w aplikacji
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form_label(form.time_format, null, {'label_attr': {'class': 'form-label'}}) }}
+                                {{ form_widget(form.time_format) }}
+                                {{ form_errors(form.time_format) }}
+                                <div class="form-text">
+                                    <i class="ri-information-line me-1"></i>
+                                    Format wyświetlania czasu w aplikacji
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="ri-time-line"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <h6 class="alert-heading">Aktualny czas systemowy</h6>
+                                    <p class="mb-0">
+                                        <strong>Serwer:</strong> <span id="server-time">{{ "now"|date("d/m/Y H:i:s") }}</span><br>
+                                        <strong>Przeglądarka:</strong> <span id="browser-time"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 {{ form_widget(form.save, {'attr': {'class': 'btn btn-primary'}}) }}
@@ -492,6 +544,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Wyświetl czas przeglądarki
+    function updateBrowserTime() {
+        const now = new Date();
+        const browserTime = now.toLocaleString('pl-PL', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        document.getElementById('browser-time').textContent = browserTime;
+    }
+    
+    updateBrowserTime();
+    setInterval(updateBrowserTime, 1000); // Aktualizuj co sekundę
 });
 </script>
 {% endblock %}

@@ -8,6 +8,7 @@ use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\File;
@@ -116,6 +117,40 @@ class GeneralSettingsType extends AbstractType
                     'maxlength' => 7
                 ]
             ])
+            ->add('timezone', ChoiceType::class, [
+                'label' => 'Strefa czasowa',
+                'choices' => $this->getTimezoneChoices(),
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'required' => false,
+                'placeholder' => 'Wybierz strefę czasową...'
+            ])
+            ->add('date_format', ChoiceType::class, [
+                'label' => 'Format daty',
+                'choices' => [
+                    'DD/MM/YYYY (31/12/2024)' => 'd/m/Y',
+                    'MM/DD/YYYY (12/31/2024)' => 'm/d/Y', 
+                    'YYYY-MM-DD (2024-12-31)' => 'Y-m-d',
+                    'DD.MM.YYYY (31.12.2024)' => 'd.m.Y',
+                    'DD-MM-YYYY (31-12-2024)' => 'd-m-Y'
+                ],
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'required' => false
+            ])
+            ->add('time_format', ChoiceType::class, [
+                'label' => 'Format czasu', 
+                'choices' => [
+                    '24 godzinny (23:59)' => 'H:i',
+                    '12 godzinny (11:59 PM)' => 'h:i A'
+                ],
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'required' => false
+            ])
             ->add('save', SubmitType::class, [
                 'label' => 'Zapisz ustawienia',
                 'attr' => [
@@ -129,5 +164,46 @@ class GeneralSettingsType extends AbstractType
         $resolver->setDefaults([
             // Configure your form options here
         ]);
+    }
+
+    private function getTimezoneChoices(): array
+    {
+        $timezones = [
+            // Europa
+            'Europa/Warsaw' => 'Europa/Warsaw (Warszawa)',
+            'Europe/London' => 'Europe/London (Londyn)',
+            'Europe/Berlin' => 'Europe/Berlin (Berlin)', 
+            'Europe/Paris' => 'Europe/Paris (Paryż)',
+            'Europe/Rome' => 'Europe/Rome (Rzym)',
+            'Europe/Madrid' => 'Europe/Madrid (Madryt)',
+            'Europe/Amsterdam' => 'Europe/Amsterdam (Amsterdam)',
+            'Europe/Vienna' => 'Europe/Vienna (Wiedeń)',
+            'Europe/Prague' => 'Europe/Prague (Praga)',
+            'Europe/Budapest' => 'Europe/Budapest (Budapeszt)',
+            'Europe/Moscow' => 'Europe/Moscow (Moskwa)',
+            
+            // Ameryka Północna
+            'America/New_York' => 'America/New_York (EST)',
+            'America/Chicago' => 'America/Chicago (CST)',  
+            'America/Denver' => 'America/Denver (MST)',
+            'America/Los_Angeles' => 'America/Los_Angeles (PST)',
+            'America/Toronto' => 'America/Toronto (Kanada)',
+            
+            // Azja
+            'Asia/Tokyo' => 'Asia/Tokyo (Tokio)',
+            'Asia/Shanghai' => 'Asia/Shanghai (Szanghaj)',
+            'Asia/Dubai' => 'Asia/Dubai (Dubaj)',
+            'Asia/Kolkata' => 'Asia/Kolkata (Kalkuta)',
+            
+            // Australia
+            'Australia/Sydney' => 'Australia/Sydney (Sydney)',
+            'Australia/Melbourne' => 'Australia/Melbourne (Melbourne)',
+            
+            // UTC
+            'UTC' => 'UTC (Czas uniwersalny)'
+        ];
+
+        // Odwróć tablicę - klucze to co wyświetlamy, wartości to co zapisujemy
+        return array_flip($timezones);
     }
 }
