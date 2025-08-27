@@ -748,6 +748,13 @@ class UserController extends AbstractController
             $userAccountControl = isset($attributes['userAccountControl']) ? (int)$attributes['userAccountControl'][0] : 0;
             $badPwdCount = isset($attributes['badPwdCount']) ? (int)$attributes['badPwdCount'][0] : 0;
             
+            $this->logger->debug('Processing LDAP user attributes', [
+                'userAccountControl_raw' => $attributes['userAccountControl'][0] ?? 'missing',
+                'userAccountControl_int' => $userAccountControl,
+                'badPwdCount' => $badPwdCount,
+                'available_attributes' => array_keys($attributes)
+            ]);
+            
             return [
                 'password_expires' => $this->parseAdDate($pwdLastSet, '+90 days'),
                 'password_last_set' => $this->parseAdDate($pwdLastSet),
@@ -801,7 +808,17 @@ class UserController extends AbstractController
     private function isAccountLockedByFailedLogins(int $userAccountControl): bool
     {
         // Bit 0x0010 = LOCKOUT (konto zablokowane przez błędne hasła)
-        return ($userAccountControl & 0x0010) !== 0;
+        $isLocked = ($userAccountControl & 0x0010) !== 0;
+        
+        $this->logger->debug('Checking account lockout status', [
+            'userAccountControl' => $userAccountControl,
+            'lockout_bit' => 0x0010,
+            'bitwise_and_result' => ($userAccountControl & 0x0010),
+            'is_locked' => $isLocked,
+            'userAccountControl_binary' => decbin($userAccountControl)
+        ]);
+        
+        return $isLocked;
     }
 
     /**
