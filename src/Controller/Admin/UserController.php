@@ -464,15 +464,11 @@ class UserController extends AbstractController
             }
             
             $entry = $results[0];
-            $userAccountControlAttr = $entry->getAttribute('userAccountControl');
-            $userAccountControl = (int)($userAccountControlAttr ? $userAccountControlAttr[0] : 0);
             
-            // Usuń flagi ACCOUNTDISABLE i LOCKOUT
-            $newUserAccountControl = $userAccountControl & ~0x0002 & ~0x0010;
-            
-            // Zaktualizuj LDAP
+            // Reset lockoutTime na 0 aby odblokować konto
+            // lockoutTime = 0 oznacza że konto nie jest zablokowane
             $ldap->getEntryManager()->update($entry, [
-                'userAccountControl' => [$newUserAccountControl]
+                'lockoutTime' => ['0']
             ]);
             
             $this->auditService->logUserAction($currentUser, 'ldap_account_unlocked', [
@@ -765,6 +761,7 @@ class UserController extends AbstractController
             $pwdLastSet = isset($attributes['pwdLastSet']) ? $attributes['pwdLastSet'][0] : null;
             $lastLogon = isset($attributes['lastLogon']) ? $attributes['lastLogon'][0] : null;
             $badPasswordTime = isset($attributes['badPasswordTime']) ? $attributes['badPasswordTime'][0] : null;
+            $lockoutTime = isset($attributes['lockoutTime']) ? $attributes['lockoutTime'][0] : null;
             $userAccountControl = isset($attributes['userAccountControl']) ? (int)$attributes['userAccountControl'][0] : 0;
             $badPwdCount = isset($attributes['badPwdCount']) ? (int)$attributes['badPwdCount'][0] : 0;
             
@@ -774,7 +771,7 @@ class UserController extends AbstractController
                 'password_last_set' => $this->parseAdDate($pwdLastSet),
                 'last_successful_login' => $this->parseAdDate($lastLogon),
                 'last_failed_login' => $this->parseAdDate($badPasswordTime),
-                'account_locked_by_failed_logins' => $this->isAccountLockedByFailedLogins($userAccountControl),
+                'account_locked_by_failed_logins' => $this->isAccountLockedByFailedLogins($lockoutTime),
                 'account_disabled' => $this->isAccountDisabled($userAccountControl),
                 'failed_login_count' => $badPwdCount,
                 'last_updated' => new \DateTime()
@@ -818,14 +815,20 @@ class UserController extends AbstractController
 
     /**
      * Sprawdza czy konto jest zablokowane przez błędne próby logowania
+     * Konto jest zablokowane jeśli lockoutTime != 0
      */
-    private function isAccountLockedByFailedLogins(int $userAccountControl): bool
+    private function isAccountLockedByFailedLogins(?string $lockoutTime): bool
     {
-        // Bit 0x0010 = LOCKOUT (konto zablokowane przez błędne hasła)
-        $isLocked = ($userAccountControl & 0x0010) !== 0;
+        if ($lockoutTime === null || $lockoutTime === '') {
+            return false;
+        }
         
+        // Konwersja lockoutTime do liczby (Windows FILETIME)
+        $lockoutTimeInt = (int)$lockoutTime;
         
-        return $isLocked;
+        // Jeśli lockoutTime = 0, konto nie jest zablokowane
+        // Jeśli lockoutTime > 0, konto jest zablokowane
+        return $lockoutTimeInt > 0;
     }
 
     /**
