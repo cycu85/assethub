@@ -893,9 +893,8 @@ class UserController extends AbstractController
         
         $body = "Witaj {$user->getFirstName()}!\n\n";
         $body .= "Twoje hasło w systemie {$appName} zostało zresetowane przez administratora.\n\n";
-        $body .= "Nowe tymczasowe hasło: {$newPassword}\n\n";
+        $body .= "Nowe hasło: {$newPassword}\n\n";
         $body .= "UWAGA:\n";
-        $body .= "- To hasło jest tymczasowe i musisz je zmienić przy pierwszym logowaniu\n";
         $body .= "- Zachowaj to hasło w bezpiecznym miejscu\n";
         $body .= "- Ten email zostanie automatycznie usunięty z serwera po 90 dniach\n\n";
         $body .= "Jeśli nie prosiłeś o reset hasła, skontaktuj się z administratorem.\n\n";
