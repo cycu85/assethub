@@ -361,8 +361,8 @@ class LdapService
         // Jeśli włączone jest ignorowanie certyfikatu SSL/TLS
         if ($ignoreSslCert) {
             putenv("TLS_REQCERT=never");
-            putenv("LDAPTLS_REQCERT=never");
-            putenv("LDAPTLS_CIPHER_SUITE=NORMAL:!VERS-TLS1.2");
+            // putenv("LDAPTLS_REQCERT=never");  // Zakomentowane jak w starym systemie
+            // putenv("LDAPTLS_CIPHER_SUITE=NORMAL:!VERS-TLS1.2");  // Zakomentowane jak w starym systemie
             $this->logger->info('SSL certificate verification disabled for LDAP connection');
         }
 
