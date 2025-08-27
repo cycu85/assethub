@@ -159,7 +159,7 @@
                                 <div class="flex-grow-1 ms-2">
                                     <h6 class="alert-heading">Aktualny czas systemowy</h6>
                                     <p class="mb-0">
-                                        <strong>Serwer:</strong> <span id="server-time">{{ "now"|date("d/m/Y H:i:s") }}</span><br>
+                                        <strong>Serwer:</strong> <span id="server-time">{{ app_now() | app_datetime }}</span><br>
                                         <strong>Przeglądarka:</strong> <span id="browser-time"></span>
                                     </p>
                                 </div>
