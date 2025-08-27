@@ -289,12 +289,6 @@ class UserController extends AbstractController
             FILE_APPEND
         );
         
-        $this->logger->info('UserController.edit method called', [
-            'user_id' => $user->getId(),
-            'username' => $user->getUsername(),
-            'method' => $request->getMethod(),
-            'route' => $request->get('_route')
-        ]);
         
         $currentUser = $this->getUser();
         
@@ -367,27 +361,11 @@ class UserController extends AbstractController
             FILE_APPEND
         );
         
-        $this->logger->info('LDAP data loading conditions', [
-            'current_user' => $currentUser->getUsername(),
-            'target_user' => $user->getUsername(),
-            'is_system_admin' => $isSystemAdmin,
-            'is_ldap_user' => $isLdapUser,
-            'target_ldap_dn' => $user->getLdapDn(),
-            'will_load_ldap_data' => ($isSystemAdmin && $isLdapUser)
-        ]);
         
         if ($isSystemAdmin && $isLdapUser) {
             $ldapData = $this->getLdapUserData($user);
         }
 
-        $this->logger->info('User edit form accessed', [
-            'user' => $currentUser->getUsername(),
-            'ip' => $request->getClientIp(),
-            'target_user_id' => $user->getId(),
-            'target_username' => $user->getUsername(),
-            'subordinates_count' => count($subordinates),
-            'ldap_data_loaded' => !empty($ldapData)
-        ]);
 
         return $this->render('admin/users/edit.html.twig', [
             'user' => $user,
@@ -757,11 +735,6 @@ class UserController extends AbstractController
      */
     private function getLdapUserData(User $user): array
     {
-        $this->logger->info('getLdapUserData called', [
-            'user_id' => $user->getId(),
-            'username' => $user->getUsername(),
-            'ldap_dn' => $user->getLdapDn()
-        ]);
         
         if (!$user->getLdapDn()) {
             $this->logger->warning('User is not an LDAP user', [
@@ -795,12 +768,6 @@ class UserController extends AbstractController
             $userAccountControl = isset($attributes['userAccountControl']) ? (int)$attributes['userAccountControl'][0] : 0;
             $badPwdCount = isset($attributes['badPwdCount']) ? (int)$attributes['badPwdCount'][0] : 0;
             
-            $this->logger->info('Processing LDAP user attributes', [
-                'userAccountControl_raw' => $attributes['userAccountControl'][0] ?? 'missing',
-                'userAccountControl_int' => $userAccountControl,
-                'badPwdCount' => $badPwdCount,
-                'available_attributes' => array_keys($attributes)
-            ]);
             
             return [
                 'password_expires' => $this->parseAdDate($pwdLastSet, '+90 days'),
@@ -857,13 +824,6 @@ class UserController extends AbstractController
         // Bit 0x0010 = LOCKOUT (konto zablokowane przez błędne hasła)
         $isLocked = ($userAccountControl & 0x0010) !== 0;
         
-        $this->logger->info('Checking account lockout status', [
-            'userAccountControl' => $userAccountControl,
-            'lockout_bit' => 0x0010,
-            'bitwise_and_result' => ($userAccountControl & 0x0010),
-            'is_locked' => $isLocked,
-            'userAccountControl_binary' => decbin($userAccountControl)
-        ]);
         
         return $isLocked;
     }
