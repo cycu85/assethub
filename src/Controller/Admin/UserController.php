@@ -526,6 +526,15 @@ class UserController extends AbstractController
                 throw new \Exception('LDAP integration is disabled');
             }
             
+            // Debug: log connection settings
+            $this->logger->info('LDAP connection settings for password reset', [
+                'host' => $settings['ldap_host'] ?? 'not_set',
+                'port' => $settings['ldap_port'] ?? 'not_set',
+                'encryption' => $settings['ldap_encryption'] ?? 'not_set',
+                'ignore_ssl_cert' => $settings['ldap_ignore_ssl_cert'] ?? 'not_set',
+                'bind_dn' => !empty($settings['ldap_bind_dn']) ? 'SET' : 'NOT_SET'
+            ]);
+            
             $ldap = $this->ldapService->createLdapConnection($settings);
             $this->bindServiceUser($ldap, $settings);
             
