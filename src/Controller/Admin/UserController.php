@@ -281,7 +281,8 @@ class UserController extends AbstractController
     public function edit(Request $request, User $user, UserPasswordHasherInterface $passwordHasher, UserRepository $userRepository): Response
     {
         // Debug na samym początku - sprawdza czy metoda w ogóle jest wywoływana
-        file_put_contents('/tmp/edit_debug.log', 
+        $debugFile = __DIR__ . '/../../debug_edit.log';
+        file_put_contents($debugFile, 
             date('Y-m-d H:i:s') . " EDIT METHOD CALLED: user_id=" . $user->getId() . 
             ", username=" . $user->getUsername() . 
             ", route=" . $request->get('_route') . "\n", 
@@ -355,7 +356,8 @@ class UserController extends AbstractController
         $isLdapUser = !empty($user->getLdapDn());
         
         // Debug do pliku - na pewno zadziała
-        file_put_contents('/tmp/ldap_debug.log', 
+        $debugFile = __DIR__ . '/../../debug_ldap.log';
+        file_put_contents($debugFile, 
             date('Y-m-d H:i:s') . " LDAP conditions: system_admin=" . ($isSystemAdmin ? 'YES' : 'NO') . 
             ", ldap_user=" . ($isLdapUser ? 'YES' : 'NO') . 
             ", will_load=" . (($isSystemAdmin && $isLdapUser) ? 'YES' : 'NO') . 
