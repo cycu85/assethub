@@ -515,8 +515,9 @@ class UserController extends AbstractController
                 // Bez walidacji - pozwól na dowolne hasło (do testowania)
                 $newPassword = $customPassword;
             } else {
-                // Generuj nowe tymczasowe hasło
-                $newPassword = $this->generateTemporaryPassword();
+                // Użyj prostego hasła do testów (jak w starej aplikacji)
+                $newPassword = 'asdqwe123';  // Testowe hasło
+                // $newPassword = $this->generateTemporaryPassword();  // Odkomentuj dla normalnej pracy
             }
             
             // Resetuj hasło w LDAP/AD
@@ -575,6 +576,32 @@ class UserController extends AbstractController
                 'entry_attributes' => array_keys($userAttributes),
                 'encoding_method' => 'manual_utf16le_like_old_php_app'
             ]);
+            
+            // Test: sprawdź czy możemy modyfikować inne atrybuty tego użytkownika
+            $testDescription = "Test modification " . date('Y-m-d H:i:s');
+            try {
+                $this->logger->info('Testing LDAP permissions by updating description attribute');
+                $ldap->getEntryManager()->update($entry, [
+                    'description' => [$testDescription]
+                ]);
+                $this->logger->info('Test attribute update successful - LDAP permissions OK', [
+                    'test_description' => $testDescription
+                ]);
+                
+                // Przywróć oryginalny opis (jeśli był)
+                $originalDescription = $userAttributes['description'][0] ?? '';
+                if ($originalDescription !== $testDescription) {
+                    $ldap->getEntryManager()->update($entry, [
+                        'description' => $originalDescription ? [$originalDescription] : []
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $this->logger->error('Test attribute update failed - LDAP permissions issue', [
+                    'error' => $e->getMessage(),
+                    'error_type' => get_class($e)
+                ]);
+                // Nie przerywamy - może problem dotyczy tylko description
+            }
             
             // Spróbuj różnych podejść do resetowania hasła
             try {
