@@ -472,4 +472,26 @@ class AparaturaPomiarowaController extends AbstractController
             'transfer_statistics' => $transferStatistics,
         ]);
     }
+
+    #[Route('/my-equipment', name: 'aparatura_pomiarowa_my_equipment')]
+    public function myEquipment(Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja - każdy użytkownik może zobaczyć swoje przypisane mierniki
+        $this->authorizationService->checkModuleAccess($user, 'aparatura_pomiarowa', $request);
+        
+        $assignedEquipment = $this->aparaturaService->getUserAssignedEquipment($user);
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'view_my_aparatura_pomiarowa_equipment', [
+            'equipment_count' => count($assignedEquipment['equipment']),
+            'equipment_sets_count' => count($assignedEquipment['equipment_sets'])
+        ], $request);
+        
+        return $this->render('aparatura-pomiarowa/my-equipment.html.twig', [
+            'equipment' => $assignedEquipment['equipment'],
+            'equipment_sets' => $assignedEquipment['equipment_sets']
+        ]);
+    }
 }
