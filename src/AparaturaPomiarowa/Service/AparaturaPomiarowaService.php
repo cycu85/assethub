@@ -352,12 +352,12 @@ class AparaturaPomiarowaService
 
     public function getReviewsForEquipment(AparaturaPomiarowaEquipment $equipment): array
     {
-        return $this->reviewRepository->findByEquipment($equipment);
+        return $this->reviewRepository->findByEquipment($equipment->getId());
     }
 
     public function getReviewsForEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): array
     {
-        return $this->reviewRepository->findByEquipmentSet($equipmentSet);
+        return $this->reviewRepository->findByEquipmentSet($equipmentSet->getId());
     }
 
     public function getTransfersForEquipment(AparaturaPomiarowaEquipment $equipment): array
