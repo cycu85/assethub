@@ -537,4 +537,120 @@ class AparaturaPomiarowaReviewController extends AbstractController
             'upcoming_reviews' => $upcomingReviews,
         ]);
     }
+
+    #[Route('/new/equipment/{id}', name: 'aparatura_pomiarowa_review_new_for_equipment', requirements: ['id' => '\d+'])]
+    public function newForEquipment(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'REVIEW', $request);
+        
+        $equipment = $this->aparaturaService->getEquipment($id);
+        if (!$equipment) {
+            throw $this->createNotFoundException('Miernik nie został znaleziony');
+        }
+        
+        $review = new AparaturaPomiarowaReview();
+        $review->setEquipment($equipment);
+        $review->setPlannedDate(new \DateTime('+7 days')); // Domyślnie za tydzień
+        
+        $form = $this->createForm(AparaturaPomiarowaReviewType::class, $review, [
+            'equipment' => $equipment
+        ]);
+        
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                // Przygotowanie danych dla ReviewService
+                $data = [
+                    'planned_date' => $review->getPlannedDate(),
+                    'review_type' => $review->getReviewType(),
+                    'review_company' => $review->getReviewCompany(),
+                    'notes' => $review->getNotes()
+                ];
+
+                // Utworzenie kalibracji przez ReviewService
+                $review = $this->reviewService->createEquipmentReview($equipment, $data, $user);
+
+                $this->addFlash('success', 'Kalibracja dla miernika została utworzona pomyślnie.');
+                return $this->redirectToRoute('aparatura_pomiarowa_review_show', ['id' => $review->getId()]);
+                
+            } catch (\Exception $e) {
+                $this->logger->error('Error creating equipment review', [
+                    'error' => $e->getMessage(),
+                    'equipment_id' => $id,
+                    'user_id' => $user->getId()
+                ]);
+                $this->addFlash('error', 'Wystąpił błąd podczas tworzenia kalibracji.');
+            }
+        }
+        
+        return $this->render('aparatura-pomiarowa/review/edit.html.twig', [
+            'review' => $review,
+            'form' => $form,
+            'equipment' => $equipment,
+            'page_title' => 'Nowa kalibracja - ' . $equipment->getName(),
+            'can_edit' => true,
+            'can_delete' => false
+        ]);
+    }
+
+    #[Route('/new/equipment-set/{id}', name: 'aparatura_pomiarowa_review_new_for_set', requirements: ['id' => '\d+'])]
+    public function newForEquipmentSet(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'REVIEW', $request);
+        
+        $equipmentSet = $this->aparaturaService->getEquipmentSet($id);
+        if (!$equipmentSet) {
+            throw $this->createNotFoundException('Zestaw nie został znaleziony');
+        }
+        
+        $review = new AparaturaPomiarowaReview();
+        $review->setEquipmentSet($equipmentSet);
+        $review->setPlannedDate(new \DateTime('+7 days')); // Domyślnie za tydzień
+        
+        $form = $this->createForm(AparaturaPomiarowaReviewType::class, $review, [
+            'equipment_set' => $equipmentSet
+        ]);
+        
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            try {
+                // Przygotowanie danych dla ReviewService
+                $data = [
+                    'planned_date' => $review->getPlannedDate(),
+                    'review_type' => $review->getReviewType(),
+                    'review_company' => $review->getReviewCompany(),
+                    'notes' => $review->getNotes()
+                ];
+
+                // Utworzenie kalibracji przez ReviewService
+                $review = $this->reviewService->createEquipmentSetReview($equipmentSet, $data, $user);
+
+                $this->addFlash('success', 'Kalibracja dla zestawu została utworzona pomyślnie.');
+                return $this->redirectToRoute('aparatura_pomiarowa_review_show', ['id' => $review->getId()]);
+                
+            } catch (\Exception $e) {
+                $this->logger->error('Error creating equipment set review', [
+                    'error' => $e->getMessage(),
+                    'equipment_set_id' => $id,
+                    'user_id' => $user->getId()
+                ]);
+                $this->addFlash('error', 'Wystąpił błąd podczas tworzenia kalibracji.');
+            }
+        }
+        
+        return $this->render('aparatura-pomiarowa/review/edit.html.twig', [
+            'review' => $review,
+            'form' => $form,
+            'equipment_set' => $equipmentSet,
+            'page_title' => 'Nowa kalibracja - ' . $equipmentSet->getName(),
+            'can_edit' => true,
+            'can_delete' => false
+        ]);
+    }
 }
