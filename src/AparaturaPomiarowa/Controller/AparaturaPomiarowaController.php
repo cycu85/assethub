@@ -369,45 +369,6 @@ class AparaturaPomiarowaController extends AbstractController
         return $this->redirectToRoute('aparatura_pomiarowa_equipment_show', ['id' => $id]);
     }
 
-    #[Route('/equipment/{id}/attachment/{filename}', name: 'aparatura_pomiarowa_equipment_download_attachment')]
-    public function downloadEquipmentAttachment(int $id, string $filename, Request $request): Response
-    {
-        $user = $this->getUser();
-        
-        // Autoryzacja
-        $this->authorizationService->checkModuleAccess($user, 'aparatura_pomiarowa', $request);
-        
-        $equipment = $this->aparaturaService->getEquipmentById($id);
-        if (!$equipment) {
-            throw $this->createNotFoundException('Urządzenie nie zostało znalezione.');
-        }
-
-        // Sprawdź czy załącznik należy do tego urządzenia
-        if (!in_array($filename, $equipment->getAttachments())) {
-            throw $this->createNotFoundException('Załącznik nie został znaleziony.');
-        }
-
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/equipment/';
-        $filePath = $uploadDir . $filename;
-        
-        if (!file_exists($filePath)) {
-            throw $this->createNotFoundException('Plik nie został znaleziony na dysku.');
-        }
-
-        // Audit
-        $this->auditService->logUserAction($user, 'download_aparatura_pomiarowa_equipment_attachment', [
-            'equipment_id' => $equipment->getId(),
-            'filename' => $filename
-        ], $request);
-
-        $response = new BinaryFileResponse($filePath);
-        $response->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            $filename
-        );
-        
-        return $response;
-    }
 
     #[Route('/search', name: 'aparatura_pomiarowa_search', methods: ['GET'])]
     public function search(Request $request): JsonResponse
@@ -493,5 +454,182 @@ class AparaturaPomiarowaController extends AbstractController
             'equipment' => $assignedEquipment['equipment'],
             'equipment_sets' => $assignedEquipment['equipment_sets']
         ]);
+    }
+
+    #[Route('/equipment/{id}/attachment/upload', name: 'aparatura_pomiarowa_equipment_attachment_upload', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function uploadEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'EDIT', $request);
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('upload_equipment_attachment_' . $equipment->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            // Ensure entity is managed by entity manager
+            $equipment = $this->entityManager->find(AparaturaPomiarowaEquipment::class, $equipment->getId());
+            if (!$equipment) {
+                throw new \RuntimeException('Equipment not found');
+            }
+            
+            $uploadedFiles = $request->files->get('attachments', []);
+            $description = $request->request->get('description', '');
+            
+            if (empty($uploadedFiles)) {
+                $this->addFlash('error', 'Nie wybrano żadnych plików do przesłania.');
+                return $this->redirectToRoute('aparatura_pomiarowa_equipment_show', ['id' => $equipment->getId()]);
+            }
+            
+            $uploadedCount = 0;
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/equipment/';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            foreach ($uploadedFiles as $uploadedFile) {
+                if ($uploadedFile->isValid()) {
+                    $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII; [^A-Za-z0-9_] remove; Lower()', $originalFilename);
+                    $newFilename = $safeFilename.'-'.uniqid().'.'.$uploadedFile->guessExtension();
+                    
+                    $uploadedFile->move($uploadDir, $newFilename);
+                    
+                    $attachments = $equipment->getAttachments();
+                    $attachments[] = [
+                        'filename' => $newFilename,
+                        'original_name' => $uploadedFile->getClientOriginalName(),
+                        'description' => $description,
+                        'uploaded_by' => $user->getId(),
+                        'uploaded_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                        'file_size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType()
+                    ];
+                    $equipment->setAttachments($attachments);
+                    
+                    $uploadedCount++;
+                }
+            }
+            
+            $this->entityManager->flush();
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'upload_aparatura_pomiarowa_equipment_attachment', [
+                'equipment_id' => $equipment->getId(),
+                'uploaded_count' => $uploadedCount,
+                'description' => $description
+            ], $request);
+            
+            $this->addFlash('success', "Przesłano {$uploadedCount} załączników pomyślnie.");
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Attachment upload failed', [
+                'equipment_id' => $equipment->getId(),
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+            
+            $this->addFlash('error', 'Wystąpił błąd podczas przesyłania załączników.');
+        }
+        
+        return $this->redirectToRoute('aparatura_pomiarowa_equipment_show', ['id' => $equipment->getId()]);
+    }
+
+    #[Route('/equipment/{id}/attachment/{filename}/download', name: 'aparatura_pomiarowa_equipment_attachment_download', requirements: ['id' => '\d+'])]
+    public function downloadEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, string $filename, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'aparatura_pomiarowa', $request);
+        
+        $attachments = $equipment->getAttachments();
+        $attachment = null;
+        
+        foreach ($attachments as $att) {
+            if ($att['filename'] === $filename) {
+                $attachment = $att;
+                break;
+            }
+        }
+        
+        if (!$attachment) {
+            throw $this->createNotFoundException('Załącznik nie został znaleziony.');
+        }
+        
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/equipment/' . $filename;
+        
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException('Plik nie został znaleziony na serwerze.');
+        }
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'download_aparatura_pomiarowa_equipment_attachment', [
+            'equipment_id' => $equipment->getId(),
+            'filename' => $filename,
+            'original_name' => $attachment['original_name'] ?? $filename
+        ], $request);
+        
+        return $this->file($filePath, $attachment['original_name'] ?? $filename);
+    }
+
+    #[Route('/equipment/{id}/attachment/{filename}/delete', name: 'aparatura_pomiarowa_equipment_attachment_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function deleteEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, string $filename, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'DELETE', $request);
+        
+        // CSRF protection
+        if (!$this->isCsrfTokenValid('delete_equipment_attachment_' . $equipment->getId() . '_' . $filename, $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+        
+        try {
+            $attachments = $equipment->getAttachments();
+            $originalAttachments = $attachments;
+            $attachments = array_filter($attachments, function($att) use ($filename) {
+                return $att['filename'] !== $filename;
+            });
+            
+            if (count($attachments) === count($originalAttachments)) {
+                $this->addFlash('error', 'Załącznik nie został znaleziony.');
+                return $this->redirectToRoute('aparatura_pomiarowa_equipment_show', ['id' => $equipment->getId()]);
+            }
+            
+            $equipment->setAttachments(array_values($attachments));
+            $this->entityManager->flush();
+            
+            // Usuń plik z dysku
+            $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/equipment/' . $filename;
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            
+            // Audit
+            $this->auditService->logUserAction($user, 'delete_aparatura_pomiarowa_equipment_attachment', [
+                'equipment_id' => $equipment->getId(),
+                'filename' => $filename
+            ], $request);
+            
+            $this->addFlash('success', 'Załącznik został usunięty pomyślnie.');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Attachment deletion failed', [
+                'equipment_id' => $equipment->getId(),
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+                'user' => $user->getUsername()
+            ]);
+            
+            $this->addFlash('error', 'Wystąpił błąd podczas usuwania załącznika.');
+        }
+        
+        return $this->redirectToRoute('aparatura_pomiarowa_equipment_show', ['id' => $equipment->getId()]);
     }
 }
