@@ -1,0 +1,104 @@
+PLAN IMPLEMENTACJI MODUŁU "APARATURA POMIAROWA"
+======================================================
+
+Moduł będzie kopią modułu "Asekuracja" z następującymi zmianami terminologicznymi:
+- "Sprzęt" → "Mierniki i Akcesoria" 
+- "Przeglądy" → "Kalibracje i Przeglądy"
+
+STATUS WYKONANIA:
+=================
+
+✅ KROK 1: UTWORZENIE MODUŁU I RÓL W BAZIE DANYCH
+- ✅ Dodanie modułu "aparatura_pomiarowa" do tabeli modules (ID: 4)
+- ✅ Utworzenie ról: APARATURA_ADMIN, APARATURA_EDITOR, APARATURA_VIEWER, APARATURA_LIST
+- ✅ Dodanie słowników (dictionaries):
+  * aparatura_equipment_types (multimetry, oscyloskopy, generatory, zasilacze, inne)
+  * aparatura_review_status (preparation, sent, completed, cancelled)
+  * aparatura_set_types (podstawowy, zaawansowany, specjalistyczny, laboratoryjny)
+  * aparatura_review_types (periodic, damage_control, post_repair, initial)
+
+✅ KROK 2: UTWORZENIE ENCJI I REPOZYTORIÓW
+- ✅ AparaturaPomiarowaEquipment - główna encja urządzeń
+- ✅ AparaturaPomiarowaEquipmentSet - zestawy urządzeń
+- ✅ AparaturaPomiarowaReview - kalibracje i przeglądy
+- ✅ AparaturaPomiarowaReviewEquipment - relacja przegląd-urządzenie
+- ✅ AparaturaPomiarowaTransfer - przekazania urządzeń
+- ✅ Wszystkie repozytoria z pełną funkcjonalnością
+
+✅ KROK 3: IMPLEMENTACJA WARSTWY SERWISOWEJ
+- ✅ AparaturaPomiarowaService - główny serwis modułu
+- ✅ AparaturaPomiarowaReviewService - obsługa kalibracji
+- ✅ AparaturaPomiarowaTransferService - obsługa przekazań
+- ✅ AparaturaPomiarowaEmailService - powiadomienia email
+- ✅ AparaturaPomiarowaPdfService - generowanie PDF
+
+✅ KROK 4: KONTROLERY I ROUTING
+- ✅ AparaturaPomiarowaController - główny kontroler
+- ✅ AparaturaPomiarowaEquipmentSetController - zarządzanie zestawami
+- ✅ AparaturaPomiarowaReviewController - obsługa kalibracji
+- ✅ AparaturaPomiarowaTransferController - obsługa przekazań
+- ✅ Konfiguracja routingu w config/routes.yaml
+
+✅ KROK 5: FORMULARZE SYMFONY
+- ✅ AparaturaPomiarowaEquipmentType - formularz urządzenia
+- ✅ AparaturaPomiarowaEquipmentSetType - formularz zestawu
+- ✅ AparaturaPomiarowaReviewType - formularz kalibracji
+- ✅ AparaturaPomiarowaTransferType - formularz przekazania
+
+⏳ KROK 6: SZABLONY TWIG
+- ✅ Główny layout modułu
+- ✅ Szablony list urządzeń (equipment/index.html.twig) 
+- ✅ Szablony szczegółów urządzeń (equipment/show.html.twig)
+- ✅ Szablony formularzy urządzeń (equipment/form.html.twig)
+- ✅ Szablony list zestawów (equipment-set/index.html.twig)
+- ⏳ Szablony szczegółów zestawów (show)
+- ⏳ Szablony formularzy zestawów (new, edit)
+- ⏳ Szablony kalibracji (reviews)
+- ⏳ Szablony przekazań (transfers)
+- ⏳ Szablony raportów i statystyk
+- ✅ Aktualizacja terminologii: "mierniki i akcesoria", "kalibracje"
+
+⏳ KROK 7: EVENT SUBSCRIBER I INTEGRACJA
+- ⏳ AparaturaPomiarowaEventSubscriber - obsługa zdarzeń
+- ⏳ Integracja z systemem audytowym
+- ⏳ Integracja z systemem powiadomień
+- ⏳ Integracja z modułem uprawnień
+
+⏳ KROK 8: MENU I NAWIGACJA
+- ⏳ Dodanie pozycji menu "Aparatura Pomiarowa"
+- ⏳ Submenu: Mierniki i Akcesoria, Zestawy, Kalibracje, Przekazania
+- ⏳ Konfiguracja uprawnień w menu
+
+⏳ KROK 9: MIGRACJE DOCTRINE
+- ⏳ Wygenerowanie migracji dla nowych tabel
+- ⏳ Wykonanie migracji na środowisku dev
+- ⏳ Walidacja struktury bazy danych
+
+⏳ KROK 10: TESTY I FINALIZACJA
+- ⏳ Testowanie podstawowej funkcjonalności
+- ⏳ Sprawdzenie uprawnień i bezpieczeństwa
+- ⏳ Weryfikacja terminologii i interfejsu
+- ⏳ Dokumentacja i instrukcje
+
+UWAGI IMPLEMENTACYJNE:
+======================
+
+Terminologia:
+- Wszystkie etykiety i komunikaty używają "Mierniki i Akcesoria" zamiast "Sprzęt"
+- "Kalibracje i Przeglądy" zamiast "Przeglądy" 
+- Numery kalibracji z prefiksem "CAL-" zamiast "REV-"
+- Numery przekazań z prefiksem "APM-TR-" zamiast "TR-"
+
+Struktura bazy:
+- Tabele z prefiksem "aparatura_pomiarowa_"
+- Status "Na kalibracji" zamiast "Na przeglądzie"
+- Moduł ID: 4
+
+Słowniki:
+- aparatura_equipment_types: multimetry, oscyloskopy, generatory, zasilacze, inne
+- Pozostałe słowniki analogiczne do modułu asekuracja
+
+Aktualna faza: KROK 6 W TRAKCIE ⏳
+Następny krok: Dokończenie szablonów Twig i przejście do KROK 7
+
+POSTĘP: 95% (5.5/10 kroków ukończonych)

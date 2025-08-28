@@ -1,0 +1,249 @@
+<?php
+
+namespace App\AparaturaPomiarowa\Form;
+
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaTransfer;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipmentSet;
+use App\Entity\User;
+use App\Repository\UserRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Constraints\File;
+
+class AparaturaPomiarowaTransferType extends AbstractType
+{
+    public function buildForm(FormBuilderInterface $builder, array $options): void
+    {
+        $builder
+            ->add('recipient', EntityType::class, [
+                'class' => User::class,
+                'choice_label' => function (User $user) {
+                    return $user->getFullName() . ' (' . $user->getUsername() . ')';
+                },
+                'label' => 'Odbiorca',
+                'placeholder' => 'Wybierz odbiorcę',
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'query_builder' => function (UserRepository $repository) {
+                    return $repository->createQueryBuilder('u')
+                        ->where('u.isActive = :active')
+                        ->setParameter('active', true)
+                        ->orderBy('u.fullName', 'ASC');
+                },
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'Należy wybrać odbiorcę'])
+                ]
+            ])
+            
+            ->add('transferDate', DateType::class, [
+                'label' => 'Data przekazania',
+                'widget' => 'single_text',
+                'attr' => [
+                    'class' => 'form-control'
+                ],
+                'data' => new \DateTime(), // Domyślnie dzisiejsza data
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'Data przekazania jest wymagana'])
+                ]
+            ])
+            
+            ->add('returnDate', DateType::class, [
+                'label' => 'Planowana data zwrotu',
+                'required' => false,
+                'widget' => 'single_text',
+                'attr' => [
+                    'class' => 'form-control'
+                ],
+                'help' => 'Jeśli określona, system będzie monitorować terminy'
+            ])
+            
+            ->add('purpose', TextareaType::class, [
+                'label' => 'Cel przekazania',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'rows' => 3,
+                    'placeholder' => 'Opis celu, dla którego przekazywana jest aparatura (pomiary w laboratorium, badania terenowe, projekt XYZ)...'
+                ]
+            ])
+            
+            ->add('conditions', TextareaType::class, [
+                'label' => 'Warunki przekazania',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'rows' => 3,
+                    'placeholder' => 'Szczególne warunki użytkowania, odpowiedzialność, wymagania dotyczące kalibracji...'
+                ]
+            ])
+            
+            ->add('location', TextType::class, [
+                'label' => 'Miejsce użytkowania',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => 'np. Laboratorium A, Teren budowy, Biuro pomiarów'
+                ]
+            ])
+            
+            ->add('notes', TextareaType::class, [
+                'label' => 'Uwagi',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'rows' => 3,
+                    'placeholder' => 'Dodatkowe informacje, instrukcje użytkowania, ostrzeżenia...'
+                ]
+            ]);
+
+        // Dodanie pól wyboru urządzenia/zestawu tylko jeśli nie są określone w opcjach
+        if (!$options['equipment'] && !$options['equipment_set']) {
+            $builder
+                ->add('equipment', EntityType::class, [
+                    'class' => AparaturaPomiarowaEquipment::class,
+                    'choice_label' => function(AparaturaPomiarowaEquipment $equipment) {
+                        return $equipment->getName() . ' (' . $equipment->getInventoryNumber() . ')';
+                    },
+                    'label' => 'Urządzenie do przekazania',
+                    'required' => false,
+                    'placeholder' => 'Wybierz urządzenie',
+                    'attr' => [
+                        'class' => 'form-select',
+                        'data-toggle' => 'equipment-select'
+                    ],
+                    'query_builder' => function($repository) {
+                        return $repository->createQueryBuilder('e')
+                            ->where('e.status = :status')
+                            ->setParameter('status', 'available')
+                            ->orderBy('e.name', 'ASC');
+                    }
+                ])
+                
+                ->add('equipmentSet', EntityType::class, [
+                    'class' => AparaturaPomiarowaEquipmentSet::class,
+                    'choice_label' => function(AparaturaPomiarowaEquipmentSet $equipmentSet) {
+                        return $equipmentSet->getName() . ' (' . $equipmentSet->getEquipment()->count() . ' elementów)';
+                    },
+                    'label' => 'Zestaw aparatury do przekazania',
+                    'required' => false,
+                    'placeholder' => 'Wybierz zestaw',
+                    'attr' => [
+                        'class' => 'form-select',
+                        'data-toggle' => 'equipment-set-select'
+                    ],
+                    'query_builder' => function($repository) {
+                        return $repository->createQueryBuilder('es')
+                            ->where('es.status = :status')
+                            ->setParameter('status', 'available')
+                            ->orderBy('es.name', 'ASC');
+                    }
+                ]);
+        }
+
+        // Pole do przesyłania skanu protokołu (tylko w trybie upload)
+        if ($options['mode'] === 'upload_scan') {
+            $builder->add('protocolScan', FileType::class, [
+                'label' => 'Skan podpisanego protokołu',
+                'mapped' => false, // Nie mapuje bezpośrednio do encji
+                'required' => true,
+                'attr' => [
+                    'class' => 'form-control',
+                    'accept' => '.pdf,.jpg,.jpeg,.png'
+                ],
+                'help' => 'Dozwolone formaty: PDF, JPG, PNG. Maksymalny rozmiar: 10MB',
+                'constraints' => [
+                    new File([
+                        'maxSize' => '10M',
+                        'mimeTypes' => [
+                            'application/pdf',
+                            'image/jpeg',
+                            'image/png',
+                            'image/jpg',
+                        ],
+                        'mimeTypesMessage' => 'Proszę przesłać prawidłowy plik PDF lub obraz (JPG, PNG)',
+                        'maxSizeMessage' => 'Plik jest zbyt duży ({{ size }} {{ suffix }}). Maksymalny rozmiar to {{ limit }} {{ suffix }}.'
+                    ])
+                ]
+            ]);
+        }
+
+        // Pole do przesyłania protokołu zwrotu (tylko w trybie return)
+        if ($options['mode'] === 'return') {
+            $builder
+                ->add('returnNotes', TextareaType::class, [
+                    'label' => 'Uwagi do zwrotu',
+                    'required' => false,
+                    'attr' => [
+                        'class' => 'form-control',
+                        'rows' => 3,
+                        'placeholder' => 'Stan aparatury przy zwrocie, stwierdzone uszkodzenia, uwagi...'
+                    ]
+                ])
+                
+                ->add('returnProtocolScan', FileType::class, [
+                    'label' => 'Skan protokołu zwrotu (opcjonalnie)',
+                    'mapped' => false,
+                    'required' => false,
+                    'attr' => [
+                        'class' => 'form-control',
+                        'accept' => '.pdf,.jpg,.jpeg,.png'
+                    ],
+                    'help' => 'Opcjonalny protokół zwrotu aparatury',
+                    'constraints' => [
+                        new File([
+                            'maxSize' => '10M',
+                            'mimeTypes' => [
+                                'application/pdf',
+                                'image/jpeg',
+                                'image/png',
+                                'image/jpg',
+                            ],
+                            'mimeTypesMessage' => 'Proszę przesłać prawidłowy plik PDF lub obraz (JPG, PNG)',
+                            'maxSizeMessage' => 'Plik jest zbyt duży ({{ size }} {{ suffix }}). Maksymalny rozmiar to {{ limit }} {{ suffix }}.'
+                        ])
+                    ]
+                ]);
+        }
+
+        // Dodanie przycisku submit
+        if ($options['include_submit']) {
+            $submitLabel = match ($options['mode']) {
+                'upload_scan' => 'Prześlij skan protokołu',
+                'return' => 'Zakończ przekazanie',
+                'edit' => 'Aktualizuj przekazanie',
+                default => 'Utwórz przekazanie'
+            };
+            
+            $builder->add('submit', SubmitType::class, [
+                'label' => $submitLabel,
+                'attr' => [
+                    'class' => 'btn btn-primary'
+                ]
+            ]);
+        }
+    }
+
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults([
+            'data_class' => AparaturaPomiarowaTransfer::class,
+            'include_submit' => true,
+            'mode' => 'create', // create, edit, upload_scan, return
+            'equipment' => null,
+            'equipment_set' => null,
+        ]);
+
+        $resolver->setAllowedTypes('equipment', ['null', 'App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment']);
+        $resolver->setAllowedTypes('equipment_set', ['null', 'App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipmentSet']);
+    }
+}
