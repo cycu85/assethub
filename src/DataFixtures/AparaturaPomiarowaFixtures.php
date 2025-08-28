@@ -8,16 +8,28 @@ use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Persistence\ObjectManager;
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
-
-class AparaturaPomiarowaFixtures extends Fixture implements FixtureGroupInterface, DependentFixtureInterface
+class AparaturaPomiarowaFixtures extends Fixture implements FixtureGroupInterface
 {
     public function load(ObjectManager $manager): void
     {
         // Pobierz pierwszego użytkownika jako creator
         $user = $manager->getRepository(User::class)->findOneBy([]);
         if (!$user) {
-            throw new \Exception('No user found. Please load UserFixtures first.');
+            throw new \Exception('No user found. Please load AppFixtures first.');
+        }
+
+        // Sprawdź czy moduł aparatury pomiarowej istnieje
+        $moduleRepository = $manager->getRepository(\App\Entity\Module::class);
+        $aparaturaModule = $moduleRepository->findOneBy(['name' => 'aparatura_pomiarowa']);
+        
+        if (!$aparaturaModule) {
+            $aparaturaModule = new \App\Entity\Module();
+            $aparaturaModule->setName('aparatura_pomiarowa')
+                ->setDisplayName('Aparatura Pomiarowa')
+                ->setDescription('Zarządzanie aparaturą pomiarową i miernikami')
+                ->setRequiredPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'CALIBRATE']);
+            $manager->persist($aparaturaModule);
+            $manager->flush();
         }
 
         // Tworzenie 20 mierników i akcesoriów
@@ -517,12 +529,6 @@ class AparaturaPomiarowaFixtures extends Fixture implements FixtureGroupInterfac
         $manager->flush();
     }
 
-    public function getDependencies(): array
-    {
-        return [
-            UserFixtures::class,
-        ];
-    }
 
     public static function getGroups(): array
     {
