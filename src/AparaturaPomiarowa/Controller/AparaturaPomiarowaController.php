@@ -49,8 +49,8 @@ class AparaturaPomiarowaController extends AbstractController
             'equipment_type' => $request->query->get('equipment_type'),
             'equipment_set_id' => $request->query->get('equipment_set_id'),
             'assigned_to' => $request->query->get('assigned_to'),
-            'needs_review' => $request->query->getBoolean('needs_calibration'),
-            'overdue_review' => $request->query->getBoolean('overdue_calibration'),
+            'needs_calibration' => $request->query->getBoolean('needs_calibration'),
+            'overdue_calibration' => $request->query->getBoolean('overdue_calibration'),
             'sort_by' => $request->query->get('sort_by'),
             'sort_dir' => $request->query->get('sort_dir')
         ];
