@@ -106,6 +106,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
                     return $this->render('aparatura-pomiarowa/review/new.html.twig', [
                         'form' => $form->createView(),
                         'review' => $review,
+                        'page_title' => 'Nowa kalibracja',
                     ]);
                 }
 
@@ -139,6 +140,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
         return $this->render('aparatura-pomiarowa/review/new.html.twig', [
             'form' => $form->createView(),
             'review' => $review,
+            'page_title' => 'Nowa kalibracja',
         ]);
     }
 
@@ -213,6 +215,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
         return $this->render('aparatura-pomiarowa/review/edit.html.twig', [
             'form' => $form->createView(),
             'review' => $review,
+            'page_title' => 'Edycja kalibracji',
         ]);
     }
 
