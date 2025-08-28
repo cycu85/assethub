@@ -346,8 +346,35 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
         return $this->redirectToRoute('aparatura_pomiarowa_equipment_set_show', ['id' => $equipmentSet->getId()]);
     }
 
-    #[Route('/{id}/add-equipment', name: 'aparatura_pomiarowa_equipment_set_add_equipment', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function addEquipment(AparaturaPomiarowaEquipmentSet $equipmentSet, Request $request): Response
+    #[Route('/{id}/add-equipment', name: 'aparatura_pomiarowa_equipment_set_add_equipment', requirements: ['id' => '\d+'])]
+    public function addEquipmentForm(AparaturaPomiarowaEquipmentSet $equipmentSet, Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'EDIT', $request);
+        
+        // Jeśli to POST, przekieruj do metody dodawania
+        if ($request->isMethod('POST')) {
+            return $this->processAddEquipment($equipmentSet, $request);
+        }
+        
+        // Pobranie dostępnego sprzętu (nie przypisanego do żadnego zestawu) 
+        $availableEquipment = $this->aparaturaService->getAvailableEquipmentForSet();
+        
+        // Audit
+        $this->auditService->logUserAction($user, 'view_aparatura_pomiarowa_add_equipment_form', [
+            'equipment_set_id' => $equipmentSet->getId(),
+            'available_equipment_count' => count($availableEquipment)
+        ], $request);
+        
+        return $this->render('aparatura-pomiarowa/equipment-set/add-equipment.html.twig', [
+            'equipment_set' => $equipmentSet,
+            'available_equipment' => $availableEquipment
+        ]);
+    }
+
+    private function processAddEquipment(AparaturaPomiarowaEquipmentSet $equipmentSet, Request $request): Response
     {
         $user = $this->getUser();
         
