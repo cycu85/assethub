@@ -355,4 +355,24 @@ class AparaturaPomiarowaReviewRepository extends ServiceEntityRepository
                 ->setParameter('equipmentSetId', $filters['equipment_set_id']);
         }
     }
+
+    public function findByEquipment($equipment): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.equipment = :equipment')
+            ->setParameter('equipment', $equipment)
+            ->orderBy('r.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByEquipmentSet($equipmentSet): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.equipmentSet = :equipmentSet')
+            ->setParameter('equipmentSet', $equipmentSet)
+            ->orderBy('r.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

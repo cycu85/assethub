@@ -345,6 +345,45 @@ class AparaturaPomiarowaService
         return $this->equipmentRepository->getStatistics();
     }
 
+    public function getEquipmentById(int $id): ?AparaturaPomiarowaEquipment
+    {
+        return $this->getEquipment($id);
+    }
+
+    public function getReviewsForEquipment(AparaturaPomiarowaEquipment $equipment): array
+    {
+        return $this->reviewRepository->findByEquipment($equipment);
+    }
+
+    public function getReviewsForEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): array
+    {
+        return $this->reviewRepository->findByEquipmentSet($equipmentSet);
+    }
+
+    public function getTransfersForEquipment(AparaturaPomiarowaEquipment $equipment): array
+    {
+        // TODO: Implement transfers functionality
+        return [];
+    }
+
+    public function getActiveTransferForEquipment(AparaturaPomiarowaEquipment $equipment): ?object
+    {
+        // TODO: Implement active transfer functionality
+        return null;
+    }
+
+    public function getTransfersForEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): array
+    {
+        // TODO: Implement transfers functionality
+        return [];
+    }
+
+    public function getActiveTransferForEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): ?object
+    {
+        // TODO: Implement active transfer functionality
+        return null;
+    }
+
     public function getEquipmentSetStatistics(): array
     {
         return $this->equipmentSetRepository->getStatistics();
