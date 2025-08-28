@@ -74,7 +74,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             'total_reviews' => $reviewsPagination['total']
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/review/index.html.twig', [
+        return $this->render('aparatura-pomiarowa/review/index.html.twig', [
             'reviews' => $reviewsPagination,
             'statistics' => $statistics,
             'filters' => $filters,
@@ -103,7 +103,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
                 // Sprawdzenie czy wybrano urządzenie lub zestaw
                 if (!$review->getEquipment() && !$review->getEquipmentSet()) {
                     $this->addFlash('error', 'Musisz wybrać urządzenie lub zestaw aparatury do kalibracji.');
-                    return $this->render('aparatura_pomiarowa/review/new.html.twig', [
+                    return $this->render('aparatura-pomiarowa/review/new.html.twig', [
                         'form' => $form->createView(),
                         'review' => $review,
                     ]);
@@ -136,7 +136,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             }
         }
         
-        return $this->render('aparatura_pomiarowa/review/new.html.twig', [
+        return $this->render('aparatura-pomiarowa/review/new.html.twig', [
             'form' => $form->createView(),
             'review' => $review,
         ]);
@@ -160,7 +160,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             'review_number' => $review->getReviewNumber()
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/review/show.html.twig', [
+        return $this->render('aparatura-pomiarowa/review/show.html.twig', [
             'review' => $review,
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,
@@ -210,7 +210,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             }
         }
         
-        return $this->render('aparatura_pomiarowa/review/edit.html.twig', [
+        return $this->render('aparatura-pomiarowa/review/edit.html.twig', [
             'form' => $form->createView(),
             'review' => $review,
         ]);
@@ -447,7 +447,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             throw $this->createNotFoundException('Załącznik nie został znaleziony.');
         }
 
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/reviews/';
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/reviews/';
         $filePath = $uploadDir . $filename;
         
         if (!file_exists($filePath)) {
@@ -529,7 +529,7 @@ class AparaturaPomiarowaReviewController extends AbstractController
             'upcoming_count' => count($upcomingReviews)
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/review/overdue.html.twig', [
+        return $this->render('aparatura-pomiarowa/review/overdue.html.twig', [
             'overdue_reviews' => $overdueReviews,
             'upcoming_reviews' => $upcomingReviews,
         ]);

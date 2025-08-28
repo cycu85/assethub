@@ -73,7 +73,7 @@ class AparaturaPomiarowaController extends AbstractController
             'total_equipment' => $equipmentPagination['total']
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/equipment/index.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment/index.html.twig', [
             'equipment' => $equipmentPagination,
             'statistics' => $statistics,
             'filters' => $filters,
@@ -134,7 +134,7 @@ class AparaturaPomiarowaController extends AbstractController
             }
         }
 
-        return $this->render('aparatura_pomiarowa/equipment/new.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment/new.html.twig', [
             'form' => $form->createView(),
             'equipment' => $equipment,
         ]);
@@ -171,7 +171,7 @@ class AparaturaPomiarowaController extends AbstractController
             'inventory_number' => $equipment->getInventoryNumber()
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/equipment/show.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment/show.html.twig', [
             'equipment' => $equipment,
             'reviews' => $reviews,
             'transfers' => $transfers,
@@ -237,7 +237,7 @@ class AparaturaPomiarowaController extends AbstractController
             }
         }
 
-        return $this->render('aparatura_pomiarowa/equipment/edit.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment/edit.html.twig', [
             'form' => $form->createView(),
             'equipment' => $equipment,
         ]);
@@ -387,7 +387,7 @@ class AparaturaPomiarowaController extends AbstractController
             throw $this->createNotFoundException('Załącznik nie został znaleziony.');
         }
 
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/equipment/';
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/equipment/';
         $filePath = $uploadDir . $filename;
         
         if (!file_exists($filePath)) {
@@ -466,7 +466,7 @@ class AparaturaPomiarowaController extends AbstractController
         // Audit
         $this->auditService->logUserAction($user, 'view_aparatura_pomiarowa_statistics', [], $request);
         
-        return $this->render('aparatura_pomiarowa/statistics.html.twig', [
+        return $this->render('aparatura-pomiarowa/statistics.html.twig', [
             'equipment_statistics' => $statistics,
             'review_statistics' => $reviewStatistics,
             'transfer_statistics' => $transferStatistics,

@@ -75,7 +75,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             'total_transfers' => $transfersPagination['total']
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/transfer/index.html.twig', [
+        return $this->render('aparatura-pomiarowa/transfer/index.html.twig', [
             'transfers' => $transfersPagination,
             'statistics' => $statistics,
             'filters' => $filters,
@@ -104,7 +104,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
                 // Sprawdzenie czy wybrano urządzenie lub zestaw
                 if (!$transfer->getEquipment() && !$transfer->getEquipmentSet()) {
                     $this->addFlash('error', 'Musisz wybrać urządzenie lub zestaw aparatury do przekazania.');
-                    return $this->render('aparatura_pomiarowa/transfer/new.html.twig', [
+                    return $this->render('aparatura-pomiarowa/transfer/new.html.twig', [
                         'form' => $form->createView(),
                         'transfer' => $transfer,
                     ]);
@@ -148,7 +148,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             }
         }
         
-        return $this->render('aparatura_pomiarowa/transfer/new.html.twig', [
+        return $this->render('aparatura-pomiarowa/transfer/new.html.twig', [
             'form' => $form->createView(),
             'transfer' => $transfer,
         ]);
@@ -177,7 +177,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             'transfer_number' => $transfer->getTransferNumber()
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/transfer/show.html.twig', [
+        return $this->render('aparatura-pomiarowa/transfer/show.html.twig', [
             'transfer' => $transfer,
             'can_edit' => $canEdit,
             'can_delete' => $canDelete,
@@ -248,7 +248,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             
             // Upload pliku protokołu
             $filename = 'signed_protocol_' . $transfer->getTransferNumber() . '_' . uniqid() . '.pdf';
-            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/transfers/';
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/transfers/';
             
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
@@ -302,7 +302,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
                 
                 // Upload pliku protokołu zwrotu
                 $filename = 'return_protocol_' . $transfer->getTransferNumber() . '_' . uniqid() . '.pdf';
-                $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/transfers/';
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/transfers/';
                 
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
@@ -384,7 +384,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
 
         try {
             // Usunięcie plików protokołów z dysku
-            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/transfers/';
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/transfers/';
             
             if ($transfer->hasProtocolScan()) {
                 $protocolPath = $uploadDir . $transfer->getProtocolScanFilename();
@@ -442,7 +442,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             throw $this->createNotFoundException('Protokół nie został jeszcze wygenerowany lub przesłany.');
         }
         
-        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/transfers/' . $transfer->getProtocolScanFilename();
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/transfers/' . $transfer->getProtocolScanFilename();
         
         if (!file_exists($filePath)) {
             throw $this->createNotFoundException('Plik protokołu nie został znaleziony na dysku.');
@@ -480,7 +480,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             throw $this->createNotFoundException('Protokół zwrotu nie został jeszcze przesłany.');
         }
         
-        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura_pomiarowa/transfers/' . $transfer->getReturnProtocolScanFilename();
+        $filePath = $this->getParameter('kernel.project_dir') . '/var/uploads/aparatura-pomiarowa/transfers/' . $transfer->getReturnProtocolScanFilename();
         
         if (!file_exists($filePath)) {
             throw $this->createNotFoundException('Plik protokołu zwrotu nie został znaleziony na dysku.');
@@ -600,7 +600,7 @@ class AparaturaPomiarowaTransferController extends AbstractController
             'without_scan_count' => count($withoutScan)
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/transfer/overdue.html.twig', [
+        return $this->render('aparatura-pomiarowa/transfer/overdue.html.twig', [
             'overdue_transfers' => $overdueTransfers,
             'upcoming_returns' => $upcomingReturns,
             'transfers_without_scan' => $withoutScan,

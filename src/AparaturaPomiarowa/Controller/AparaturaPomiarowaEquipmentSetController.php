@@ -77,7 +77,7 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
             'total_sets' => $equipmentSetsPagination['total']
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/equipment-set/index.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment-set/index.html.twig', [
             'equipment_sets' => $equipmentSetsPagination,
             'statistics' => $statistics,
             'filters' => $filters,
@@ -133,7 +133,7 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
             }
         }
         
-        return $this->render('aparatura_pomiarowa/equipment-set/form.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment-set/form.html.twig', [
             'form' => $form,
             'equipment_set' => $equipmentSet,
             'mode' => 'create'
@@ -171,7 +171,7 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
             'set_name' => $equipmentSet->getName()
         ], $request);
         
-        return $this->render('aparatura_pomiarowa/equipment-set/show.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment-set/show.html.twig', [
             'equipment_set' => $equipmentSet,
             'reviews' => $reviews,
             'transfers' => $transfers,
@@ -228,7 +228,7 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
             }
         }
         
-        return $this->render('aparatura_pomiarowa/equipment-set/form.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment-set/form.html.twig', [
             'form' => $form,
             'equipment_set' => $equipmentSet,
             'mode' => 'edit'
@@ -478,7 +478,7 @@ class AparaturaPomiarowaEquipmentSetController extends AbstractController
             }
         }
 
-        return $this->render('aparatura_pomiarowa/equipment-set/transfer.html.twig', [
+        return $this->render('aparatura-pomiarowa/equipment-set/transfer.html.twig', [
             'form' => $form,
             'equipment_set' => $equipmentSet,
         ]);
