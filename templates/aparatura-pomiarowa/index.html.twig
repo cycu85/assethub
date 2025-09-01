@@ -101,9 +101,9 @@
                 <div class="d-flex align-items-end justify-content-between mt-2">
                     <div>
                         <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                            <span class="counter-value text-warning" data-target="{{ statistics.needing_calibration }}">{{ statistics.needing_calibration }}</span>
+                            <span class="counter-value text-warning" data-target="{{ statistics.needing_review }}">{{ statistics.needing_review }}</span>
                         </h4>
-                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_calibration': 1}) }}" class="text-decoration-underline">Sprawdź urządzenia</a>
+                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_review': 1}) }}" class="text-decoration-underline">Sprawdź urządzenia</a>
                     </div>
                     <div class="avatar-sm flex-shrink-0">
                         <span class="avatar-title bg-warning-subtle rounded fs-3">
@@ -186,7 +186,7 @@
                     {% endif %}
                     
                     <div class="col-md-3">
-                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_calibration': 1}) }}" class="btn btn-outline-warning btn-lg w-100 d-flex flex-column align-items-center p-4">
+                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_review': 1}) }}" class="btn btn-outline-warning btn-lg w-100 d-flex flex-column align-items-center p-4">
                             <i class="ri-error-warning-line fs-2 mb-2"></i>
                             <span>Sprawdź terminy</span>
                             <small class="text-muted">Urządzenia do kalibracji</small>

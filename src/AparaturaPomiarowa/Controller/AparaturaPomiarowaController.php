@@ -36,6 +36,50 @@ class AparaturaPomiarowaController extends AbstractController
     #[Route('/', name: 'aparatura_pomiarowa_index')]
     public function index(Request $request): Response
     {
+        // Jeśli nie ma żadnych filtrów, pokaż dashboard
+        if (!$request->query->count()) {
+            return $this->dashboard($request);
+        }
+        
+        // W przeciwnym razie pokaż listę sprzętu z filtrami
+        return $this->equipment($request);
+    }
+
+    public function dashboard(Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Autoryzacja
+        $this->authorizationService->checkModuleAccess($user, 'aparatura_pomiarowa', $request);
+        
+        // Pobranie statystyk
+        $statistics = $this->aparaturaPomiarowaService->getEquipmentStatistics();
+        $equipmentSetStatistics = $this->aparaturaPomiarowaService->getEquipmentSetStatistics();
+        
+        // Sprawdzenie uprawnień
+        $canCreate = $this->authorizationService->hasPermission($user, 'aparatura_pomiarowa', 'CREATE');
+        $canEdit = $this->authorizationService->hasPermission($user, 'aparatura_pomiarowa', 'EDIT');
+        $canDelete = $this->authorizationService->hasPermission($user, 'aparatura_pomiarowa', 'DELETE');
+        $canAssign = $this->authorizationService->hasPermission($user, 'aparatura_pomiarowa', 'ASSIGN');
+        $canReview = $this->authorizationService->hasPermission($user, 'aparatura_pomiarowa', 'REVIEW');
+
+        // Audit
+        $this->auditService->logUserAction($user, 'view_aparatura_pomiarowa_dashboard', [], $request);
+        
+        return $this->render('aparatura-pomiarowa/index.html.twig', [
+            'statistics' => $statistics,
+            'equipment_set_statistics' => $equipmentSetStatistics,
+            'can_create' => $canCreate,
+            'can_edit' => $canEdit,
+            'can_delete' => $canDelete,
+            'can_assign' => $canAssign,
+            'can_review' => $canReview,
+        ]);
+    }
+
+    #[Route('/equipment', name: 'aparatura_pomiarowa_equipment_index')]
+    public function equipment(Request $request): Response
+    {
         $user = $this->getUser();
         
         // Autoryzacja

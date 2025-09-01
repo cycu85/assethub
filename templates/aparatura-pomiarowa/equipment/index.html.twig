@@ -141,16 +141,16 @@
                     <div class="col-md-2">
                         <label class="form-label">Specjalne filtry</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="needs_calibration" 
-                                   {{ filters.needs_calibration ? 'checked' : '' }} id="needs_calibration">
-                            <label class="form-check-label" for="needs_calibration">
+                            <input class="form-check-input" type="checkbox" name="needs_review" 
+                                   {{ filters.needs_review ? 'checked' : '' }} id="needs_review">
+                            <label class="form-check-label" for="needs_review">
                                 Wymagają kalibracji (30 dni)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="overdue_calibration" 
-                                   {{ filters.overdue_calibration ? 'checked' : '' }} id="overdue_calibration">
-                            <label class="form-check-label" for="overdue_calibration">
+                            <input class="form-check-input" type="checkbox" name="overdue_review" 
+                                   {{ filters.overdue_review ? 'checked' : '' }} id="overdue_review">
+                            <label class="form-check-label" for="overdue_review">
                                 Przeterminowane kalibracje
                             </label>
                         </div>
