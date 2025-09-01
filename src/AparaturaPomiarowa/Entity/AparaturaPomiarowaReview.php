@@ -37,6 +37,9 @@ class AparaturaPomiarowaReview
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $calibrationType = null;
 
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $reviewType = null;
+
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     #[Assert\NotNull(message: 'Data planowanej kalibracji jest wymagana')]
     private ?\DateTimeInterface $plannedDate = null;
