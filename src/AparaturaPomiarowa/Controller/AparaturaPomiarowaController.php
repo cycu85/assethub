@@ -138,8 +138,8 @@ class AparaturaPomiarowaController extends AbstractController
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'CREATE', $request);
         
-        $equipment = new AsekuracyjnyEquipment();
-        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment, [
+        $equipment = new AparaturaPomiarowaEquipment();
+        $form = $this->createForm(AparaturaPomiarowaEquipmentType::class, $equipment, [
             'include_submit' => false
         ]);
         $form->handleRequest($request);
@@ -192,7 +192,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}', name: 'aparatura_pomiarowa_equipment_show', requirements: ['id' => '\d+'])]
-    public function showEquipment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function showEquipment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -224,7 +224,7 @@ class AparaturaPomiarowaController extends AbstractController
         // Pobierz przeglądy posortowane chronologicznie (najnowsze pierwsze)
         // 1. Przeglądy bezpośrednio tego sprzętu
         // 2. Przeglądy zestawów, w których uczestniczy ten sprzęt
-        $reviews = $this->entityManager->getRepository(AsekuracyjnyReview::class)
+        $reviews = $this->entityManager->getRepository(AparaturaPomiarowaReview::class)
             ->createQueryBuilder('r')
             ->leftJoin('r.equipmentSet', 'es')
             ->leftJoin('es.equipment', 'eq')
@@ -253,14 +253,14 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/edit', name: 'aparatura_pomiarowa_equipment_edit', requirements: ['id' => '\d+'])]
-    public function editEquipment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function editEquipment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
         // Autoryzacja
         $this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'EDIT', $request);
         
-        $form = $this->createForm(AsekuracyjnyEquipmentType::class, $equipment, [
+        $form = $this->createForm(AparaturaPomiarowaEquipmentType::class, $equipment, [
             'include_submit' => false
         ]);
         $form->handleRequest($request);
@@ -314,7 +314,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/delete', name: 'aparatura_pomiarowa_equipment_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function deleteEquipment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function deleteEquipment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -347,7 +347,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/assign', name: 'aparatura_pomiarowa_equipment_assign', requirements: ['id' => '\d+'])]
-    public function assignEquipment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function assignEquipment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -386,7 +386,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/unassign', name: 'aparatura_pomiarowa_equipment_unassign', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function unassignEquipment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function unassignEquipment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -507,7 +507,7 @@ class AparaturaPomiarowaController extends AbstractController
     // === ATTACHMENT MANAGEMENT ===
 
     #[Route('/equipment/{id}/attachment/upload', name: 'aparatura_pomiarowa_equipment_attachment_upload', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function uploadEquipmentAttachment(AsekuracyjnyEquipment $equipment, Request $request): Response
+    public function uploadEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -521,7 +521,7 @@ class AparaturaPomiarowaController extends AbstractController
         
         try {
             // Ensure entity is managed by entity manager
-            $equipment = $this->entityManager->find(AsekuracyjnyEquipment::class, $equipment->getId());
+            $equipment = $this->entityManager->find(AparaturaPomiarowaEquipment::class, $equipment->getId());
             if (!$equipment) {
                 throw new \RuntimeException('Equipment not found');
             }
@@ -620,7 +620,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/attachment/{filename}/download', name: 'aparatura_pomiarowa_equipment_attachment_download', requirements: ['id' => '\d+'])]
-    public function downloadEquipmentAttachment(AsekuracyjnyEquipment $equipment, string $filename, Request $request): Response
+    public function downloadEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, string $filename, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -665,7 +665,7 @@ class AparaturaPomiarowaController extends AbstractController
     }
 
     #[Route('/equipment/{id}/attachment/{filename}/delete', name: 'aparatura_pomiarowa_equipment_attachment_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function deleteEquipmentAttachment(AsekuracyjnyEquipment $equipment, string $filename, Request $request): Response
+    public function deleteEquipmentAttachment(AparaturaPomiarowaEquipment $equipment, string $filename, Request $request): Response
     {
         $user = $this->getUser();
         
@@ -725,7 +725,7 @@ class AparaturaPomiarowaController extends AbstractController
 
     // === PRIVATE HELPER METHODS ===
 
-    private function canUserViewEquipment(User $user, AsekuracyjnyEquipment $equipment): bool
+    private function canUserViewEquipment(User $user, AparaturaPomiarowaEquipment $equipment): bool
     {
         // Admini i edytorzy mogą widzieć wszystko
         if ($this->authorizationService->checkAnyPermission($user, 'aparatura_pomiarowa', ['EDIT', 'DELETE', 'ASSIGN'])) {

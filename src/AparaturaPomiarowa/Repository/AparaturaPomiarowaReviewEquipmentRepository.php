@@ -3,8 +3,8 @@
 namespace App\AparaturaPomiarowa\Repository;
 
 use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReviewEquipment;
-use App\AparaturaPomiarowa\Entity\AsekuracyjnyReview;
-use App\AparaturaPomiarowa\Entity\AsekuracyjnyEquipment;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReview;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -39,7 +39,7 @@ class AparaturaPomiarowaReviewEquipmentRepository extends ServiceEntityRepositor
     /**
      * Find all review equipments for a specific equipment (complete history)
      */
-    public function findByEquipment(AsekuracyjnyEquipment $equipment): array
+    public function findByEquipment(AparaturaPomiarowaEquipment $equipment): array
     {
         return $this->createQueryBuilder('re')
             ->leftJoin('re.review', 'r')
@@ -54,7 +54,7 @@ class AparaturaPomiarowaReviewEquipmentRepository extends ServiceEntityRepositor
     /**
      * Find all equipments that were reviewed in a specific review
      */
-    public function findByReview(AsekuracyjnyReview $review): array
+    public function findByReview(AparaturaPomiarowaReview $review): array
     {
         return $this->createQueryBuilder('re')
             ->leftJoin('re.equipment', 'e')
@@ -124,7 +124,7 @@ class AparaturaPomiarowaReviewEquipmentRepository extends ServiceEntityRepositor
     /**
      * Get review history for equipment with pagination
      */
-    public function findEquipmentHistoryWithPagination(AsekuracyjnyEquipment $equipment, int $page = 1, int $limit = 25): array
+    public function findEquipmentHistoryWithPagination(AparaturaPomiarowaEquipment $equipment, int $page = 1, int $limit = 25): array
     {
         $qb = $this->createQueryBuilder('re')
             ->leftJoin('re.review', 'r')
@@ -161,7 +161,7 @@ class AparaturaPomiarowaReviewEquipmentRepository extends ServiceEntityRepositor
         $qb = $this->createQueryBuilder('re')
             ->leftJoin('re.review', 'r')
             ->where('r.status = :completedStatus')
-            ->setParameter('completedStatus', AsekuracyjnyReview::STATUS_COMPLETED);
+            ->setParameter('completedStatus', AparaturaPomiarowaReview::STATUS_COMPLETED);
 
         $total = (clone $qb)
             ->select('COUNT(re.id)')
@@ -240,7 +240,7 @@ class AparaturaPomiarowaReviewEquipmentRepository extends ServiceEntityRepositor
             ->leftJoin('re.equipment', 'e')
             ->where('r.status = :completedStatus')
             ->andWhere('re.equipment IS NOT NULL')
-            ->setParameter('completedStatus', AsekuracyjnyReview::STATUS_COMPLETED)
+            ->setParameter('completedStatus', AparaturaPomiarowaReview::STATUS_COMPLETED)
             ->orderBy('e.id', 'ASC')
             ->addOrderBy('r.completedDate', 'DESC')
             ->getQuery()

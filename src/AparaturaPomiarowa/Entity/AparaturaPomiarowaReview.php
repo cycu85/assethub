@@ -681,6 +681,11 @@ class AparaturaPomiarowaReview
         });
     }
 
+    public function getReviewNumber(): ?string
+    {
+        return $this->calibrationNumber;
+    }
+
     public function __toString(): string
     {
         return $this->calibrationNumber ?? '';

@@ -3,8 +3,8 @@
 namespace App\AparaturaPomiarowa\Repository;
 
 use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaTransfer;
-use App\AparaturaPomiarowa\Entity\AsekuracyjnyEquipment;
-use App\AparaturaPomiarowa\Entity\AsekuracyjnyEquipmentSet;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipmentSet;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -103,7 +103,7 @@ class AparaturaPomiarowaTransferRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findByEquipment(AsekuracyjnyEquipment $equipment): array
+    public function findByEquipment(AparaturaPomiarowaEquipment $equipment): array
     {
         return $this->createQueryBuilder('t')
             ->where('t.equipment = :equipment')
@@ -113,7 +113,7 @@ class AparaturaPomiarowaTransferRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findByEquipmentSet(AsekuracyjnyEquipmentSet $equipmentSet): array
+    public function findByEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): array
     {
         return $this->createQueryBuilder('t')
             ->where('t.equipmentSet = :equipmentSet')
@@ -330,7 +330,7 @@ class AparaturaPomiarowaTransferRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    public function getActiveTransfersForEquipment(AsekuracyjnyEquipment $equipment): array
+    public function getActiveTransfersForEquipment(AparaturaPomiarowaEquipment $equipment): array
     {
         return $this->createQueryBuilder('t')
             ->where('t.equipment = :equipment')
@@ -345,7 +345,7 @@ class AparaturaPomiarowaTransferRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function getActiveTransfersForEquipmentSet(AsekuracyjnyEquipmentSet $equipmentSet): array
+    public function getActiveTransfersForEquipmentSet(AparaturaPomiarowaEquipmentSet $equipmentSet): array
     {
         return $this->createQueryBuilder('t')
             ->where('t.equipmentSet = :equipmentSet')

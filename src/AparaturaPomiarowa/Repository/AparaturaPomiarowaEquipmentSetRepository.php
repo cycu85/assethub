@@ -9,7 +9,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * @extends ServiceEntityRepository<AsekuracyjnyEquipmentSet>
+ * @extends ServiceEntityRepository<AparaturaPomiarowaEquipmentSet>
  */
 class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
 {
@@ -122,7 +122,7 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('s')
             ->where('s.status = :status')
             ->andWhere('s.assignedTo IS NULL')
-            ->setParameter('status', AsekuracyjnyEquipmentSet::STATUS_AVAILABLE)
+            ->setParameter('status', AparaturaPomiarowaEquipmentSet::STATUS_AVAILABLE)
             ->orderBy('s.name', 'ASC')
             ->getQuery()
             ->getResult();
@@ -139,7 +139,7 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
             ->andWhere('s.nextReviewDate <= :warningDate')
             ->andWhere('s.status != :inReviewStatus')
             ->setParameter('warningDate', $warningDate)
-            ->setParameter('inReviewStatus', AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW)
+            ->setParameter('inReviewStatus', AparaturaPomiarowaEquipmentSet::STATUS_IN_REVIEW)
             ->orderBy('s.nextReviewDate', 'ASC')
             ->getQuery()
             ->getResult();
@@ -154,7 +154,7 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
             ->andWhere('s.nextReviewDate < :now')
             ->andWhere('s.status != :inReviewStatus')
             ->setParameter('now', $now)
-            ->setParameter('inReviewStatus', AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW)
+            ->setParameter('inReviewStatus', AparaturaPomiarowaEquipmentSet::STATUS_IN_REVIEW)
             ->orderBy('s.nextReviewDate', 'ASC')
             ->getQuery()
             ->getResult();
@@ -176,7 +176,7 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
             ->leftJoin('s.equipment', 'e')
             ->where('s.status = :availableStatus')
             ->andWhere('e.status = :equipmentAvailableStatus OR e.status IS NULL')
-            ->setParameter('availableStatus', AsekuracyjnyEquipmentSet::STATUS_AVAILABLE)
+            ->setParameter('availableStatus', AparaturaPomiarowaEquipmentSet::STATUS_AVAILABLE)
             ->setParameter('equipmentAvailableStatus', 'available')
             ->groupBy('s.id')
             ->orderBy('s.name', 'ASC')
@@ -190,7 +190,7 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
             ->leftJoin('s.equipment', 'e')
             ->where('s.status != :incompleteStatus')
             ->andWhere('e.status != :equipmentAvailableStatus')
-            ->setParameter('incompleteStatus', AsekuracyjnyEquipmentSet::STATUS_INCOMPLETE)
+            ->setParameter('incompleteStatus', AparaturaPomiarowaEquipmentSet::STATUS_INCOMPLETE)
             ->setParameter('equipmentAvailableStatus', 'available')
             ->groupBy('s.id')
             ->orderBy('s.name', 'ASC')
@@ -209,28 +209,28 @@ class AparaturaPomiarowaEquipmentSetRepository extends ServiceEntityRepository
         $available = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
             ->where('s.status = :status')
-            ->setParameter('status', AsekuracyjnyEquipmentSet::STATUS_AVAILABLE)
+            ->setParameter('status', AparaturaPomiarowaEquipmentSet::STATUS_AVAILABLE)
             ->getQuery()
             ->getSingleScalarResult();
 
         $assigned = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
             ->where('s.status = :status')
-            ->setParameter('status', AsekuracyjnyEquipmentSet::STATUS_ASSIGNED)
+            ->setParameter('status', AparaturaPomiarowaEquipmentSet::STATUS_ASSIGNED)
             ->getQuery()
             ->getSingleScalarResult();
 
         $inReview = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
             ->where('s.status = :status')
-            ->setParameter('status', AsekuracyjnyEquipmentSet::STATUS_IN_REVIEW)
+            ->setParameter('status', AparaturaPomiarowaEquipmentSet::STATUS_IN_REVIEW)
             ->getQuery()
             ->getSingleScalarResult();
 
         $incomplete = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
             ->where('s.status = :status')
-            ->setParameter('status', AsekuracyjnyEquipmentSet::STATUS_INCOMPLETE)
+            ->setParameter('status', AparaturaPomiarowaEquipmentSet::STATUS_INCOMPLETE)
             ->getQuery()
             ->getSingleScalarResult();
 
