@@ -254,21 +254,21 @@ class AparaturaPomiarowaFixtures extends Fixture implements FixtureGroupInterfac
         $reviewData = [
             [
                 'equipment_set_index' => 0,
-                'review_type' => AparaturaPomiarowaReview::TYPE_CALIBRATION,
+                'review_type' => AparaturaPomiarowaReview::TYPE_PERIODIC,
                 'planned_date' => '+30 days',
                 'company' => 'CALIBRA Sp. z o.o.',
                 'notes' => 'Kalibracja podstawowych przyrządów pomiarowych'
             ],
             [
                 'equipment_index' => 7, // Kalibrator
-                'review_type' => AparaturaPomiarowaReview::TYPE_CALIBRATION,
+                'review_type' => AparaturaPomiarowaReview::TYPE_PERIODIC,
                 'planned_date' => '+14 days',
                 'company' => 'WZORCOWNIA LAB',
                 'notes' => 'Kalibracja etalonu roboczego - wysoka priorytet'
             ],
             [
                 'equipment_set_index' => 2,
-                'review_type' => AparaturaPomiarowaReview::TYPE_VERIFICATION,
+                'review_type' => AparaturaPomiarowaReview::TYPE_INITIAL,
                 'planned_date' => '+60 days',
                 'company' => 'PRECYZJA TECH',
                 'notes' => 'Weryfikacja zestawu precyzyjnych pomiarów'
@@ -290,7 +290,7 @@ class AparaturaPomiarowaFixtures extends Fixture implements FixtureGroupInterfac
                 ->setPlannedDate($plannedDate)
                 ->setReviewCompany($data['company'])
                 ->setNotes($data['notes'])
-                ->setStatus(AparaturaPomiarowaReview::STATUS_PLANNED)
+                ->setStatus(AparaturaPomiarowaReview::STATUS_PREPARATION)
                 ->setCreatedBy($admin);
 
             $manager->persist($review);
