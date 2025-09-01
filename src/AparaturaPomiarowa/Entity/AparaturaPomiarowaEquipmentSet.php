@@ -44,6 +44,9 @@ class AparaturaPomiarowaEquipmentSet
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $nextCalibrationDate = null;
 
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $nextReviewDate = null;
+
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
     #[Assert\Positive(message: 'Okres kalibracji musi być liczbą dodatnią')]
     private ?int $calibrationIntervalMonths = null;
@@ -87,6 +90,7 @@ class AparaturaPomiarowaEquipmentSet
     public const STATUS_AVAILABLE = 'available';
     public const STATUS_ASSIGNED = 'assigned';
     public const STATUS_IN_CALIBRATION = 'in_calibration';
+    public const STATUS_IN_REVIEW = 'in_review';
     public const STATUS_MAINTENANCE = 'maintenance';
     public const STATUS_INCOMPLETE = 'incomplete';
     public const STATUS_RETIRED = 'retired';
@@ -95,6 +99,7 @@ class AparaturaPomiarowaEquipmentSet
         self::STATUS_AVAILABLE => 'Dostępny',
         self::STATUS_ASSIGNED => 'Przypisany',
         self::STATUS_IN_CALIBRATION => 'Na kalibracji',
+        self::STATUS_IN_REVIEW => 'Na przeglądzie',
         self::STATUS_MAINTENANCE => 'W serwisie',
         self::STATUS_INCOMPLETE => 'Niekompletny',
         self::STATUS_RETIRED => 'Wycofany'
