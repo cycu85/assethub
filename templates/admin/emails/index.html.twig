@@ -196,7 +196,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 id: 'subject',
                 width: '30%',
                 formatter: (cell, row) => {
-                    return gridjs.html(`<a href="{{ path('admin_emails_show', {id: '__ID__'}) }}".replace('__ID__', row.cells[0].data) class="text-decoration-none">${cell}</a>`);
+                    const emailId = row.cells[0].data;
+                    const showUrl = `/admin/emails/${emailId}`;
+                    return gridjs.html(`<a href="${showUrl}" class="text-decoration-none">${cell}</a>`);
                 }
             },
             {
