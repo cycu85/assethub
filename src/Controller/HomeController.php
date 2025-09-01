@@ -33,7 +33,7 @@ class HomeController extends AbstractController
         return $this->render('index.html.twig');
     }
 
-    #[Route('/{path}', requirements: ['path' => '^(?!install|admin|api|login|logout|profile|asekuracja).*'])]
+    #[Route('/{path}', requirements: ['path' => '^(?!install|admin|api|login|logout|profile|asekuracja|aparatura-pomiarowa/).*'])]
     public function root($path, Request $request)
     {
         $user = $this->getUser();

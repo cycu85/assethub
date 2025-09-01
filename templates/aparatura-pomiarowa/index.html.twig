@@ -1,0 +1,396 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Aparatura Pomiarowa - {{ app_name() }}{% endblock %}
+{% block page_title %}Aparatura Pomiarowa{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h4 class="mb-0">
+            <i class="ri-scales-line me-2 text-primary"></i>
+            Moduł Aparatura Pomiarowa
+        </h4>
+        <p class="text-muted mb-0">Zarządzanie miernikami, akcesoriami pomiarowymi i ich kalibracjami</p>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_create %}
+        <a href="{{ path('aparatura_pomiarowa_equipment_new') }}" class="btn btn-primary">
+            <i class="ri-add-line me-1"></i>
+            Dodaj urządzenie
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Szybki przegląd -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Łącznie urządzeń</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <h5 class="text-success fs-14 mb-0">
+                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i>
+                        </h5>
+                    </div>
+                </div>
+                <div class="d-flex align-items-end justify-content-between mt-2">
+                    <div>
+                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                            <span class="counter-value" data-target="{{ statistics.total_equipment }}">{{ statistics.total_equipment }}</span>
+                        </h4>
+                        <a href="{{ path('aparatura_pomiarowa_equipment_index') }}" class="text-decoration-underline">Zobacz wszystkie</a>
+                    </div>
+                    <div class="avatar-sm flex-shrink-0">
+                        <span class="avatar-title bg-primary-subtle rounded fs-3">
+                            <i class="ri-scales-line text-primary"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Zestawy aparatury</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <h5 class="text-success fs-14 mb-0">
+                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i>
+                        </h5>
+                    </div>
+                </div>
+                <div class="d-flex align-items-end justify-content-between mt-2">
+                    <div>
+                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                            <span class="counter-value" data-target="{{ statistics.total_sets }}">{{ statistics.total_sets }}</span>
+                        </h4>
+                        <a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}" class="text-decoration-underline">Zobacz zestawy</a>
+                    </div>
+                    <div class="avatar-sm flex-shrink-0">
+                        <span class="avatar-title bg-info-subtle rounded fs-3">
+                            <i class="ri-stack-line text-info"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Wymagają kalibracji</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <h5 class="text-danger fs-14 mb-0">
+                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i>
+                        </h5>
+                    </div>
+                </div>
+                <div class="d-flex align-items-end justify-content-between mt-2">
+                    <div>
+                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                            <span class="counter-value text-warning" data-target="{{ statistics.needing_calibration }}">{{ statistics.needing_calibration }}</span>
+                        </h4>
+                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_calibration': 1}) }}" class="text-decoration-underline">Sprawdź urządzenia</a>
+                    </div>
+                    <div class="avatar-sm flex-shrink-0">
+                        <span class="avatar-title bg-warning-subtle rounded fs-3">
+                            <i class="ri-time-line text-warning"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Kalibracje w miesiącu</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <h5 class="text-success fs-14 mb-0">
+                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i>
+                        </h5>
+                    </div>
+                </div>
+                <div class="d-flex align-items-end justify-content-between mt-2">
+                    <div>
+                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">
+                            <span class="counter-value" data-target="{{ statistics.calibrations_this_month }}">{{ statistics.calibrations_this_month }}</span>
+                        </h4>
+                        <a href="{{ path('aparatura_pomiarowa_review_index') }}" class="text-decoration-underline">Zobacz kalibracje</a>
+                    </div>
+                    <div class="avatar-sm flex-shrink-0">
+                        <span class="avatar-title bg-success-subtle rounded fs-3">
+                            <i class="ri-search-eye-line text-success"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Szybkie akcje -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-flashlight-line me-2"></i>Szybkie akcje
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% if can_create %}
+                    <div class="col-md-3">
+                        <a href="{{ path('aparatura_pomiarowa_equipment_new') }}" class="btn btn-outline-primary btn-lg w-100 d-flex flex-column align-items-center p-4">
+                            <i class="ri-scales-line fs-2 mb-2"></i>
+                            <span>Dodaj urządzenie</span>
+                            <small class="text-muted">Nowe urządzenie pomiarowe</small>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <a href="{{ path('aparatura_pomiarowa_equipment_set_new') }}" class="btn btn-outline-info btn-lg w-100 d-flex flex-column align-items-center p-4">
+                            <i class="ri-stack-line fs-2 mb-2"></i>
+                            <span>Utwórz zestaw</span>
+                            <small class="text-muted">Nowy zestaw aparatury</small>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if can_review %}
+                    <div class="col-md-3">
+                        <a href="{{ path('aparatura_pomiarowa_review_new') }}" class="btn btn-outline-success btn-lg w-100 d-flex flex-column align-items-center p-4">
+                            <i class="ri-search-eye-line fs-2 mb-2"></i>
+                            <span>Nowa kalibracja</span>
+                            <small class="text-muted">Zaplanuj kalibrację</small>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-3">
+                        <a href="{{ path('aparatura_pomiarowa_equipment_index', {'needs_calibration': 1}) }}" class="btn btn-outline-warning btn-lg w-100 d-flex flex-column align-items-center p-4">
+                            <i class="ri-error-warning-line fs-2 mb-2"></i>
+                            <span>Sprawdź terminy</span>
+                            <small class="text-muted">Urządzenia do kalibracji</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ostatnie działania -->
+<div class="row">
+    <div class="col-xl-8">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1">
+                    <i class="ri-history-line me-2"></i>Ostatnie urządzenia
+                </h5>
+                <a href="{{ path('aparatura_pomiarowa_equipment_index') }}" class="btn btn-sm btn-outline-primary">
+                    Zobacz wszystkie
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_equipment|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
+                        <thead class="text-muted table-light">
+                            <tr>
+                                <th>Urządzenie</th>
+                                <th>Typ</th>
+                                <th>Status</th>
+                                <th>Następna kalibracja</th>
+                                <th>Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipment in recent_equipment %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-3">
+                                            <i class="ri-scales-line text-primary fs-16"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">
+                                                <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: equipment.id}) }}" class="text-dark text-decoration-none">
+                                                    {{ equipment.name }}
+                                                </a>
+                                            </h6>
+                                            <span class="text-muted small">{{ equipment.inventoryNumber }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ equipment.equipmentType }}</span>
+                                </td>
+                                <td>
+                                    {% set status_class = equipment.status == 'available' ? 'success' : 
+                                                         (equipment.status == 'assigned' ? 'warning' : 
+                                                         (equipment.status == 'damaged' ? 'danger' : 'secondary')) %}
+                                    <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                                </td>
+                                <td>
+                                    {% if equipment.nextReviewDate %}
+                                        {% set review_date = equipment.nextReviewDate|date('Y-m-d') %}
+                                        {% set today_date = 'now'|date('Y-m-d') %}
+                                        {% if review_date < today_date %}
+                                            <span class="text-danger small">
+                                                <i class="ri-error-warning-line me-1"></i>
+                                                {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                            </span>
+                                        {% else %}
+                                            {% set days_to_review = date(equipment.nextReviewDate).diff(date()).days %}
+                                            {% if days_to_review <= 30 %}
+                                                <span class="text-warning small">
+                                                    <i class="ri-time-line me-1"></i>
+                                                    {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-success small">
+                                                    {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted small">Nie określono</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="ri-more-line"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('aparatura_pomiarowa_equipment_show', {id: equipment.id}) }}">
+                                                    <i class="ri-eye-line me-2"></i>Szczegóły
+                                                </a>
+                                            </li>
+                                            {% if can_edit %}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('aparatura_pomiarowa_equipment_edit', {id: equipment.id}) }}">
+                                                    <i class="ri-edit-line me-2"></i>Edytuj
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="ri-scales-line text-muted fs-32"></i>
+                    <p class="text-muted mb-0 mt-2">Brak urządzeń w systemie</p>
+                    {% if can_create %}
+                    <a href="{{ path('aparatura_pomiarowa_equipment_new') }}" class="btn btn-primary btn-sm mt-2">
+                        <i class="ri-add-line me-1"></i>Dodaj pierwsze urządzenie
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <!-- Nadchodzące kalibracje -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1">
+                    <i class="ri-calendar-check-line me-2"></i>Nadchodzące kalibracje
+                </h5>
+                <a href="{{ path('aparatura_pomiarowa_review_index') }}" class="btn btn-sm btn-outline-success">
+                    Zobacz wszystkie
+                </a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_calibrations|length > 0 %}
+                {% for calibration in upcoming_calibrations|slice(0, 5) %}
+                <div class="d-flex align-items-start mb-3">
+                    <div class="avatar-sm bg-warning-subtle rounded me-3">
+                        <i class="ri-time-line text-warning fs-16"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fs-14">
+                            <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: calibration.equipment.id}) }}" 
+                               class="text-decoration-none">
+                                {{ calibration.equipment.name }}
+                            </a>
+                        </h6>
+                        <p class="mb-0 text-muted small">
+                            Kalibracja: {{ calibration.nextReviewDate|date('d.m.Y') }}
+                            {% set days = date(calibration.nextReviewDate).diff(date()).days %}
+                            (za {{ days }} dni)
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="ri-calendar-check-line text-muted fs-24"></i>
+                    <p class="text-muted mb-0 mt-2">Brak nadchodzących kalibracji</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statystyki typów -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-pie-chart-line me-2"></i>Typy urządzeń
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment_by_type|length > 0 %}
+                {% for type, count in equipment_by_type %}
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary-subtle rounded me-3">
+                            <i class="ri-scales-line text-primary fs-16"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ type|title }}</h6>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark">{{ count }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="ri-pie-chart-line text-muted fs-24"></i>
+                    <p class="text-muted mb-0 mt-2">Brak danych</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Zarządzanie miernikami - {{ equipment_set.name }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Zarządzanie miernikami zestawu{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_index') }}">Aparatura Pomiarowa</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}">Zestawy</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_equipment_set_show', {id: equipment_set.id}) }}">{{ equipment_set.name }}</a></li>
+                <li class="breadcrumb-item active">Zarządzanie miernikami</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-primary rounded me-3">
+                <i class="ri-settings-3-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">Zarządzanie miernikami</h4>
+                <p class="text-muted mb-0">
+                    Zestaw: <strong>{{ equipment_set.name }}</strong>
+                    <span class="ms-2 badge bg-info">{{ equipment_set.equipmentItems|length }} elementów</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+            <i class="ri-add-line me-1"></i>Dodaj miernik
+        </button>
+        <a href="{{ path('aparatura_pomiarowa_equipment_set_show', {id: equipment_set.id}) }}" 
+           class="btn btn-outline-secondary ms-2">
+            <i class="ri-arrow-left-line me-1"></i>Powrót
+        </a>
+    </div>
+</div>
+
+<!-- Aktualny sprzęt w zestawie -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-tools-line me-2"></i>Mierniki w zestawie
+                    <span class="badge bg-primary ms-2">{{ equipment_set.equipmentItems|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.equipmentItems is empty %}
+                    <div class="text-center py-4">
+                        <div class="avatar-lg bg-light rounded mx-auto mb-3">
+                            <i class="ri-tools-line text-muted fs-24"></i>
+                        </div>
+                        <h5 class="text-muted">Brak mierników w zestawie</h5>
+                        <p class="text-muted mb-0">Kliknij "Dodaj miernik" aby dodać pierwszy element.</p>
+                    </div>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Miernik</th>
+                                    <th>Typ</th>
+                                    <th>Status</th>
+                                    <th>Następna kalibracja</th>
+                                    <th width="120">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for equipment in equipment_set.equipmentItems %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs bg-light rounded me-2">
+                                                <i class="ri-cpu-line text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ equipment.name }}</h6>
+                                                <small class="text-muted">{{ equipment.inventoryNumber }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ equipment.equipmentType }}</span>
+                                    </td>
+                                    <td>
+                                        {% set status_class = equipment.status == 'available' ? 'success' : 'warning' %}
+                                        <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                                    </td>
+                                    <td>
+                                        {% if equipment.nextReviewDate %}
+                                            <span class="text-muted">{{ equipment.nextReviewDate|date('d.m.Y') }}</span>
+                                            {% if equipment.isReviewOverdue %}
+                                                <i class="ri-error-warning-line text-danger ms-1"></i>
+                                            {% elseif equipment.needsReview %}
+                                                <i class="ri-time-line text-warning ms-1"></i>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_remove_equipment', {id: equipment_set.id}) }}" class="d-inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('remove_equipment_' ~ equipment_set.id) }}">
+                                            <input type="hidden" name="equipment_ids[]" value="{{ equipment.id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="return confirm('Czy na pewno chcesz usunąć miernik z zestawu?')"
+                                                    title="Usuń z zestawu">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dostępny sprzęt -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-add-circle-line me-2"></i>Dostępne mierniki
+                    <span class="badge bg-success ms-2">{{ available_equipment|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if available_equipment is empty %}
+                    <div class="text-center py-4">
+                        <div class="avatar-lg bg-light rounded mx-auto mb-3">
+                            <i class="ri-information-line text-muted fs-24"></i>
+                        </div>
+                        <h5 class="text-muted">Brak dostępnych mierników</h5>
+                        <p class="text-muted mb-0">Wszystkie mierniki są już przypisane do zestawów lub niedostępne.</p>
+                    </div>
+                {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Miernik</th>
+                                    <th>Typ</th>
+                                    <th>Status</th>
+                                    <th>Lokalizacja</th>
+                                    <th width="120">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for equipment in available_equipment %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs bg-light rounded me-2">
+                                                <i class="ri-cpu-line text-success"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ equipment.name }}</h6>
+                                                <small class="text-muted">{{ equipment.inventoryNumber }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ equipment.equipmentType }}</span>
+                                    </td>
+                                    <td>
+                                        {% set status_class = equipment.status == 'available' ? 'success' : 'warning' %}
+                                        <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ equipment.location|default('-') }}</span>
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_add_equipment', {id: equipment_set.id}) }}" class="d-inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('add_equipment_' ~ equipment_set.id) }}">
+                                            <input type="hidden" name="equipment_ids[]" value="{{ equipment.id }}">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Dodaj do zestawu">
+                                                <i class="ri-add-line"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania sprzętu -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dodaj mierniki do zestawu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_add_equipment', {id: equipment_set.id}) }}">
+                <div class="modal-body">
+                    <input type="hidden" name="_token" value="{{ csrf_token('add_equipment_' ~ equipment_set.id) }}">
+                    
+                    {% if available_equipment is not empty %}
+                        <div class="mb-3">
+                            <label class="form-label">Wybierz mierniki:</label>
+                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                {% for equipment in available_equipment %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="equipment_ids[]" value="{{ equipment.id }}" id="equipment_{{ equipment.id }}">
+                                    <label class="form-check-label" for="equipment_{{ equipment.id }}">
+                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                            <div>
+                                                <strong>{{ equipment.name }}</strong>
+                                                <small class="text-muted d-block">{{ equipment.inventoryNumber }}</small>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-light text-dark">{{ equipment.equipmentType }}</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="ri-information-line me-2"></i>
+                            Brak dostępnych mierników do dodania.
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    {% if available_equipment is not empty %}
+                        <button type="submit" class="btn btn-success">
+                            <i class="ri-add-line me-1"></i>Dodaj wybrane
+                        </button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox "select all" functionality
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.type = 'button';
+    selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-2';
+    selectAllBtn.innerHTML = '<i class="ri-check-double-line me-1"></i>Zaznacz wszystkie';
+    
+    const checkboxContainer = document.querySelector('#addEquipmentModal .border.rounded');
+    if (checkboxContainer) {
+        checkboxContainer.insertBefore(selectAllBtn, checkboxContainer.firstChild);
+        
+        selectAllBtn.addEventListener('click', function() {
+            const checkboxes = checkboxContainer.querySelectorAll('input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            selectAllBtn.innerHTML = !allChecked 
+                ? '<i class="ri-close-line me-1"></i>Odznacz wszystkie'
+                : '<i class="ri-check-double-line me-1"></i>Zaznacz wszystkie';
+        });
+    }
+});
+</script>
+{% endblock %}
