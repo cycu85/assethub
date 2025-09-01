@@ -11,11 +11,6 @@ use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReviewEquipment;
-use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment;
-use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipmentSet;
-use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReview;
-use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaTransfer;
-use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReviewEquipment;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -33,7 +28,6 @@ class AppFixtures extends Fixture
         $adminModule = $moduleRepository->findOneBy(['name' => 'admin']);
         $equipmentModule = $moduleRepository->findOneBy(['name' => 'equipment']);
         $asekuracyjnyModule = $moduleRepository->findOneBy(['name' => 'asekuracja']);
-        $aparaturaModule = $moduleRepository->findOneBy(['name' => 'aparatura_pomiarowa']);
 
         // Create modules only if they don't exist
         if (!$adminModule) {
@@ -63,14 +57,6 @@ class AppFixtures extends Fixture
             $manager->persist($asekuracyjnyModule);
         }
 
-        if (!$aparaturaModule) {
-            $aparaturaModule = new Module();
-            $aparaturaModule->setName('aparatura_pomiarowa')
-                ->setDisplayName('Aparatura Pomiarowa')
-                ->setDescription('Zarządzanie aparaturą pomiarową i kalibracyjną')
-                ->setRequiredPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'CALIBRATE', 'TRANSFER']);
-            $manager->persist($aparaturaModule);
-        }
 
         // Create roles only if they don't exist
         $roleRepository = $manager->getRepository(Role::class);
@@ -187,50 +173,6 @@ class AppFixtures extends Fixture
             $manager->persist($assekListRole);
         }
 
-        // Aparatura Pomiarowa roles
-        $aparaturaAdminRole = $roleRepository->findOneBy(['name' => 'APARATURA_ADMIN']);
-        if (!$aparaturaAdminRole) {
-            $aparaturaAdminRole = new Role();
-            $aparaturaAdminRole->setName('APARATURA_ADMIN')
-                ->setDescription('Administrator Aparatury Pomiarowej - pełne prawa do modułu')
-                ->setModule($aparaturaModule)
-                ->setPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'CALIBRATE', 'TRANSFER'])
-                ->setIsSystemRole(false);
-            $manager->persist($aparaturaAdminRole);
-        }
-
-        $aparaturaEditorRole = $roleRepository->findOneBy(['name' => 'APARATURA_EDITOR']);
-        if (!$aparaturaEditorRole) {
-            $aparaturaEditorRole = new Role();
-            $aparaturaEditorRole->setName('APARATURA_EDITOR')
-                ->setDescription('Edytor Aparatury Pomiarowej - bez uprawnień do usuwania')
-                ->setModule($aparaturaModule)
-                ->setPermissions(['VIEW', 'CREATE', 'EDIT', 'ASSIGN', 'CALIBRATE', 'TRANSFER'])
-                ->setIsSystemRole(false);
-            $manager->persist($aparaturaEditorRole);
-        }
-
-        $aparaturaViewerRole = $roleRepository->findOneBy(['name' => 'APARATURA_VIEWER']);
-        if (!$aparaturaViewerRole) {
-            $aparaturaViewerRole = new Role();
-            $aparaturaViewerRole->setName('APARATURA_VIEWER')
-                ->setDescription('Przeglądający Aparatury Pomiarowej - tylko podgląd')
-                ->setModule($aparaturaModule)
-                ->setPermissions(['VIEW'])
-                ->setIsSystemRole(false);
-            $manager->persist($aparaturaViewerRole);
-        }
-
-        $aparaturaListRole = $roleRepository->findOneBy(['name' => 'APARATURA_LIST']);
-        if (!$aparaturaListRole) {
-            $aparaturaListRole = new Role();
-            $aparaturaListRole->setName('APARATURA_LIST')
-                ->setDescription('Lista Aparatury Pomiarowej - tylko lista zestawów i elementów')
-                ->setModule($aparaturaModule)
-                ->setPermissions(['VIEW_LIST'])
-                ->setIsSystemRole(false);
-            $manager->persist($aparaturaListRole);
-        }
 
         // Create users only if they don't exist
         $userRepository = $manager->getRepository(User::class);
@@ -303,11 +245,6 @@ class AppFixtures extends Fixture
             ->setAssignedBy($adminUser);
         $manager->persist($assekAdminUserRole);
 
-        $aparaturaAdminUserRole = new UserRole();
-        $aparaturaAdminUserRole->setUser($adminUser)
-            ->setRole($aparaturaAdminRole)
-            ->setAssignedBy($adminUser);
-        $manager->persist($aparaturaAdminUserRole);
 
         $testUserRole = new UserRole();
         $testUserRole->setUser($testUser)
@@ -330,14 +267,10 @@ class AppFixtures extends Fixture
         // Create asekuracja dictionaries
         $this->createAsekuracijnyDictionaries($manager);
 
-        // Create aparatura pomiarowa dictionaries (already exist in DB)
-        // $this->createAparaturaPomiarowaDictionaries($manager);
 
         // Create example asekuracyjny equipment and sets
         $this->createAsekuracyjnyExampleData($manager, $adminUser);
 
-        // Create example aparatura pomiarowa equipment and sets
-        $this->createAparaturaPomiarowaExampleData($manager, $adminUser);
 
         // Create example reviews with new structure
         $this->createExampleReviews($manager, $adminUser);
@@ -847,155 +780,4 @@ class AppFixtures extends Fixture
         $manager->flush();
     }
 
-    private function createAparaturaPomiarowaExampleData(ObjectManager $manager, User $createdBy): void
-    {
-        // Check if example equipment already exists
-        $equipmentRepository = $manager->getRepository(AparaturaPomiarowaEquipment::class);
-        if ($equipmentRepository->findOneBy(['inventoryNumber' => 'APAR-001'])) {
-            return; // Skip if example data already exists
-        }
-
-        // Create measurement equipment
-        $equipmentData = [
-            [
-                'inventoryNumber' => 'APAR-001',
-                'name' => 'Multimetr Fluke 87V',
-                'type' => 'multimeter',
-                'manufacturer' => 'Fluke Corporation',
-                'model' => '87V',
-                'serialNumber' => 'FL87V123456',
-                'price' => '1250.00',
-                'supplier' => 'TME Sp. z o.o.',
-                'description' => 'Multimetr przemysłowy True RMS z funkcjami pomiarowymi AC/DC',
-                'location' => 'Laboratorium A-101',
-                'projekt' => 'LAB-2024-001',
-                'reviewMonths' => 12
-            ],
-            [
-                'inventoryNumber' => 'APAR-002',
-                'name' => 'Oscyloskop Rigol DS1054Z',
-                'type' => 'oscilloscope',
-                'manufacturer' => 'Rigol Technologies',
-                'model' => 'DS1054Z',
-                'serialNumber' => 'RG1054Z789012',
-                'price' => '2800.00',
-                'supplier' => 'Distrelec Sp. z o.o.',
-                'description' => 'Oscyloskop cyfrowy 4-kanałowy 50MHz z dekodowaniem',
-                'location' => 'Laboratorium A-102',
-                'projekt' => 'LAB-2024-002',
-                'reviewMonths' => 24
-            ],
-            [
-                'inventoryNumber' => 'APAR-003',
-                'name' => 'Generator sygnałów Keysight 33500B',
-                'type' => 'generator',
-                'manufacturer' => 'Keysight Technologies',
-                'model' => '33500B',
-                'serialNumber' => 'KS33500B345678',
-                'price' => '4500.00',
-                'supplier' => 'Keysight Polska',
-                'description' => 'Generator funkcyjny 30MHz z arbitralnym kształtem fali',
-                'location' => 'Laboratorium A-103',
-                'projekt' => 'LAB-2024-003',
-                'reviewMonths' => 12
-            ],
-            [
-                'inventoryNumber' => 'APAR-004',
-                'name' => 'Miernik LCR Keysight E4980A',
-                'type' => 'lcr_meter',
-                'manufacturer' => 'Keysight Technologies',
-                'model' => 'E4980A',
-                'serialNumber' => 'KSE4980A456789',
-                'price' => '15000.00',
-                'supplier' => 'Keysight Polska',
-                'description' => 'Precyzyjny miernik LCR 20Hz-2MHz z funkcją DC bias',
-                'location' => 'Laboratorium A-104',
-                'projekt' => 'LAB-2024-004',
-                'reviewMonths' => 6
-            ],
-            [
-                'inventoryNumber' => 'APAR-005',
-                'name' => 'Zasilacz programowalny Keithley 2230-30-1',
-                'type' => 'power_supply',
-                'manufacturer' => 'Keithley Instruments',
-                'model' => '2230-30-1',
-                'serialNumber' => 'KI2230567890',
-                'price' => '3200.00',
-                'supplier' => 'TME Sp. z o.o.',
-                'description' => 'Zasilacz 3-kanałowy, 2x30V/1A + 5V/1A, programowalny',
-                'location' => 'Laboratorium B-201',
-                'projekt' => 'LAB-2024-005',
-                'reviewMonths' => 18
-            ]
-        ];
-
-        $equipment = [];
-        foreach ($equipmentData as $data) {
-            $eq = new AparaturaPomiarowaEquipment();
-            $eq->setInventoryNumber($data['inventoryNumber'])
-                ->setName($data['name'])
-                ->setEquipmentType($data['type'])
-                ->setManufacturer($data['manufacturer'])
-                ->setModel($data['model'])
-                ->setSerialNumber($data['serialNumber'])
-                ->setPurchasePrice($data['price'])
-                ->setSupplier($data['supplier'])
-                ->setDescription($data['description'])
-                ->setLocation($data['location'])
-                ->setProjekt($data['projekt'])
-                ->setReviewIntervalMonths($data['reviewMonths'])
-                ->setStatus(AparaturaPomiarowaEquipment::STATUS_AVAILABLE)
-                ->setCreatedBy($createdBy)
-                ->setManufacturingDate(new \DateTime('-' . rand(12, 48) . ' months'))
-                ->setPurchaseDate(new \DateTime('-' . rand(6, 24) . ' months'))
-                ->setWarrantyExpiry(new \DateTime('+' . rand(6, 36) . ' months'))
-                ->setNextReviewDate(new \DateTime('+' . rand(30, 365) . ' days'));
-            
-            $equipment[] = $eq;
-            $manager->persist($eq);
-        }
-
-        // Create equipment sets
-        $setData = [
-            [
-                'name' => 'Zestaw Pomiarowy Podstawowy',
-                'type' => 'basic',
-                'description' => 'Podstawowy zestaw do pomiarów elektrycznych w laboratorium',
-                'equipment_indices' => [0, 1, 4] // Multimetr, Oscyloskop, Zasilacz
-            ],
-            [
-                'name' => 'Zestaw Elektroniczny Zaawansowany',
-                'type' => 'electronic',
-                'description' => 'Zaawansowany zestaw do pomiarów elektronicznych',
-                'equipment_indices' => [2, 3] // Generator, Miernik LCR
-            ]
-        ];
-
-        foreach ($setData as $setInfo) {
-            $set = new AparaturaPomiarowaEquipmentSet();
-            $set->setName($setInfo['name'])
-                ->setSetType($setInfo['type'])
-                ->setDescription($setInfo['description'])
-                ->setStatus(AparaturaPomiarowaEquipmentSet::STATUS_AVAILABLE)
-                ->setCreatedBy($createdBy)
-                ->setReviewIntervalMonths(12)
-                ->setNextReviewDate(new \DateTime('+' . rand(60, 300) . ' days'))
-                ->setLocation('Magazyn Sprzętu Pomiarowego');
-
-            // Add equipment to set
-            foreach ($setInfo['equipment_indices'] as $index) {
-                if (isset($equipment[$index])) {
-                    $set->addEquipment($equipment[$index]);
-                }
-            }
-
-            $manager->persist($set);
-        }
-
-        $manager->flush();
-        
-        echo "Utworzono przykładowe dane dla modułu Aparatura Pomiarowa:\n";
-        echo "- " . count($equipment) . " urządzeń pomiarowych\n";
-        echo "- " . count($setData) . " zestawów sprzętu\n";
-    }
 }

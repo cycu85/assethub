@@ -156,7 +156,6 @@ $canEditAny = $this->authorizationService->hasAnyPermission($user, 'equipment', 
 ### Main Modules
 1. **Core** (`src/`) - Base entities, services, controllers
 2. **Asekuracja** (`src/AsekuracyjnySPM/`) - Safety equipment management (COMPLETE)
-3. **AparaturaPomiarowa** (`src/AparaturaPomiarowa/`) - Measurement equipment module
 
 ### Module Development Pattern
 Each module follows this structure:
@@ -189,7 +188,6 @@ The application uses **MySQL 8.0+** with Doctrine ORM. Migration files follow ch
 - `modules` - Module management
 - `equipment`, `equipment_categories` - Core equipment
 - `asekuracyjny_*` - Safety equipment module tables
-- `aparatura_pomiarowa_*` - Measurement equipment tables
 - `email_history` - Email tracking
 - `dictionaries` - System-wide lookup tables
 

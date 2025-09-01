@@ -106,50 +106,6 @@
                                 </ul>
                             </div>
                         </li>
-                        {% elseif module.name == 'aparatura_pomiarowa' %}
-                        {# Sprawdź czy użytkownik jest w sekcji aparatura pomiarowa #}
-                        {% set current_route = app.request.get('_route') %}
-                        {% set is_aparatura_section = current_route starts with 'aparatura_pomiarowa_' %}
-                        
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ is_aparatura_section ? 'active' : '' }}" 
-                               href="#sidebarAparaturaPomiarowa" 
-                               data-bs-toggle="collapse" 
-                               role="button" 
-                               aria-expanded="{{ is_aparatura_section ? 'true' : 'false' }}" 
-                               aria-controls="sidebarAparaturaPomiarowa">
-                                <i class="ri-scales-line"></i> <span>{{ module.displayName }}</span>
-                            </a>
-                            <div class="collapse menu-dropdown {{ is_aparatura_section ? 'show' : '' }}" id="sidebarAparaturaPomiarowa">
-                                <ul class="nav nav-sm flex-column">
-                                    {% set user_has_basic_access = is_granted('ROLE_USER') and has_any_permission('aparatura_pomiarowa', ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER']) %}
-                                    
-                                    {% if user_has_basic_access %}
-                                    <li class="nav-item">
-                                        <a href="{{ path('aparatura_pomiarowa_equipment_index') }}" class="nav-link {{ current_route in ['aparatura_pomiarowa_index', 'aparatura_pomiarowa_equipment_index', 'aparatura_pomiarowa_equipment_new', 'aparatura_pomiarowa_equipment_show', 'aparatura_pomiarowa_equipment_edit', 'aparatura_pomiarowa_search'] ? 'active' : '' }}">
-                                            <i class="ri-scales-line me-2"></i>Mierniki i Akcesoria
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}" class="nav-link {{ current_route starts with 'aparatura_pomiarowa_equipment_set' ? 'active' : '' }}">
-                                            <i class="ri-stack-line me-2"></i>Zestawy
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ path('aparatura_pomiarowa_review_index') }}" class="nav-link {{ current_route starts with 'aparatura_pomiarowa_review' ? 'active' : '' }}">
-                                            <i class="ri-search-eye-line me-2"></i>Kalibracje
-                                        </a>
-                                    </li>
-                                    {% endif %}
-                                    
-                                    <li class="nav-item">
-                                        <a href="{{ path('aparatura_pomiarowa_my_equipment') }}" class="nav-link {{ current_route == 'aparatura_pomiarowa_my_equipment' ? 'active' : '' }}">
-                                            <i class="ri-user-line me-2"></i>Moje przypisania
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
                         {% elseif module.name != 'admin' %}
                         {# Generic module handler - dla przyszłych modułów (pomijamy admin bo obsługujemy go osobno) #}
                         <li class="nav-item">
