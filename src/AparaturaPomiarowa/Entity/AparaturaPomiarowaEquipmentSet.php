@@ -1,0 +1,550 @@
+<?php
+
+namespace App\AparaturaPomiarowa\Entity;
+
+use App\AparaturaPomiarowa\Repository\AparaturaPomiarowaEquipmentSetRepository;
+use App\Entity\User;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ORM\Entity(repositoryClass: AparaturaPomiarowaEquipmentSetRepository::class)]
+#[ORM\HasLifecycleCallbacks]
+#[ORM\Table(name: 'aparatura_pomiarowa_equipment_set')]
+class AparaturaPomiarowaEquipmentSet
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Nazwa zestawu jest wymagana')]
+    #[Assert\Length(max: 255, maxMessage: 'Nazwa nie może być dłuższa niż {{ limit }} znaków')]
+    private ?string $name = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $description = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $setType = null;
+
+    #[ORM\Column(length: 50)]
+    private ?string $status = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $assignedTo = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $assignedDate = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $nextCalibrationDate = null;
+
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    #[Assert\Positive(message: 'Okres kalibracji musi być liczbą dodatnią')]
+    private ?int $calibrationIntervalMonths = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $location = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $notes = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private array $customFields = [];
+
+    #[ORM\ManyToMany(targetEntity: AparaturaPomiarowaEquipment::class, inversedBy: 'equipmentSets')]
+    #[ORM\JoinTable(name: 'aparatura_pomiarowa_equipment_set_items')]
+    private Collection $equipment;
+
+    #[ORM\OneToMany(mappedBy: 'equipmentSet', targetEntity: AparaturaPomiarowaReview::class, cascade: ['persist'])]
+    private Collection $reviews;
+
+    #[ORM\OneToMany(mappedBy: 'equipmentSet', targetEntity: AparaturaPomiarowaTransfer::class, cascade: ['persist'])]
+    private Collection $transfers;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $createdAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $updatedAt = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private array $attachments = [];
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $createdBy = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $updatedBy = null;
+
+    public const STATUS_AVAILABLE = 'available';
+    public const STATUS_ASSIGNED = 'assigned';
+    public const STATUS_IN_CALIBRATION = 'in_calibration';
+    public const STATUS_MAINTENANCE = 'maintenance';
+    public const STATUS_INCOMPLETE = 'incomplete';
+    public const STATUS_RETIRED = 'retired';
+
+    public const STATUSES = [
+        self::STATUS_AVAILABLE => 'Dostępny',
+        self::STATUS_ASSIGNED => 'Przypisany',
+        self::STATUS_IN_CALIBRATION => 'Na kalibracji',
+        self::STATUS_MAINTENANCE => 'W serwisie',
+        self::STATUS_INCOMPLETE => 'Niekompletny',
+        self::STATUS_RETIRED => 'Wycofany'
+    ];
+
+    public function __construct()
+    {
+        $this->equipment = new ArrayCollection();
+        $this->reviews = new ArrayCollection();
+        $this->transfers = new ArrayCollection();
+        $this->status = self::STATUS_AVAILABLE;
+        $this->customFields = [];
+        $this->attachments = [];
+        $this->createdAt = new \DateTime();
+        $this->updatedAt = new \DateTime();
+    }
+
+    #[ORM\PreUpdate]
+    public function setUpdatedValue(): void
+    {
+        $this->updatedAt = new \DateTime();
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): self
+    {
+        $this->name = $name;
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
+        return $this;
+    }
+
+    public function getSetType(): ?string
+    {
+        return $this->setType;
+    }
+
+    public function setSetType(?string $setType): self
+    {
+        $this->setType = $setType;
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(string $status): self
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    public function getStatusDisplayName(): string
+    {
+        return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function getAssignedTo(): ?User
+    {
+        return $this->assignedTo;
+    }
+
+    public function setAssignedTo(?User $assignedTo): self
+    {
+        $this->assignedTo = $assignedTo;
+        $this->assignedDate = $assignedTo ? new \DateTime() : null;
+        return $this;
+    }
+
+    public function getAssignedDate(): ?\DateTimeInterface
+    {
+        return $this->assignedDate;
+    }
+
+    public function setAssignedDate(?\DateTimeInterface $assignedDate): self
+    {
+        $this->assignedDate = $assignedDate;
+        return $this;
+    }
+
+    public function getNextReviewDate(): ?\DateTimeInterface
+    {
+        return $this->nextReviewDate;
+    }
+
+    public function setNextReviewDate(?\DateTimeInterface $nextReviewDate): self
+    {
+        $this->nextReviewDate = $nextReviewDate;
+        return $this;
+    }
+
+    public function getReviewIntervalMonths(): ?int
+    {
+        return $this->reviewIntervalMonths;
+    }
+
+    public function setReviewIntervalMonths(?int $reviewIntervalMonths): self
+    {
+        $this->reviewIntervalMonths = $reviewIntervalMonths;
+        return $this;
+    }
+
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?string $location): self
+    {
+        $this->location = $location;
+        return $this;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->notes;
+    }
+
+    public function setNotes(?string $notes): self
+    {
+        $this->notes = $notes;
+        return $this;
+    }
+
+    public function getCustomFields(): array
+    {
+        return $this->customFields;
+    }
+
+    public function setCustomFields(array $customFields): self
+    {
+        $this->customFields = $customFields;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AparaturaPomiarowaEquipment>
+     */
+    public function getEquipment(): Collection
+    {
+        return $this->equipment;
+    }
+
+    /**
+     * Alias for getEquipment() - for template compatibility
+     * @return Collection<int, AparaturaPomiarowaEquipment>
+     */
+    public function getEquipmentItems(): Collection
+    {
+        return $this->equipment;
+    }
+
+    public function addEquipment(AparaturaPomiarowaEquipment $equipment): self
+    {
+        if (!$this->equipment->contains($equipment)) {
+            $this->equipment->add($equipment);
+        }
+
+        return $this;
+    }
+
+    public function removeEquipment(AparaturaPomiarowaEquipment $equipment): self
+    {
+        $this->equipment->removeElement($equipment);
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AparaturaPomiarowaReview>
+     */
+    public function getReviews(): Collection
+    {
+        return $this->reviews;
+    }
+
+    public function addReview(AparaturaPomiarowaReview $review): self
+    {
+        if (!$this->reviews->contains($review)) {
+            $this->reviews->add($review);
+            $review->setEquipmentSet($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReview(AparaturaPomiarowaReview $review): self
+    {
+        if ($this->reviews->removeElement($review)) {
+            if ($review->getEquipmentSet() === $this) {
+                $review->setEquipmentSet(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AparaturaPomiarowaTransfer>
+     */
+    public function getTransfers(): Collection
+    {
+        return $this->transfers;
+    }
+
+    public function addTransfer(AparaturaPomiarowaTransfer $transfer): self
+    {
+        if (!$this->transfers->contains($transfer)) {
+            $this->transfers->add($transfer);
+            $transfer->setEquipmentSet($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTransfer(AparaturaPomiarowaTransfer $transfer): self
+    {
+        if ($this->transfers->removeElement($transfer)) {
+            if ($transfer->getEquipmentSet() === $this) {
+                $transfer->setEquipmentSet(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeInterface
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(\DateTimeInterface $updatedAt): self
+    {
+        $this->updatedAt = $updatedAt;
+        return $this;
+    }
+
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): self
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
+
+    public function getUpdatedBy(): ?User
+    {
+        return $this->updatedBy;
+    }
+
+    public function setUpdatedBy(?User $updatedBy): self
+    {
+        $this->updatedBy = $updatedBy;
+        return $this;
+    }
+
+    public function isAssigned(): bool
+    {
+        return $this->assignedTo !== null;
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->status === self::STATUS_AVAILABLE;
+    }
+
+    public function isInReview(): bool
+    {
+        return $this->status === self::STATUS_IN_REVIEW;
+    }
+
+    public function isIncomplete(): bool
+    {
+        return $this->status === self::STATUS_INCOMPLETE;
+    }
+
+    public function needsReview(): bool
+    {
+        if (!$this->nextReviewDate) {
+            return false;
+        }
+
+        $now = new \DateTime();
+        $warningDate = clone $this->nextReviewDate;
+        $warningDate->modify('-30 days');
+
+        return $now >= $warningDate;
+    }
+
+    public function isReviewOverdue(): bool
+    {
+        if (!$this->nextReviewDate) {
+            return false;
+        }
+
+        return new \DateTime() > $this->nextReviewDate;
+    }
+
+    public function getEquipmentCount(): int
+    {
+        return $this->equipment->count();
+    }
+
+    public function getAvailableEquipmentCount(): int
+    {
+        return $this->equipment->filter(function(AparaturaPomiarowaEquipment $equipment) {
+            return $equipment->isAvailable();
+        })->count();
+    }
+
+    public function hasAllEquipmentAvailable(): bool
+    {
+        return $this->getEquipmentCount() === $this->getAvailableEquipmentCount();
+    }
+
+    /**
+     * Alias for hasAllEquipmentAvailable() - for template compatibility
+     */
+    public function isComplete(): bool
+    {
+        return $this->hasAllEquipmentAvailable() && $this->getEquipmentCount() > 0;
+    }
+
+    public function getLastReview(): ?AparaturaPomiarowaReview
+    {
+        $reviews = $this->reviews->toArray();
+        if (empty($reviews)) {
+            return null;
+        }
+
+        usort($reviews, function($a, $b) {
+            return $b->getCompletedDate() <=> $a->getCompletedDate();
+        });
+
+        return $reviews[0] ?? null;
+    }
+
+    public function calculateNextReviewDate(): ?\DateTimeInterface
+    {
+        if (!$this->reviewIntervalMonths) {
+            return null;
+        }
+
+        $lastReview = $this->getLastReview();
+        $baseDate = $lastReview?->getCompletedDate() ?? $this->createdAt;
+        
+        if (!$baseDate) {
+            return null;
+        }
+
+        $nextDate = clone $baseDate;
+        $nextDate->add(new \DateInterval('P' . $this->reviewIntervalMonths . 'M'));
+        
+        return $nextDate;
+    }
+
+    public function hasElementsNeedingReview(): bool
+    {
+        foreach ($this->equipment as $equipment) {
+            if ($equipment->needsReview()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function hasElementsOverdueReview(): bool
+    {
+        foreach ($this->equipment as $equipment) {
+            if ($equipment->isReviewOverdue()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function getElementsNeedingReviewCount(): int
+    {
+        return $this->equipment->filter(function(AparaturaPomiarowaEquipment $equipment) {
+            return $equipment->needsReview();
+        })->count();
+    }
+
+    public function getElementsOverdueReviewCount(): int
+    {
+        return $this->equipment->filter(function(AparaturaPomiarowaEquipment $equipment) {
+            return $equipment->isReviewOverdue();
+        })->count();
+    }
+
+    public function getAttachments(): array
+    {
+        return $this->attachments;
+    }
+
+    public function setAttachments(array $attachments): static
+    {
+        $this->attachments = $attachments;
+        return $this;
+    }
+
+    public function addAttachment(array $attachment): static
+    {
+        $this->attachments[] = $attachment;
+        return $this;
+    }
+
+    public function removeAttachment(string $filename): static
+    {
+        $this->attachments = array_filter($this->attachments, function($attachment) use ($filename) {
+            return $attachment['filename'] !== $filename;
+        });
+        return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->name ?? '';
+    }
+}
