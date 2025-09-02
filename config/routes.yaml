@@ -11,3 +11,10 @@ asekuracja:
         namespace: App\AsekuracyjnySPM\Controller
     type: attribute
 
+# Moduł Aparatura Pomiarowa
+aparatura_pomiarowa:
+    resource:
+        path: ../src/AparaturaPomiarowa/Controller/
+        namespace: App\AparaturaPomiarowa\Controller
+    type: attribute
+

@@ -1,0 +1,1162 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Przegląd {{ review.reviewNumber }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Przegląd {{ review.reviewNumber }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_review_index') }}">Przeglądy</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ review.reviewNumber }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Nagłówek -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">
+                            <i class="ri-search-eye-line me-2"></i>
+                            Przegląd {{ review.reviewNumber }}
+                        </h5>
+                    </div>
+                    <div>
+                        {% set status_class = review.status == 'preparation' ? 'secondary' : 
+                                             (review.status == 'sent' ? 'warning' : 
+                                             (review.status == 'completed' ? 'success' : 'danger')) %}
+                        <span class="badge bg-{{ status_class }} fs-6">
+                            {% if review.status == 'preparation' %}Przygotowanie
+                            {% elseif review.status == 'sent' %}Wysłane
+                            {% elseif review.status == 'completed' %}Zakończone
+                            {% elseif review.status == 'cancelled' %}Anulowane
+                            {% else %}{{ review.status }}{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Podstawowe informacje</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Numer kalibracjau:</td>
+                                <td><strong>{{ review.reviewNumber }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Typ kalibracjau:</td>
+                                <td>
+                                    {% set type_class = review.reviewType == 'periodic' ? 'primary' : 'secondary' %}
+                                    <span class="badge bg-{{ type_class }}">
+                                        {% if review.reviewType == 'periodic' %}Okresowy
+                                        {% elseif review.reviewType == 'damage_control' %}Po uszkodzeniu
+                                        {% elseif review.reviewType == 'post_repair' %}Po naprawie
+                                        {% elseif review.reviewType == 'initial' %}Początkowy
+                                        {% else %}{{ review.reviewType }}{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Data planowana:</td>
+                                <td><strong>{{ review.plannedDate|date('d.m.Y') }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Data utworzenia:</td>
+                                <td>{{ review.createdAt|date('d.m.Y H:i') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Odpowiedzialni</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Przygotował:</td>
+                                <td>{{ review.preparedBy ? review.preparedBy.fullName : review.createdBy.fullName }}</td>
+                            </tr>
+                            {% if review.sentBy %}
+                            <tr>
+                                <td class="text-muted">Wysłał:</td>
+                                <td>{{ review.sentBy.fullName }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.completedBy %}
+                            <tr>
+                                <td class="text-muted">Zakończył:</td>
+                                <td>{{ review.completedBy.fullName }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.reviewCompany %}
+                            <tr>
+                                <td class="text-muted">Firma kontrolująca:</td>
+                                <td><strong>{{ review.reviewCompany }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                {% if review.notes %}
+                <div class="mt-3">
+                    <h6>Uwagi</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.notes|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Przedmiot kalibracjau -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        <i class="ri-tools-line me-2"></i>Przedmiot kalibracjau
+                        <span class="badge bg-info ms-2">{{ review.reviewedEquipmentsCount }} elementów</span>
+                    </h6>
+                    {% if can_edit and review.status != 'completed' %}
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addEquipmentToReviewModal">
+                        <i class="ri-add-line me-1"></i>Dodaj miernik/akcesorium
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if review.reviewEquipments|length > 0 %}
+                    {% for reviewEquipment in review.reviewEquipments %}
+                    <div class="d-flex align-items-center mb-3 {{ loop.last ? '' : 'border-bottom pb-3' }}">
+                        <div class="avatar-sm bg-{{ reviewEquipment.wasSetReview ? 'info' : 'primary' }} rounded me-3">
+                            <i class="ri-{{ reviewEquipment.wasSetReview ? 'stack' : 'shield' }}-line text-white fs-16"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                {% if reviewEquipment.equipment %}
+                                    <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: reviewEquipment.equipment.id}) }}" 
+                                       class="text-decoration-none">
+                                        {{ reviewEquipment.equipmentDisplayName }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">{{ reviewEquipment.equipmentDisplayName }} (usunięty)</span>
+                                {% endif %}
+                                {% if reviewEquipment.wasSetReview %}
+                                    <small class="text-info ms-2">
+                                        <i class="ri-stack-line"></i> {{ reviewEquipment.setNameAtReview }}
+                                    </small>
+                                {% endif %}
+                            </h6>
+                            <div class="text-muted small">
+                                <span class="me-3">{{ reviewEquipment.equipmentDisplayInventoryNumber }}</span>
+                                <span class="me-3">{{ reviewEquipment.equipmentTypeAtReview }}</span>
+                                {% if reviewEquipment.equipmentManufacturerAtReview and reviewEquipment.equipmentModelAtReview %}
+                                    <span>{{ reviewEquipment.equipmentManufacturerAtReview }} {{ reviewEquipment.equipmentModelAtReview }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if review.status == 'completed' %}
+                                {% set effective_result = reviewEquipment.effectiveResult %}
+                                {% if effective_result %}
+                                    {% set result_class = effective_result == 'passed' ? 'success' : 
+                                                         (effective_result == 'failed' ? 'danger' : 
+                                                         (effective_result == 'conditionally_passed' ? 'warning' : 'secondary')) %}
+                                    <span class="badge bg-{{ result_class }} mb-1">
+                                        {{ reviewEquipment.effectiveResultDisplayName }}
+                                    </span><br>
+                                {% endif %}
+                            {% endif %}
+                            {% if reviewEquipment.equipment %}
+                                {% set status_class = reviewEquipment.equipment.status == 'available' ? 'success' : 'warning' %}
+                                <span class="badge bg-{{ status_class }}">{{ reviewEquipment.equipment.statusDisplayName }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ reviewEquipment.equipmentStatusAtReview }}</span>
+                            {% endif %}
+                            {% if can_edit and review.status != 'completed' %}
+                            <div class="mt-2">
+                                <form method="POST" action="{{ path('aparatura_pomiarowa_review_remove_equipment', {id: review.id, equipmentId: reviewEquipment.id}) }}" 
+                                      class="d-inline" onsubmit="return confirm('Czy na pewno usunąć {{ reviewEquipment.equipmentDisplayName }} z kalibracjau?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('remove_review_equipment_' ~ review.id ~ '_' ~ reviewEquipment.id) }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="ri-alert-line fs-24"></i>
+                    <p class="mb-0">Brak elementów w kalibracjazie</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Wyniki kalibracjau -->
+        {% if review.status == 'completed' %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-check-double-line me-2"></i>Wyniki kalibracjau
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            {% if review.sentDate %}
+                            <tr>
+                                <td class="text-muted">Data wysłania:</td>
+                                <td>{{ review.sentDate|date('d.m.Y') }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.completedDate %}
+                            <tr>
+                                <td class="text-muted">Data zakończenia:</td>
+                                <td>{{ review.completedDate|date('d.m.Y') }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if review.certificateNumber %}
+                            <tr>
+                                <td class="text-muted">Nr certyfikatu:</td>
+                                <td><strong>{{ review.certificateNumber }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            {% if review.result %}
+                            <tr>
+                                <td class="text-muted">Wynik:</td>
+                                <td>
+                                    {% set result_class = review.result == 'passed' ? 'success' : 
+                                                         (review.result == 'failed' ? 'danger' : 'warning') %}
+                                    <span class="badge bg-{{ result_class }}">
+                                        {% if review.result == 'passed' %}Pozytywny
+                                        {% elseif review.result == 'failed' %}Negatywny
+                                        {% elseif review.result == 'conditionally_passed' %}Warunkowo pozytywny
+                                        {% else %}{{ review.result }}{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if review.cost %}
+                            <tr>
+                                <td class="text-muted">Koszt:</td>
+                                <td><strong>{{ review.cost }} PLN</strong></td>
+                            </tr>
+                            {% endif %}
+                            {% if review.nextReviewDate %}
+                            <tr>
+                                <td class="text-muted">Następna kalibracja:</td>
+                                <td><strong>{{ review.nextReviewDate|date('d.m.Y') }}</strong></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                {% if review.findings %}
+                <div class="mt-3">
+                    <h6>Stwierdzone usterki/uwagi</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.findings|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if review.recommendations %}
+                <div class="mt-3">
+                    <h6>Zalecenia</h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ review.recommendations|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Szczegółowe wyniki dla elementów -->
+        {% if review.status == 'completed' and review.reviewEquipments|length > 1 %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-list-check-2 me-2"></i>Szczegółowe wyniki elementów
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Element</th>
+                                <th>Typ</th>
+                                <th>Wynik</th>
+                                <th>Uwagi/Usterki</th>
+                                <th>Zalecenia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reviewEquipment in review.reviewEquipments %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="ri-{{ reviewEquipment.wasSetReview ? 'stack' : 'shield' }}-line text-{{ reviewEquipment.wasSetReview ? 'info' : 'primary' }} me-2"></i>
+                                        <div>
+                                            <strong>{{ reviewEquipment.equipmentDisplayName }}</strong><br>
+                                            <small class="text-muted">{{ reviewEquipment.equipmentDisplayInventoryNumber }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ reviewEquipment.equipmentTypeAtReview }}</span>
+                                    {% if reviewEquipment.wasSetReview %}
+                                        <br><small class="text-info">z zestawu</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set effective_result = reviewEquipment.effectiveResult %}
+                                    {% if effective_result %}
+                                        {% set result_class = effective_result == 'passed' ? 'success' : 
+                                                             (effective_result == 'failed' ? 'danger' : 
+                                                             (effective_result == 'conditionally_passed' ? 'warning' : 'secondary')) %}
+                                        <span class="badge bg-{{ result_class }}">
+                                            {{ reviewEquipment.effectiveResultDisplayName }}
+                                        </span>
+                                        {% if reviewEquipment.individualResult and reviewEquipment.individualResult != 'inherited' %}
+                                            <br><small class="text-muted">wynik indywidualny</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if reviewEquipment.individualFindings %}
+                                        <div class="text-truncate" style="max-width: 200px;" 
+                                             title="{{ reviewEquipment.individualFindings }}">
+                                            {{ reviewEquipment.individualFindings }}
+                                        </div>
+                                    {% elseif review.findings and not reviewEquipment.individualFindings %}
+                                        <div class="text-truncate text-muted" style="max-width: 200px;" 
+                                             title="{{ review.findings }}">
+                                            {{ review.findings }} <small>(ogólne)</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if reviewEquipment.individualRecommendations %}
+                                        <div class="text-truncate" style="max-width: 200px;" 
+                                             title="{{ reviewEquipment.individualRecommendations }}">
+                                            {{ reviewEquipment.individualRecommendations }}
+                                        </div>
+                                    {% elseif review.recommendations and not reviewEquipment.individualRecommendations %}
+                                        <div class="text-truncate text-muted" style="max-width: 200px;" 
+                                             title="{{ review.recommendations }}">
+                                            {{ review.recommendations }} <small>(ogólne)</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Załączniki -->
+        {% if review.attachments is not empty %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-attachment-line me-2"></i>Załączniki z kalibracjau ({{ review.attachments|length }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for attachment in review.attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="avatar-sm bg-light rounded me-3">
+                                {% if attachment.filename|split('.')|last in ['pdf'] %}
+                                    <i class="ri-file-pdf-line text-danger fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['doc', 'docx'] %}
+                                    <i class="ri-file-word-line text-primary fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['jpg', 'jpeg', 'png'] %}
+                                    <i class="ri-image-line text-success fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['xls', 'xlsx'] %}
+                                    <i class="ri-file-excel-line text-success fs-16"></i>
+                                {% else %}
+                                    <i class="ri-file-line text-muted fs-16"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14">{{ attachment.original_name }}</h6>
+                                <div class="text-muted small">
+                                    <span>{{ (attachment.size / 1024)|number_format(0) }} KB</span>
+                                    <span class="mx-1">•</span>
+                                    <span>{{ attachment.uploaded_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="{{ path('aparatura_pomiarowa_review_attachment_download', {id: review.id, filename: attachment.filename}) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="ri-download-line"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar z akcjami -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Akcje</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if can_edit %}
+                    <a href="{{ path('aparatura_pomiarowa_review_edit', {id: review.id}) }}" 
+                       class="btn btn-primary">
+                        <i class="ri-edit-line me-1"></i>Edytuj kalibracja
+                    </a>
+                    {% endif %}
+
+                    {% if review.status == 'preparation' and can_edit %}
+                    <form method="POST" action="{{ path('aparatura_pomiarowa_review_send', {id: review.id}) }}" class="d-inline">
+                        <input type="hidden" name="_token" value="{{ csrf_token('send_review_' ~ review.id) }}">
+                        <button type="submit" class="btn btn-warning w-100" 
+                                onclick="return confirm('Czy na pewno wysłać kalibracja?')">
+                            <i class="ri-send-plane-line me-1"></i>Wyślij na kalibracja
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if review.status == 'sent' and can_edit %}
+                    <button type="button" class="btn btn-success w-100" 
+                            data-bs-toggle="modal" data-bs-target="#completeReviewModal">
+                        <i class="ri-check-double-line me-1"></i>Zakończ kalibracja
+                    </button>
+                    {% endif %}
+
+                    {% if can_delete and review.status == 'preparation' %}
+                    <form method="POST" action="{{ path('aparatura_pomiarowa_review_delete', {id: review.id}) }}" class="d-inline">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_review_' ~ review.id) }}">
+                        <button type="submit" class="btn btn-outline-danger w-100" 
+                                onclick="return confirm('Czy na pewno usunąć ten kalibracja?')">
+                            <i class="ri-delete-bin-line me-1"></i>Usuń kalibracja
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <a href="{{ path('aparatura_pomiarowa_review_index') }}" class="btn btn-outline-secondary">
+                        <i class="ri-arrow-left-line me-1"></i>Powrót do listy
+                    </a>
+
+                    {% if review.equipment %}
+                        <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: review.equipment.id}) }}" 
+                           class="btn btn-outline-info">
+                            <i class="ri-radar-line me-1"></i>Zobacz sprzęt
+                        </a>
+                    {% elseif review.equipmentSet %}
+                        <a href="{{ path('aparatura_pomiarowa_equipment_set_show', {id: review.equipmentSet.id}) }}" 
+                           class="btn btn-outline-info">
+                            <i class="ri-stack-line me-1"></i>Zobacz zestaw
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Historia kalibracjau -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Historia kalibracjau</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Utworzenie kalibracjau</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.createdAt|date('d.m.Y H:i') }}<br>
+                                przez {{ review.createdBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if review.sentDate %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Wysłanie na kalibracja</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.sentDate|date('d.m.Y H:i') }}<br>
+                                przez {{ review.sentBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if review.completedDate %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Zakończenie kalibracjau</h6>
+                            <p class="text-muted mb-0">
+                                {{ review.completedDate|date('d.m.Y H:i') }}<br>
+                                przez {{ review.completedBy.fullName }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 3px solid #dee2e6;
+}
+
+.timeline-content h6 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Grid.js styling for review modal */
+#review-modal-table-gridjs .gridjs-search-input {
+    padding-left: 35px !important;
+    background-image: none !important;
+}
+#review-modal-table-gridjs .gridjs-search {
+    position: relative !important;
+}
+#review-modal-table-gridjs .gridjs-search::before {
+    content: "\f0d1" !important;
+    font-family: "remixicon" !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6c757d !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+    font-size: 14px !important;
+}
+
+/* Word wrapping for equipment column in review modal */
+#review-modal-table-gridjs .gridjs-td:nth-child(2) {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 250px !important;
+}
+
+/* Fix for select field in complete review modal */
+#completeReviewModal #result {
+    appearance: none !important;
+    background-color: var(--vz-input-bg-custom) !important;
+    background-image: var(--vz-form-select-bg-img), var(--vz-form-select-bg-icon, none) !important;
+    background-position: right .9rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 16px 12px !important;
+    border: var(--vz-border-width) solid var(--vz-input-border-custom) !important;
+    border-radius: var(--vz-border-radius) !important;
+    color: var(--vz-body-color) !important;
+    display: block !important;
+    font-size: .825rem !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    padding: .5rem 2.7rem .5rem .9rem !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    vertical-align: initial !important;
+}
+
+#completeReviewModal #result:focus {
+    border-color: var(--vz-input-focus-border-color) !important;
+    outline: 0 !important;
+    box-shadow: var(--vz-input-btn-focus-box-shadow) !important;
+}
+</style>
+
+<!-- Modal dodawania sprzętu do kalibracjau -->
+{% if can_edit and review.status != 'completed' %}
+<div class="modal fade" id="addEquipmentToReviewModal" tabindex="-1" aria-labelledby="addEquipmentToReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEquipmentToReviewModalLabel">
+                    <i class="ri-add-line me-2"></i>Dodaj miernik/akcesorium do kalibracjau
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="addEquipmentToReviewForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Filtruj według typu</label>
+                        <select class="form-select" id="reviewEquipmentTypeFilter">
+                            <option value="">Wszystkie typy</option>
+                            <option value="harness">Szelki</option>
+                            <option value="rope">Liny</option>
+                            <option value="helmet">Kaski</option>
+                            <option value="ascender">Zaciski</option>
+                            <option value="stopper">Blokady</option>
+                        </select>
+                    </div>
+                    
+                    <div class="border rounded p-3">
+                        <div class="row mb-3">
+                            <div class="col-sm-12 col-md-6">
+                                <!-- Puste miejsce po lewej -->
+                            </div>
+                            <div class="col-sm-12 col-md-6">
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <label for="review-modal-page-size-select" class="form-label me-2 mb-0">Pokaż:</label>
+                                    <select id="review-modal-page-size-select" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                        <option value="0">Wszystkie</option>
+                                    </select>
+                                    <span class="ms-2 text-muted">wierszy</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="reviewEquipmentListLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Ładowanie...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Ładowanie dostępnego sprzętu...</p>
+                        </div>
+                        
+                        <div id="review-modal-table-gridjs" style="display: none;"></div>
+                        
+                        <div id="reviewEquipmentListEmpty" class="text-center py-4" style="display: none;">
+                            <i class="ri-inbox-line text-muted fs-48"></i>
+                            <h5 class="mt-3">Brak dostępnego sprzętu</h5>
+                            <p class="text-muted">Nie znaleziono mierników odpowiadających kryteriom wyszukiwania.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllReview">
+                            <label class="form-check-label fw-medium" for="selectAllReview">
+                                Zaznacz/Odznacz wszystkie
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="ri-close-line me-1"></i>Anuluj
+                    </button>
+                    <button type="button" class="btn btn-success" id="addEquipmentToReviewButton">
+                        <i class="ri-check-line me-1"></i>Dodaj wybrany sprzęt (<span id="selectedReviewCount">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal zakończenia kalibracjau -->
+{% if review.status == 'sent' and can_edit %}
+<div class="modal fade" id="completeReviewModal" tabindex="-1" aria-labelledby="completeReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completeReviewModalLabel">
+                    <i class="ri-check-double-line me-2"></i>Zakończenie kalibracjau {{ review.reviewNumber }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ path('aparatura_pomiarowa_review_complete', {id: review.id}) }}" enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token('complete_review_' ~ review.id) }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="completedDate" class="form-label">Data zakończenia kalibracjau <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="completedDate" name="completed_date" 
+                                       value="{{ 'now'|date('Y-m-d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="result" class="form-label">Wynik kalibracjau <span class="text-danger">*</span></label>
+                                <select class="form-select" id="result" name="result" required>
+                                    <option value="">Wybierz wynik</option>
+                                    <option value="passed" selected>Pozytywny</option>
+                                    <option value="failed">Negatywny</option>
+                                    <option value="conditionally_passed">Warunkowo pozytywny</option>
+                                    <option value="not_applicable">Nie dotyczy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="certificateNumber" class="form-label">Numer certyfikatu/protokołu</label>
+                                <input type="text" class="form-control" id="certificateNumber" name="certificate_number" 
+                                       placeholder="Numer dokumentu potwierdzającego kalibracja">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cost" class="form-label">Koszt kalibracjau (PLN)</label>
+                                <input type="number" class="form-control" id="cost" name="cost" step="0.01" min="0"
+                                       value="0.00" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="nextReviewDate" class="form-label">Data następnego kalibracjau</label>
+                        <input type="date" class="form-control" id="nextReviewDate" name="next_review_date"
+                               min="{{ 'now'|date('Y-m-d') }}">
+                        <div class="form-text">Zalecana data kolejnego kalibracjau</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="findings" class="form-label">Stwierdzone usterki/uwagi</label>
+                        <textarea class="form-control" id="findings" name="findings" rows="3"
+                                  placeholder="Opis stwierdzonych usterek, wad, obserwacji..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="recommendations" class="form-label">Zalecenia</label>
+                        <textarea class="form-control" id="recommendations" name="recommendations" rows="3"
+                                  placeholder="Zalecenia dotyczące dalszego użytkowania, napraw, wymiany..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="attachments" class="form-label">Załączniki z kalibracjau</label>
+                        <input type="file" class="form-control" id="attachments" name="attachments[]" multiple
+                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls">
+                        <div class="form-text">
+                            Dozwolone formaty: PDF, DOC, DOCX, JPG, PNG, XLSX, XLS. Maksymalny rozmiar: 10MB na plik.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="ri-information-line me-2"></i>Informacja
+                        </h6>
+                        <p class="mb-0">Po zakończeniu kalibracjau status sprzętu/zestawu zostanie automatycznie zmieniony na "Dostępny". W historii kalibracjau zostanie zapisany odnośnik do tego kalibracjau.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ kalibracja
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block head_css %}
+{{ parent() }}
+<!-- gridjs css -->
+<link href="{{ asset('assets/libs/gridjs/theme/mermaid.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block javascript %}
+{{ parent() }}
+<!-- gridjs js -->
+<script src="{{ asset('assets/libs/gridjs/gridjs.umd.js') }}"></script>
+
+<script>
+{% if can_edit and review.status != 'completed' %}
+document.addEventListener('DOMContentLoaded', function() {
+    const reviewModal = new bootstrap.Modal(document.getElementById('addEquipmentToReviewModal'));
+    const reviewEquipmentTypeFilter = document.getElementById('reviewEquipmentTypeFilter');
+    const reviewEquipmentListLoading = document.getElementById('reviewEquipmentListLoading');
+    const reviewEquipmentListEmpty = document.getElementById('reviewEquipmentListEmpty');
+    const selectAllReviewCheckbox = document.getElementById('selectAllReview');
+    const selectedReviewCountSpan = document.getElementById('selectedReviewCount');
+    const addEquipmentToReviewButton = document.getElementById('addEquipmentToReviewButton');
+    
+    let availableReviewEquipment = [];
+    let filteredReviewEquipment = [];
+    let currentReviewGrid = null;
+    let selectedReviewEquipmentIds = new Set();
+    
+    // Załaduj dostępny sprzęt przy otwarciu modala
+    document.getElementById('addEquipmentToReviewModal').addEventListener('show.bs.modal', function() {
+        selectedReviewEquipmentIds.clear();
+        selectAllReviewCheckbox.checked = false;
+        loadAvailableReviewEquipment();
+    });
+    
+    // Funkcja ładowania dostępnego sprzętu
+    async function loadAvailableReviewEquipment() {
+        try {
+            reviewEquipmentListLoading.style.display = 'block';
+            document.getElementById('review-modal-table-gridjs').style.display = 'none';
+            reviewEquipmentListEmpty.style.display = 'none';
+            
+            const response = await fetch('{{ path("aparatura_pomiarowa_available_equipment_modal") }}');
+            const data = await response.json();
+            
+            availableReviewEquipment = data.equipment || [];
+            filteredReviewEquipment = [...availableReviewEquipment];
+            
+            reviewEquipmentListLoading.style.display = 'none';
+            
+            if (availableReviewEquipment.length === 0) {
+                reviewEquipmentListEmpty.style.display = 'block';
+            } else {
+                createReviewGrid(10);
+                document.getElementById('review-modal-table-gridjs').style.display = 'block';
+            }
+            
+            bindReviewEquipmentTypeFilter();
+        } catch (error) {
+            console.error('Błąd ładowania sprzętu:', error);
+            reviewEquipmentListLoading.style.display = 'none';
+            reviewEquipmentListEmpty.style.display = 'block';
+        }
+    }
+    
+    function createReviewGrid(pageSize = 10) {
+        const equipmentData = filteredReviewEquipment.map(equipment => [
+            gridjs.html(`
+                <div class="form-check" onclick="event.stopPropagation();">
+                    <input class="form-check-input review-equipment-checkbox" type="checkbox" 
+                           value="${equipment.id}" id="review_equipment_${equipment.id}"
+                           ${selectedReviewEquipmentIds.has(equipment.id.toString()) ? 'checked' : ''}
+                           onchange="handleReviewCheckboxChange(this)"
+                           onclick="event.stopPropagation();">
+                </div>
+            `),
+            gridjs.html(`
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-light rounded me-3">
+                        <i class="ri-radar-line text-primary fs-16"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">${equipment.name}</h6>
+                        <span class="text-muted small">${equipment.inventory_number}</span>
+                    </div>
+                </div>
+            `),
+            gridjs.html(`<span class="badge bg-secondary">${equipment.equipment_type}</span>`),
+            gridjs.html(`
+                ${equipment.manufacturer ? equipment.manufacturer : '-'}
+                ${equipment.model ? `<br><small class="text-muted">${equipment.model}</small>` : ''}
+            `),
+            gridjs.html(`<span class="badge bg-success">${equipment.status}</span>`)
+        ]);
+
+        const gridConfig = {
+            columns: [
+                { name: '', width: '50px', sort: false },
+                { name: 'Miernik/Akcesorium', width: '250px' },
+                { name: 'Typ', width: '120px' },
+                { name: 'Producent/Model', width: '180px' },
+                { name: 'Status', width: '100px' }
+            ],
+            data: equipmentData,
+            sort: true,
+            search: true,
+            className: {
+                table: 'table table-borderless table-centered align-middle table-nowrap mb-0',
+                th: 'text-muted',
+                td: 'text-body'
+            },
+            language: {
+                search: { placeholder: 'Szukaj sprzętu...' },
+                pagination: {
+                    previous: 'Poprzednia',
+                    next: 'Następna',
+                    showing: 'Pokazane',
+                    results: () => 'wyniki'
+                }
+            }
+        };
+
+        if (pageSize > 0) {
+            gridConfig.pagination = {
+                limit: pageSize,
+                summary: true
+            };
+        }
+
+        if (currentReviewGrid) {
+            currentReviewGrid.destroy();
+        }
+
+        currentReviewGrid = new gridjs.Grid(gridConfig).render(document.getElementById("review-modal-table-gridjs"));
+        
+        setTimeout(() => {
+            restoreReviewCheckboxStates();
+        }, 100);
+    }
+
+    // Obsługa zmiany checkboxa
+    window.handleReviewCheckboxChange = function(checkbox) {
+        event.stopPropagation();
+        
+        if (checkbox.checked) {
+            selectedReviewEquipmentIds.add(checkbox.value);
+        } else {
+            selectedReviewEquipmentIds.delete(checkbox.value);
+        }
+        updateReviewSelectedCount();
+    }
+
+    // Funkcja aktualizacji liczby wybranych elementów
+    function updateReviewSelectedCount() {
+        selectedReviewCountSpan.textContent = selectedReviewEquipmentIds.size;
+    }
+    
+    // Handle page size change
+    document.getElementById('review-modal-page-size-select').addEventListener('change', function() {
+        const pageSize = parseInt(this.value);
+        createReviewGrid(pageSize);
+    });
+    
+    // Funkcja bindowania filtra typu sprzętu
+    function bindReviewEquipmentTypeFilter() {
+        reviewEquipmentTypeFilter.addEventListener('change', function() {
+            applyReviewFilters();
+        });
+    }
+    
+    // Funkcja aplikowania filtrów
+    function applyReviewFilters() {
+        const selectedType = reviewEquipmentTypeFilter.value;
+        
+        if (selectedType === '') {
+            filteredReviewEquipment = [...availableReviewEquipment];
+        } else {
+            filteredReviewEquipment = availableReviewEquipment.filter(equipment => 
+                equipment.equipment_type === selectedType
+            );
+        }
+        
+        const currentPageSize = parseInt(document.getElementById('review-modal-page-size-select').value);
+        createReviewGrid(currentPageSize);
+        
+        if (filteredReviewEquipment.length === 0) {
+            document.getElementById('review-modal-table-gridjs').style.display = 'none';
+            reviewEquipmentListEmpty.style.display = 'block';
+        } else {
+            document.getElementById('review-modal-table-gridjs').style.display = 'block';
+            reviewEquipmentListEmpty.style.display = 'none';
+        }
+    }
+    
+    // Funkcja przywracania stanów checkboxów po renderze grid
+    function restoreReviewCheckboxStates() {
+        const checkboxes = document.querySelectorAll('.review-equipment-checkbox');
+        checkboxes.forEach(checkbox => {
+            if (selectedReviewEquipmentIds.has(checkbox.value)) {
+                checkbox.checked = true;
+            }
+        });
+    }
+    
+    // Zaznacz/odznacz wszystkie
+    selectAllReviewCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.review-equipment-checkbox');
+        if (selectAllReviewCheckbox.checked) {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                selectedReviewEquipmentIds.add(checkbox.value);
+            });
+        } else {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                selectedReviewEquipmentIds.delete(checkbox.value);
+            });
+        }
+        updateReviewSelectedCount();
+    });
+    
+    // Obsługa przycisku dodawania
+    addEquipmentToReviewButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (selectedReviewEquipmentIds.size === 0) {
+            alert('Wybierz co najmniej jeden element sprzętu.');
+            return;
+        }
+        
+        // Utwórz formularz z wybranymi elementami
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path("aparatura_pomiarowa_review_add_equipment", {id: review.id}) }}';
+        
+        selectedReviewEquipmentIds.forEach(equipmentId => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'equipment_ids[]';
+            input.value = equipmentId;
+            form.appendChild(input);
+        });
+        
+        // CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token("add_review_equipment_" ~ review.id) }}';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Walidacja formularza zakończenia kalibracjau
+    const completeReviewForm = document.querySelector('#completeReviewModal form');
+    const completedDateField = document.getElementById('completedDate');
+    const nextReviewDateField = document.getElementById('nextReviewDate');
+    
+    function validateCompletedDate() {
+        const completedDate = new Date(completedDateField.value);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Koniec dnia
+        
+        if (completedDate > today) {
+            completedDateField.setCustomValidity('Data zakończenia kalibracjau nie może być z przyszłości');
+            return false;
+        } else {
+            completedDateField.setCustomValidity('');
+            return true;
+        }
+    }
+    
+    function validateNextReviewDate() {
+        if (!nextReviewDateField.value || !completedDateField.value) {
+            nextReviewDateField.setCustomValidity('');
+            return true;
+        }
+        
+        const completedDate = new Date(completedDateField.value);
+        const nextReviewDate = new Date(nextReviewDateField.value);
+        
+        if (nextReviewDate <= completedDate) {
+            nextReviewDateField.setCustomValidity('Data następnego kalibracjau musi być późniejsza niż data zakończenia');
+            return false;
+        } else {
+            nextReviewDateField.setCustomValidity('');
+            return true;
+        }
+    }
+    
+    function validateCompleteReviewForm() {
+        const isCompletedDateValid = validateCompletedDate();
+        const isNextReviewDateValid = validateNextReviewDate();
+        
+        return isCompletedDateValid && isNextReviewDateValid;
+    }
+    
+    // Event listenery dla walidacji na bieżąco
+    completedDateField.addEventListener('change', function() {
+        validateCompletedDate();
+        validateNextReviewDate(); // Rewalidacja następnej daty
+    });
+    
+    completedDateField.addEventListener('blur', validateCompletedDate);
+    
+    nextReviewDateField.addEventListener('change', validateNextReviewDate);
+    nextReviewDateField.addEventListener('blur', validateNextReviewDate);
+    
+    // Walidacja przed wysłaniem formularza
+    completeReviewForm.addEventListener('submit', function(e) {
+        if (!validateCompleteReviewForm()) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Pokaż komunikat błędu
+            const firstInvalidField = completeReviewForm.querySelector(':invalid');
+            if (firstInvalidField) {
+                firstInvalidField.focus();
+                firstInvalidField.reportValidity();
+            }
+        }
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

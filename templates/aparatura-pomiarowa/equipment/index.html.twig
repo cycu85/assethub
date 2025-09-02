@@ -1,0 +1,455 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mierniki i Akcesoria - {{ app_name() }}{% endblock %}
+{% block page_title %}Mierniki i Akcesoria{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h4 class="mb-0">
+            <i class="ri-shield-check-line me-2 text-primary"></i>
+            Zarządzanie miernikami i akcesoriami
+        </h4>
+        <p class="text-muted mb-0">Przegląd i zarządzanie sprzętem bezpieczeństwa do pracy na wysokości</p>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_create %}
+        <a href="{{ path('aparatura_pomiarowa_equipment_new') }}" class="btn btn-primary">
+            <i class="ri-add-line me-1"></i>
+            Dodaj miernik/akcesorium
+        </a>
+        {% endif %}
+        <a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}" class="btn btn-outline-secondary ms-2">
+            <i class="ri-stack-line me-1"></i>
+            Zestawy
+        </a>
+    </div>
+</div>
+
+<!-- Statystyki -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded">
+                        <i class="ri-radar-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.total }}</h5>
+                        <p class="text-muted mb-0">Łącznie mierników</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-success rounded">
+                        <i class="ri-check-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.available }}</h5>
+                        <p class="text-muted mb-0">Dostępne</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-warning rounded">
+                        <i class="ri-user-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.assigned }}</h5>
+                        <p class="text-muted mb-0">Przypisane</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-danger rounded">
+                        <i class="ri-error-warning-line text-white fs-16"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ statistics.needing_review + statistics.overdue_reviews }}</h5>
+                        <p class="text-muted mb-0">Wymagają kalibracji</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtry -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Szukaj</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="ri-search-line"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Nazwa, numer inwentarzowy..." 
+                                   value="{{ filters.search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="available" {{ filters.status == 'available' ? 'selected' : '' }}>Dostępne</option>
+                            <option value="assigned" {{ filters.status == 'assigned' ? 'selected' : '' }}>Przypisane</option>
+                            <option value="in_review" {{ filters.status == 'in_review' ? 'selected' : '' }}>Na kalibracji</option>
+                            <option value="damaged" {{ filters.status == 'damaged' ? 'selected' : '' }}>Uszkodzone</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Typ sprzętu</label>
+                        <select name="equipment_type" class="form-select">
+                            <option value="">Wszystkie typy</option>
+                            <option value="harness" {{ filters.equipment_type == 'harness' ? 'selected' : '' }}>Szelki</option>
+                            <option value="rope" {{ filters.equipment_type == 'rope' ? 'selected' : '' }}>Liny</option>
+                            <option value="helmet" {{ filters.equipment_type == 'helmet' ? 'selected' : '' }}>Kaski</option>
+                            <option value="ascender" {{ filters.equipment_type == 'ascender' ? 'selected' : '' }}>Zaciski</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Zestaw</label>
+                        <select name="equipment_set_id" class="form-select">
+                            <option value="">Wszystkie</option>
+                            <option value="no_set" {{ filters.equipment_set_id == 'no_set' ? 'selected' : '' }}>Nie w zestawie</option>
+                            {% for set in all_equipment_sets %}
+                            <option value="{{ set.id }}" {{ filters.equipment_set_id == set.id ? 'selected' : '' }}>{{ set.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Specjalne filtry</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="needs_review" 
+                                   {{ filters.needs_review ? 'checked' : '' }} id="needs_review">
+                            <label class="form-check-label" for="needs_review">
+                                Wymagają kalibracji (30 dni)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="overdue_review" 
+                                   {{ filters.overdue_review ? 'checked' : '' }} id="overdue_review">
+                            <label class="form-check-label" for="overdue_review">
+                                Przeterminowane kalibracje
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="ri-search-line me-1"></i>
+                            Filtruj
+                        </button>
+                        <a href="{{ path('aparatura_pomiarowa_index') }}" class="btn btn-outline-secondary">
+                            <i class="ri-refresh-line"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista sprzętu -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Lista sprzętu</h5>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if equipment.items|length > 0 %}
+                <div class="row mb-3">
+                    <div class="col-sm-12 col-md-6">
+                        <!-- Puste miejsce po lewej -->
+                    </div>
+                    <div class="col-sm-12 col-md-6">
+                        <div class="d-flex align-items-center justify-content-end">
+                            <label for="page-size-select" class="form-label me-2 mb-0">Pokaż:</label>
+                            <select id="page-size-select" class="form-select form-select-sm" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="250">250</option>
+                                <option value="500">500</option>
+                                <option value="1000">1000</option>
+                                <option value="0">Wszystkie</option>
+                            </select>
+                            <span class="ms-2 text-muted">wierszy</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="table-gridjs"></div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-radar-line text-muted fs-48"></i>
+                    <h5 class="mt-3">Brak mierników i akcesoriów</h5>
+                    <p class="text-muted">
+                        {% if filters.search or filters.status or filters.equipment_type %}
+                            Nie znaleziono mierników odpowiadających wybranym filtrom.
+                        {% else %}
+                            Nie dodano jeszcze żadnego mierników i akcesoriów.
+                        {% endif %}
+                    </p>
+                    {% if can_create and not filters.search and not filters.status and not filters.equipment_type %}
+                    <a href="{{ path('aparatura_pomiarowa_equipment_new') }}" class="btn btn-primary">
+                        <i class="ri-add-line me-1"></i>
+                        Dodaj pierwszy miernik
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_css %}
+{{ parent() }}
+<!-- gridjs css -->
+<link href="{{ asset('assets/libs/gridjs/theme/mermaid.min.css') }}" rel="stylesheet" type="text/css" />
+<style>
+.gridjs-table {
+    border: none !important;
+}
+.gridjs-th {
+    background-color: #f8f9fa !important;
+    border: none !important;
+    color: #495057 !important;
+    font-weight: 600 !important;
+}
+.gridjs-td {
+    border: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+.gridjs-sort {
+    color: #495057 !important;
+}
+.gridjs-sort::after {
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+}
+.gridjs-sort-asc::after {
+}
+.gridjs-sort-desc::after {
+}
+.gridjs-td {
+    white-space: nowrap !important;
+}
+.gridjs-td:nth-child(1),
+.gridjs-td:nth-child(3) {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    max-width: 200px !important;
+}
+/* Fix search input styling */
+.gridjs-search-input {
+    padding-left: 35px !important;
+}
+.gridjs-search {
+    position: relative !important;
+}
+.gridjs-search::before {
+    content: "\f0d1" !important;
+    font-family: "remixicon" !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6c757d !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<!-- gridjs js -->
+<script src="{{ asset('assets/libs/gridjs/gridjs.umd.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prepare data for GridJS
+    const equipmentData = [
+        {% for item in equipment.items %}
+        [
+            gridjs.html(`
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-light rounded me-3">
+                        <i class="ri-radar-line text-primary fs-16"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">
+                            <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: item.id}) }}" class="text-dark text-decoration-none">
+                                {{ item.name }}
+                            </a>
+                        </h6>
+                        <span class="text-muted small">{{ item.inventoryNumber }}</span>
+                        {% if item.manufacturer and item.model %}
+                        <br><span class="text-muted small">{{ item.manufacturer }} {{ item.model }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            `),
+            gridjs.html(`<span class="badge bg-secondary">{{ item.equipmentType }}</span>`),
+            gridjs.html(`
+                {% if item.isInSet %}
+                    {% if item.equipmentSets|length == 1 %}
+                        <a href="{{ path('aparatura_pomiarowa_equipment_set_show', {id: item.primaryEquipmentSet.id}) }}" class="text-decoration-none">
+                            <i class="ri-stack-line me-1"></i>{{ item.primaryEquipmentSet.name }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted" title="{{ item.equipmentSetsDisplayNames }}">
+                            <i class="ri-stack-line me-1"></i>{{ item.equipmentSets|length }} zestawów
+                        </span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted"><i class="ri-minus-line me-1"></i>Nie w zestawie</span>
+                {% endif %}
+            `),
+            gridjs.html(`
+                {% set status_class = item.status == 'available' ? 'success' : (item.status == 'assigned' ? 'warning' : (item.status == 'damaged' ? 'danger' : 'secondary')) %}
+                <span class="badge bg-{{ status_class }}">{{ item.statusDisplayName }}</span>
+            `),
+            gridjs.html(`
+                {% if item.projekt %}
+                    <span class="text-dark">{{ item.projekt }}</span>
+                {% else %}
+                    <span class="text-muted">-</span>
+                {% endif %}
+            `),
+            gridjs.html(`
+                {% if item.assignedTo %}
+                    <span class="text-dark">{{ item.assignedTo.fullName }}</span>
+                    <br><small class="text-muted">{{ item.assignedDate|date('d.m.Y') }}</small>
+                {% else %}
+                    <span class="text-muted">Nieprzypisane</span>
+                {% endif %}
+            `),
+            gridjs.html(`
+                {% if item.nextReviewDate %}
+                    {% set review_date = item.nextReviewDate|date('Y-m-d') %}
+                    {% set today_date = 'now'|date('Y-m-d') %}
+                    {% if review_date < today_date %}
+                        {% set days_overdue = date().diff(date(item.nextReviewDate)).days %}
+                        <span class="text-danger">
+                            <i class="ri-error-warning-line me-1"></i>{{ item.nextReviewDate|date('d.m.Y') }}
+                            <br><small>Przeterminowany o {{ days_overdue }} dni!</small>
+                        </span>
+                    {% else %}
+                        {% set days_to_review = date(item.nextReviewDate).diff(date()).days %}
+                        {% if days_to_review <= 30 %}
+                            <span class="text-warning">
+                                <i class="ri-time-line me-1"></i>{{ item.nextReviewDate|date('d.m.Y') }}
+                                <br><small>Za {{ days_to_review }} dni</small>
+                            </span>
+                        {% else %}
+                            <span class="text-success">
+                                {{ item.nextReviewDate|date('d.m.Y') }}
+                                <br><small>Za {{ days_to_review }} dni</small>
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted">Nie określono</span>
+                {% endif %}
+            `),
+            gridjs.html(`
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">Akcje</button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ path('aparatura_pomiarowa_equipment_show', {id: item.id}) }}"><i class="ri-eye-line me-2"></i>Szczegóły</a></li>
+                        {% if can_edit %}
+                        <li><a class="dropdown-item" href="{{ path('aparatura_pomiarowa_equipment_edit', {id: item.id}) }}"><i class="ri-edit-line me-2"></i>Edytuj</a></li>
+                        {% endif %}
+                        {% if can_review %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ path('aparatura_pomiarowa_review_new_for_equipment', {id: item.id}) }}"><i class="ri-search-eye-line me-2"></i>Nowa kalibracja</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            `)
+        ]{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let currentGrid;
+
+    function createGrid(pageSize = 10) {
+        const gridConfig = {
+            columns: [
+                { name: 'Miernik/Akcesorium', width: '250px' },
+                { name: 'Typ', width: '100px' },
+                { name: 'Zestaw', width: '150px' },
+                { name: 'Status', width: '100px' },
+                { name: 'Projekt', width: '120px' },
+                { name: 'Przypisane do', width: '150px' },
+                { name: 'Następna kalibracja', width: '150px' },
+                { name: 'Akcje', width: '120px', sort: false }
+            ],
+            data: equipmentData,
+            sort: true,
+            search: true,
+            className: {
+                table: 'table table-borderless table-centered align-middle table-nowrap mb-0',
+                th: 'text-muted',
+                td: 'text-body'
+            },
+            language: {
+                search: { placeholder: 'Szukaj...' },
+                pagination: {
+                    previous: 'Poprzednia',
+                    next: 'Następna',
+                    showing: 'Pokazane',
+                    results: () => 'wyniki'
+                }
+            }
+        };
+
+        if (pageSize > 0) {
+            gridConfig.pagination = {
+                limit: pageSize,
+                summary: true
+            };
+        }
+
+        if (currentGrid) {
+            currentGrid.destroy();
+        }
+
+        currentGrid = new gridjs.Grid(gridConfig).render(document.getElementById("table-gridjs"));
+    }
+
+    createGrid(10);
+
+    document.getElementById('page-size-select').addEventListener('change', function() {
+        const pageSize = parseInt(this.value);
+        createGrid(pageSize);
+    });
+});
+</script>
+{% endblock %}

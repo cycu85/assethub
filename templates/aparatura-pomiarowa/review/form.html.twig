@@ -1,0 +1,304 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title }} - {{ app_name() }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_review_index') }}">Przeglądy</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-search-eye-line me-2"></i>
+                    {{ page_title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment is defined %}
+                <!-- Informacje o sprzęcie -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Przegląd dla sprzętu
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Nazwa:</strong> {{ equipment.name }}<br>
+                            <strong>Numer inwentarzowy:</strong> {{ equipment.inventoryNumber }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Typ:</strong> {{ equipment.equipmentType }}<br>
+                            <strong>Status:</strong> 
+                            {% set status_class = equipment.status == 'available' ? 'success' : 'warning' %}
+                            <span class="badge bg-{{ status_class }}">{{ equipment.statusDisplayName }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% elseif equipment_set is defined %}
+                <!-- Informacje o zestawie -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Przegląd dla zestawu
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Nazwa:</strong> {{ equipment_set.name }}<br>
+                            <strong>Typ zestawu:</strong> {{ equipment_set.setType }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Liczba elementów:</strong> {{ equipment_set.equipmentItems|length }}<br>
+                            <strong>Status:</strong> 
+                            {% set status_class = equipment_set.status == 'available' ? 'success' : 'warning' %}
+                            <span class="badge bg-{{ status_class }}">{{ equipment_set.statusDisplayName }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': true, 'data-validation': 'custom'}}) }}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.plannedDate) }}
+                            {{ form_widget(form.plannedDate) }}
+                            {{ form_errors(form.plannedDate) }}
+                            <div class="form-text">Data planowanego rozpoczęcia kalibracjau</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.reviewType) }}
+                            {{ form_widget(form.reviewType) }}
+                            {{ form_errors(form.reviewType) }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wybór sprzętu/zestawu tylko jeśli nie został już określony -->
+                {% if equipment is not defined and equipment_set is not defined and form.equipment is defined and form.equipmentSet is defined %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.equipment) }}
+                            {{ form_widget(form.equipment) }}
+                            {{ form_errors(form.equipment) }}
+                            <div class="form-text">Wybierz sprzęt do kalibracjau (wykluczające się z zestawem)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.equipmentSet) }}
+                            {{ form_widget(form.equipmentSet) }}
+                            {{ form_errors(form.equipmentSet) }}
+                            <div class="form-text">Wybierz zestaw sprzętu do kalibracjau (wykluczające się ze sprzętem)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="ri-information-line me-2"></i>Informacja
+                    </h6>
+                    <p class="mb-0">Możesz wybrać albo pojedynczy sprzęt, albo cały zestaw sprzętu do kalibracjau. Pola wykluczają się wzajemnie.</p>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    {{ form_label(form.reviewCompany) }}
+                    {{ form_widget(form.reviewCompany) }}
+                    {{ form_errors(form.reviewCompany) }}
+                    <div class="form-text">Firma lub osoba przeprowadzająca kalibracja</div>
+                </div>
+
+                <div class="mb-4">
+                    {{ form_label(form.notes) }}
+                    {{ form_widget(form.notes) }}
+                    {{ form_errors(form.notes) }}
+                </div>
+
+                <!-- Pola dla zakończonych kalibracjaów -->
+                {% if review.status == 'completed' %}
+                <hr class="my-4">
+                <h6 class="mb-3">
+                    <i class="ri-check-double-line me-2"></i>Wyniki kalibracjau
+                </h6>
+
+                {% if form.sentDate is defined and form.completedDate is defined %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.sentDate) }}
+                            {{ form_widget(form.sentDate) }}
+                            {{ form_errors(form.sentDate) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.completedDate) }}
+                            {{ form_widget(form.completedDate) }}
+                            {{ form_errors(form.completedDate) }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if form.result is defined and form.certificateNumber is defined %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.result) }}
+                            {{ form_widget(form.result) }}
+                            {{ form_errors(form.result) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.certificateNumber) }}
+                            {{ form_widget(form.certificateNumber) }}
+                            {{ form_errors(form.certificateNumber) }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if form.findings is defined %}
+                <div class="mb-3">
+                    {{ form_label(form.findings) }}
+                    {{ form_widget(form.findings) }}
+                    {{ form_errors(form.findings) }}
+                </div>
+                {% endif %}
+
+                {% if form.recommendations is defined %}
+                <div class="mb-3">
+                    {{ form_label(form.recommendations) }}
+                    {{ form_widget(form.recommendations) }}
+                    {{ form_errors(form.recommendations) }}
+                </div>
+                {% endif %}
+
+                {% if form.cost is defined and form.nextReviewDate is defined %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.cost) }}
+                            {{ form_widget(form.cost) }}
+                            {{ form_errors(form.cost) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.nextReviewDate) }}
+                            {{ form_widget(form.nextReviewDate) }}
+                            {{ form_errors(form.nextReviewDate) }}
+                            <div class="form-text">Data kolejnego zalecanego kalibracjau</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <a href="{{ review.id ? path('aparatura_pomiarowa_review_show', {id: review.id}) : path('aparatura_pomiarowa_review_index') }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="ri-arrow-left-line me-1"></i>
+                            Anuluj
+                        </a>
+                    </div>
+                    <div>
+                        {% if form.submit is defined %}
+                            {{ form_widget(form.submit) }}
+                        {% else %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-line me-1"></i>
+                                Zapisz
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {{ form_end(form) }}
+            </div>
+        </div>
+
+        <!-- Instrukcje -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Instrukcje
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Typy kalibracjaów:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Okresowy</strong> - standardowy kalibracja planowy</li>
+                            <li><strong>Po uszkodzeniu</strong> - kontrola po wykryciu usterki</li>
+                            <li><strong>Po naprawie</strong> - weryfikacja po wykonanej naprawie</li>
+                            <li><strong>Początkowy</strong> - pierwszy kalibracja nowego sprzętu</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Przepływ procesu:</h6>
+                        <ol>
+                            <li>Przygotowanie kalibracjau</li>
+                            <li>Wysłanie sprzętu na kalibracja</li>
+                            <li>Zakończenie i wprowadzenie wyników</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    
+    // Walidacja wzajemnego wykluczania się pól equipment i equipmentSet
+    const equipmentField = form.querySelector('select[name*="equipment"]:not([name*="equipmentSet"])');
+    const equipmentSetField = form.querySelector('select[name*="equipmentSet"]');
+    
+    if (equipmentField && equipmentSetField) {
+        equipmentField.addEventListener('change', function() {
+            if (this.value) {
+                equipmentSetField.value = '';
+                equipmentSetField.classList.remove('is-invalid');
+            }
+        });
+        
+        equipmentSetField.addEventListener('change', function() {
+            if (this.value) {
+                equipmentField.value = '';
+                equipmentField.classList.remove('is-invalid');
+            }
+        });
+    }
+    
+    // Podstawowa walidacja typu kalibracjau (server-side validation już to sprawdza)
+    const reviewTypeField = form.querySelector('select[name*="reviewType"]');
+    if (reviewTypeField) {
+        reviewTypeField.addEventListener('change', function() {
+            this.classList.remove('is-invalid');
+        });
+    }
+});
+</script>
+{% endblock %}

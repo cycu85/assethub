@@ -1,0 +1,975 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ equipment_set.name }} - {{ app_name() }}{% endblock %}
+{% block page_title %}Szczegóły zestawu{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a href="{{ path('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_index') }}">Asekuracja</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}">Zestawy</a></li>
+                <li class="breadcrumb-item active">{{ equipment_set.name }}</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-lg bg-info rounded me-3">
+                <i class="ri-stack-line text-white fs-24"></i>
+            </div>
+            <div>
+                <h4 class="mb-1">{{ equipment_set.name }}</h4>
+                <p class="text-muted mb-0">
+                    {% set status_class = equipment_set.status == 'available' ? 'success' : 
+                                         (equipment_set.status == 'assigned' ? 'warning' : 
+                                         (equipment_set.status == 'in_review' ? 'info' : 'secondary')) %}
+                    <span class="badge bg-{{ status_class }} me-2">{{ equipment_set.statusDisplayName }}</span>
+                    <span class="text-muted">{{ equipment_set.equipmentItems|length }} elementów</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_edit %}
+        <a href="{{ path('aparatura_pomiarowa_equipment_set_edit', {id: equipment_set.id}) }}" class="btn btn-primary">
+            <i class="ri-edit-line me-1"></i>Edytuj
+        </a>
+        {% endif %}
+        <a href="{{ path('aparatura_pomiarowa_equipment_set_index') }}" class="btn btn-outline-secondary ms-2">
+            <i class="ri-arrow-left-line me-1"></i>Powrót
+        </a>
+    </div>
+</div>
+
+<!-- Informacje podstawowe -->
+<div class="row mb-4">
+    <div class="col-xl-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Informacje o zestawie
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Nazwa zestawu</label>
+                            <p class="mb-0">{{ equipment_set.name }}</p>
+                        </div>
+                        
+                        {% if equipment_set.setType %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Typ zestawu</label>
+                            <p class="mb-0">
+                                <span class="badge bg-info">{{ equipment_set.setType }}</span>
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if equipment_set.location %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Lokalizacja</label>
+                            <p class="mb-0">{{ equipment_set.location }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Status</label>
+                            <p class="mb-0">
+                                <span class="badge bg-{{ status_class }}">{{ equipment_set.statusDisplayName }}</span>
+                            </p>
+                        </div>
+                        
+                        {% if equipment_set.assignedTo %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Przypisany do</label>
+                            <p class="mb-0">
+                                <i class="ri-user-line me-1"></i>
+                                {{ equipment_set.assignedTo.fullName }}
+                                {% if equipment_set.assignedDate %}
+                                <br><small class="text-muted">od {{ equipment_set.assignedDate|date('d.m.Y') }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if equipment_set.nextReviewDate %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Następna kalibracja</label>
+                            {% set review_date = equipment_set.nextReviewDate|date('Y-m-d') %}
+                            {% set today_date = 'now'|date('Y-m-d') %}
+                            <p class="mb-0">
+                                {% if review_date < today_date %}
+                                    {% set days_overdue = date().diff(date(equipment_set.nextReviewDate)).days %}
+                                    <span class="text-danger">
+                                        <i class="ri-error-warning-line me-1"></i>
+                                        {{ equipment_set.nextReviewDate|date('d.m.Y') }}
+                                        <br><small>Przeterminowany o {{ days_overdue }} dni!</small>
+                                    </span>
+                                {% else %}
+                                    {% set days_to_review = date(equipment_set.nextReviewDate).diff(date()).days %}
+                                    {% if days_to_review <= 30 %}
+                                        <span class="text-warning">
+                                            <i class="ri-time-line me-1"></i>
+                                            {{ equipment_set.nextReviewDate|date('d.m.Y') }}
+                                            <br><small>Za {{ days_to_review }} dni</small>
+                                        </span>
+                                    {% else %}
+                                        <span class="text-success">
+                                            {{ equipment_set.nextReviewDate|date('d.m.Y') }}
+                                            <br><small>Za {{ days_to_review }} dni</small>
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% set lastReview = equipment_set.lastReview %}
+                        {% if lastReview %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Ostatni kalibracja</label>
+                            <p class="mb-0">
+                                <a href="{{ path('aparatura_pomiarowa_review_show', {id: lastReview.id}) }}" class="text-decoration-none">
+                                    {{ lastReview.completedDate|date('d.m.Y') }}
+                                    <i class="ri-external-link-line ms-1 small"></i>
+                                </a>
+                                <br><small class="text-muted">{{ lastReview.resultDisplayName }}</small>
+                                {% if lastReview.certificateNumber %}
+                                    <br><small class="text-muted">Cert: {{ lastReview.certificateNumber }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if equipment_set.description %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Opis</label>
+                            <p class="mb-0">{{ equipment_set.description }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Załączniki -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ri-attachment-line me-2"></i>Załączniki ({{ equipment_set.attachments|length }})
+                    </h5>
+                    {% if can_edit %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#equipmentSetAttachmentsModal">
+                        <i class="ri-add-line me-1"></i>Dodaj
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.attachments|length > 0 %}
+                <div class="row">
+                    {% for attachment in equipment_set.attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="avatar-sm bg-light rounded me-3">
+                                {% if attachment.filename|split('.')|last in ['pdf'] %}
+                                    <i class="ri-file-pdf-line text-danger fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['doc', 'docx'] %}
+                                    <i class="ri-file-word-line text-primary fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['jpg', 'jpeg', 'png'] %}
+                                    <i class="ri-image-line text-success fs-16"></i>
+                                {% elseif attachment.filename|split('.')|last in ['xls', 'xlsx'] %}
+                                    <i class="ri-file-excel-line text-success fs-16"></i>
+                                {% else %}
+                                    <i class="ri-file-line text-muted fs-16"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fs-14">{{ attachment.original_name }}</h6>
+                                <div class="text-muted small">
+                                    <span>{{ (attachment.size / 1024)|number_format(0) }} KB</span>
+                                    <span class="mx-1">•</span>
+                                    <span>{{ attachment.uploaded_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="ri-more-line"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ path('aparatura_pomiarowa_equipment_set_attachment_download', {id: equipment_set.id, filename: attachment.filename}) }}" 
+                                           class="dropdown-item">
+                                            <i class="ri-download-line me-2"></i>Pobierz
+                                        </a>
+                                    </li>
+                                    {% if can_edit %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_attachment_delete', {id: equipment_set.id, filename: attachment.filename}) }}" 
+                                              class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten załącznik?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete_attachment_' ~ equipment_set.id ~ '_' ~ attachment.filename) }}">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="ri-delete-bin-line me-2"></i>Usuń
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="ri-attachment-line text-muted fs-32"></i>
+                    <p class="text-muted mb-0 mt-2">Brak załączników</p>
+                    {% if can_edit %}
+                    <p class="text-muted small">Kliknij przycisk "Dodaj" aby załączyć pliki</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statystyki zestawu -->
+    <div class="col-xl-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Statystyki zestawu</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="avatar-sm bg-primary rounded me-3">
+                        <i class="ri-stack-line text-white fs-16"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">{{ equipment_set.equipmentItems|length }}</h6>
+                        <small class="text-muted">Łącznie elementów</small>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center mb-3">
+                    <div class="avatar-sm bg-{{ equipment_set.isComplete ? 'success' : 'warning' }} rounded me-3">
+                        <i class="ri-{{ equipment_set.isComplete ? 'check' : 'error-warning' }}-line text-white fs-16"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">{{ equipment_set.isComplete ? 'Kompletny' : 'Niekompletny' }}</h6>
+                        <small class="text-muted">Status kompletności</small>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-info rounded me-3">
+                        <i class="ri-calendar-line text-white fs-16"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">{{ equipment_set.createdAt|date('d.m.Y') }}</h6>
+                        <small class="text-muted">Data utworzenia</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Akcje -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Akcje</h6>
+            </div>
+            <div class="card-body">
+                {% if can_manage_equipment %}
+                <a href="{{ path('aparatura_pomiarowa_equipment_set_add_equipment', {id: equipment_set.id}) }}" 
+                   class="btn btn-outline-primary w-100 mb-2">
+                    <i class="ri-settings-3-line me-1"></i>Zarządzaj sprzętem
+                </a>
+                {% endif %}
+                
+                {% if can_review %}
+                    {% if active_reviews|length > 0 %}
+                        {% set first_active_review = active_reviews[0] %}
+                        <a href="{{ path('aparatura_pomiarowa_review_show', {id: first_active_review.id}) }}" class="btn btn-warning w-100 mb-2">
+                            <i class="ri-eye-line me-1"></i>Przejdź do kalibracjau
+                        </a>
+                        <small class="text-muted d-block text-center mb-2">
+                            Status: {{ first_active_review.statusDisplayName }}
+                            {% if first_active_review.reviewNumber %}
+                                <br>{{ first_active_review.reviewNumber }}
+                            {% endif %}
+                        </small>
+                    {% else %}
+                        <a href="{{ path('aparatura_pomiarowa_review_new_for_set', {id: equipment_set.id}) }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="ri-search-eye-line me-1"></i>Nowa kalibracja
+                        </a>
+                    {% endif %}
+                {% endif %}
+                
+                {% if can_transfer %}
+                    {% if equipment_set.isAssigned %}
+                    <button class="btn btn-outline-warning w-100 mb-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#prepareReturnModal">
+                        <i class="ri-arrow-left-line me-1"></i>Przygotuj zwrot
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-success w-100 mb-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#prepareTransferModal">
+                        <i class="ri-send-plane-line me-1"></i>Przygotuj przekazanie
+                    </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historia przekazań -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="ri-arrow-right-line me-2"></i>Przekazania ({{ equipment_set.transfers|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if equipment_set.transfers|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Numer przekazania</th>
+                                <th>Odbiorca</th>
+                                <th>Data przekazania</th>
+                                <th>Status</th>
+                                <th>Protokół PDF</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transfer in equipment_set.transfers %}
+                            <tr>
+                                <td>
+                                    <strong>{{ transfer.transferNumber }}</strong>
+                                    {% if transfer.purpose %}
+                                    <br><small class="text-muted">{{ transfer.purpose }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-2">
+                                            <i class="ri-user-line text-primary fs-14"></i>
+                                        </div>
+                                        <div>
+                                            <span>{{ transfer.recipient.fullName }}</span>
+                                            {% if transfer.recipient.branch %}
+                                            <br><small class="text-muted">{{ transfer.recipient.branch }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ transfer.transferDate|date('d.m.Y') }}
+                                    {% if transfer.returnDate %}
+                                    <br><small class="text-muted">Zwrócone: {{ transfer.returnDate|date('d.m.Y') }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set transfer_status_class = transfer.status == 'transferred' ? 'success' : 
+                                                                  (transfer.status == 'in_progress' ? 'warning' : 
+                                                                  (transfer.status == 'return_in_progress' ? 'info' :
+                                                                  (transfer.status == 'returned' ? 'primary' :
+                                                                  (transfer.status == 'cancelled' ? 'danger' : 'secondary')))) %}
+                                    <span class="badge bg-{{ transfer_status_class }}">{{ transfer.statusDisplayName }}</span>
+                                </td>
+                                <td>
+                                    {% if transfer.protocolScanFilename %}
+                                    <a href="{{ path('aparatura_pomiarowa_transfer_protocol_download', {id: transfer.id}) }}" 
+                                       class="btn btn-sm btn-outline-primary mb-1" target="_blank">
+                                        <i class="ri-file-pdf-line me-1"></i>Protokół przekazania
+                                    </a>
+                                    {% endif %}
+                                    {% if transfer.returnProtocolFilename %}
+                                    <br>
+                                    <a href="{{ path('aparatura_pomiarowa_return_protocol_download', {id: transfer.id}) }}" 
+                                       class="btn btn-sm btn-outline-info" target="_blank">
+                                        <i class="ri-file-pdf-line me-1"></i>Protokół zwrotu
+                                    </a>
+                                    {% endif %}
+                                    {% if not transfer.protocolScanFilename and not transfer.returnProtocolFilename %}
+                                    <span class="text-muted">Brak</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if transfer.isInProgress() and can_transfer %}
+                                    <button class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#completeTransferModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-check-line me-1"></i>Zakończ przekazanie
+                                    </button>
+                                    {% elseif transfer.isTransferred() and can_transfer %}
+                                    <button class="btn btn-sm btn-warning" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#prepareReturnForTransferModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-arrow-left-line me-1"></i>Przygotuj zwrot
+                                    </button>
+                                    {% elseif transfer.isReturnInProgress() and can_transfer %}
+                                    <button class="btn btn-sm btn-info" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#completeReturnModal"
+                                            data-transfer-id="{{ transfer.id }}"
+                                            data-transfer-number="{{ transfer.transferNumber }}">
+                                        <i class="ri-check-double-line me-1"></i>Zakończ zwrot
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-arrow-right-line text-muted fs-48"></i>
+                    <h6 class="mt-3">Brak historii przekazań</h6>
+                    <p class="text-muted mb-0">Ten zestaw nie został jeszcze nikomu przekazany.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista sprzętu w zestawie -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="ri-list-check-2 me-2"></i>Sprzęt w zestawie ({{ equipment_set.equipmentItems|length }})
+                </h5>
+                {% if can_manage_equipment %}
+                <a href="{{ path('aparatura_pomiarowa_equipment_set_add_equipment', {id: equipment_set.id}) }}" 
+                   class="btn btn-sm btn-primary">
+                    <i class="ri-add-line me-1"></i>Dodaj miernik/akcesorium
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if equipment_set.equipmentItems|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sprzęt</th>
+                                <th>Typ</th>
+                                <th>Producent</th>
+                                <th>Status</th>
+                                <th>Następna kalibracja</th>
+                                <th>Lokalizacja</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in equipment_set.equipmentItems %}
+                            {% set equipment = item.equipment is defined ? item.equipment : item %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-light rounded me-3">
+                                            <i class="ri-radar-line text-primary fs-16"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">
+                                                <a href="{{ path('aparatura_pomiarowa_equipment_show', {id: equipment.id}) }}" 
+                                                   class="text-dark text-decoration-none">
+                                                    {{ equipment.name }}
+                                                </a>
+                                            </h6>
+                                            <span class="text-muted small">{{ equipment.inventoryNumber }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ equipment.equipmentType }}</span>
+                                </td>
+                                <td>
+                                    {{ equipment.manufacturer ?? '-' }}
+                                    {% if equipment.model %}
+                                    <br><small class="text-muted">{{ equipment.model }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set item_status_class = equipment.status == 'available' ? 'success' : 
+                                                              (equipment.status == 'assigned' ? 'warning' : 
+                                                              (equipment.status == 'damaged' ? 'danger' : 'secondary')) %}
+                                    <span class="badge bg-{{ item_status_class }}">{{ equipment.statusDisplayName }}</span>
+                                </td>
+                                <td>
+                                    {% if equipment.nextReviewDate %}
+                                        {% set item_review_date = equipment.nextReviewDate|date('Y-m-d') %}
+                                        {% set today_date = 'now'|date('Y-m-d') %}
+                                        {% if item_review_date < today_date %}
+                                            {% set days_overdue = date().diff(date(equipment.nextReviewDate)).days %}
+                                            <span class="text-danger">
+                                                <i class="ri-error-warning-line me-1"></i>
+                                                {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                                <br><small>Przeterminowany o {{ days_overdue }} dni!</small>
+                                            </span>
+                                        {% else %}
+                                            {% set days_to_review = date(equipment.nextReviewDate).diff(date()).days %}
+                                            {% if days_to_review <= 30 %}
+                                                <span class="text-warning">
+                                                    <i class="ri-time-line me-1"></i>
+                                                    {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% else %}
+                                                <span class="text-success">
+                                                    {{ equipment.nextReviewDate|date('d.m.Y') }}
+                                                    <br><small>Za {{ days_to_review }} dni</small>
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Nie określono</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ equipment.location ?? '-' }}</td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" 
+                                                data-bs-toggle="dropdown">
+                                            Akcje
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ path('aparatura_pomiarowa_equipment_show', {id: equipment.id}) }}">
+                                                    <i class="ri-eye-line me-2"></i>Szczegóły
+                                                </a>
+                                            </li>
+                                            {% if can_manage_equipment %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_remove_equipment', {id: equipment_set.id, equipmentId: equipment.id}) }}" 
+                                                      class="d-inline" onsubmit="return confirm('Czy na pewno usunąć ten sprzęt z zestawu?')">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('remove_equipment_' ~ equipment_set.id ~ '_' ~ equipment.id) }}">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="ri-delete-bin-line me-2"></i>Usuń z zestawu
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-inbox-line text-muted fs-48"></i>
+                    <h5 class="mt-3">Brak sprzętu w zestawie</h5>
+                    <p class="text-muted">
+                        Ten zestaw nie zawiera jeszcze żadnego sprzętu.
+                    </p>
+                    {% if can_manage_equipment %}
+                    <a href="{{ path('aparatura_pomiarowa_equipment_set_add_equipment', {id: equipment_set.id}) }}" 
+                       class="btn btn-primary">
+                        <i class="ri-add-line me-1"></i>Dodaj pierwszy miernik
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Uwagi -->
+{% if equipment_set.notes %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-file-text-line me-2"></i>Uwagi
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ equipment_set.notes|nl2br }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Informacje systemowe -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-information-line me-2"></i>Informacje systemowe
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Utworzony przez</small>
+                        <span>{{ equipment_set.createdBy.fullName }}</span>
+                        <small class="text-muted d-block">{{ equipment_set.createdAt|date('d.m.Y H:i') }}</small>
+                    </div>
+                    <div class="col-md-6">
+                        {% if equipment_set.updatedBy %}
+                        <small class="text-muted d-block">Ostatnia modyfikacja</small>
+                        <span>{{ equipment_set.updatedBy.fullName }}</span>
+                        <small class="text-muted d-block">{{ equipment_set.updatedAt|date('d.m.Y H:i') }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania załączników do zestawu -->
+<div class="modal fade" id="equipmentSetAttachmentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-attachment-line me-2"></i>Dodaj załączniki do zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('aparatura_pomiarowa_equipment_set_attachment_upload', {id: equipment_set.id}) }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="set_attachments" class="form-label">Wybierz pliki</label>
+                        <input type="file" class="form-control" id="set_attachments" name="attachments[]" multiple required
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt">
+                        <div class="form-text">
+                            Dozwolone typy: PDF, Word, Excel, obrazy, pliki tekstowe. Maksymalny rozmiar: 10MB na plik.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="set_attachment_description" class="form-label">Opis (opcjonalnie)</label>
+                        <textarea class="form-control" id="set_attachment_description" name="description" rows="3"
+                                  placeholder="Opisz zawartość załączników..."></textarea>
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('upload_equipment_set_attachment_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-upload-line me-1"></i>Prześlij
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal przygotowania przekazania -->
+<div class="modal fade" id="prepareTransferModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-send-plane-line me-2"></i>Przygotuj przekazanie zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('aparatura_pomiarowa_transfer_prepare', {setId: equipment_set.id}) }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz przekazanie zestawu <strong>{{ equipment_set.name }}</strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_recipient" class="form-label">Odbiorca</label>
+                        <select class="form-select" id="transfer_recipient" name="recipient_id" required>
+                            <option value="">Wybierz odbiorcy...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.fullName }}
+                                {% if user.branch %} - {{ user.branch }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_date" class="form-label">Data przekazania</label>
+                        <input type="date" class="form-control" id="transfer_date" name="transfer_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_purpose" class="form-label">Cel przekazania (opcjonalnie)</label>
+                        <textarea class="form-control" id="transfer_purpose" name="purpose" rows="2"
+                                  placeholder="Opisz cel przekazania sprzętu..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transfer_notes" class="form-label">Uwagi (opcjonalnie)</label>
+                        <textarea class="form-control" id="transfer_notes" name="notes" rows="2"
+                                  placeholder="Dodatkowe uwagi dotyczące przekazania..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('prepare_transfer_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-send-plane-line me-1"></i>Wykonaj przekazanie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal zakończenia przekazania -->
+<div class="modal fade" id="completeTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-check-double-line me-2"></i>Zakończ przekazanie
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="completeTransferForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-information-line me-2"></i>
+                        Zakończenie przekazania <strong id="transferNumberDisplay"></strong>
+                        spowoduje przypisanie zestawu do odbiorcy.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="protocol_file" class="form-label">Podpisany protokół PDF</label>
+                        <input type="file" class="form-control" id="protocol_file" name="protocol_file" 
+                               accept=".pdf" required>
+                        <div class="form-text">
+                            Wymagany jest podpisany protokół w formacie PDF (maks. 10MB).
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="" id="completeTransferToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ przekazanie
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal przygotowania zwrotu dla całego zestawu -->
+<div class="modal fade" id="prepareReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-arrow-left-line me-2"></i>Przygotuj zwrot zestawu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ path('aparatura_pomiarowa_return_prepare', {setId: equipment_set.id}) }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz zwrot zestawu <strong>{{ equipment_set.name }}</strong>
+                        {% if equipment_set.assignedTo %}
+                        <br>obecnie przypisanego do: <strong>{{ equipment_set.assignedTo.fullName }}</strong>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_date" class="form-label">Data zwrotu</label>
+                        <input type="date" class="form-control" id="return_date" name="return_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_notes" class="form-label">Uwagi dotyczące zwrotu (opcjonalnie)</label>
+                        <textarea class="form-control" id="return_notes" name="return_notes" rows="3"
+                                  placeholder="Powód zwrotu, stan sprzętu, dodatkowe uwagi..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('prepare_return_' ~ equipment_set.id) }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ri-arrow-left-line me-1"></i>Wykonaj zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal przygotowania zwrotu dla konkretnego przekazania -->
+<div class="modal fade" id="prepareReturnForTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-arrow-left-line me-2"></i>Przygotuj zwrot
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="prepareReturnForTransferForm">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ri-information-line me-2"></i>
+                        Przygotowujesz zwrot dla przekazania <strong id="returnTransferNumberDisplay"></strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_date_transfer" class="form-label">Data zwrotu</label>
+                        <input type="date" class="form-control" id="return_date_transfer" name="return_date" 
+                               value="{{ 'now'|date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_notes_transfer" class="form-label">Uwagi dotyczące zwrotu (opcjonalnie)</label>
+                        <textarea class="form-control" id="return_notes_transfer" name="return_notes" rows="3"
+                                  placeholder="Powód zwrotu, stan sprzętu, dodatkowe uwagi..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="" id="prepareReturnForTransferToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ri-arrow-left-line me-1"></i>Wykonaj zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal zakończenia zwrotu -->
+<div class="modal fade" id="completeReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-check-double-line me-2"></i>Zakończ zwrot
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="completeReturnForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="ri-information-line me-2"></i>
+                        Zakończenie zwrotu <strong id="returnCompleteTransferNumberDisplay"></strong>
+                        spowoduje odłączenie zestawu od aktualnego użytkownika.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_protocol_file" class="form-label">Podpisany protokół zwrotu PDF</label>
+                        <input type="file" class="form-control" id="return_protocol_file" name="return_protocol_file" 
+                               accept=".pdf" required>
+                        <div class="form-text">
+                            Wymagany jest podpisany protokół zwrotu w formacie PDF (maks. 10MB).
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="_token" value="{{ csrf_token('complete_return') }}" id="completeReturnToken">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-check-double-line me-1"></i>Zakończ zwrot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle complete transfer modal data
+document.addEventListener('DOMContentLoaded', function() {
+    const completeTransferModal = document.getElementById('completeTransferModal');
+    if (completeTransferModal) {
+        completeTransferModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('transferNumberDisplay').textContent = transferNumber;
+            document.getElementById('completeTransferForm').action = '{{ path("aparatura_pomiarowa_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeTransferToken').name = '_token';
+            document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer") }}';
+        });
+    }
+
+    // Handle prepare return for transfer modal
+    const prepareReturnForTransferModal = document.getElementById('prepareReturnForTransferModal');
+    if (prepareReturnForTransferModal) {
+        prepareReturnForTransferModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('returnTransferNumberDisplay').textContent = transferNumber;
+            document.getElementById('prepareReturnForTransferForm').action = '{{ path("aparatura_pomiarowa_transfer_return", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('prepareReturnForTransferToken').value = '{{ csrf_token("prepare_return") }}';
+        });
+    }
+
+    // Handle complete return modal
+    const completeReturnModal = document.getElementById('completeReturnModal');
+    if (completeReturnModal) {
+        completeReturnModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transferId = button.getAttribute('data-transfer-id');
+            const transferNumber = button.getAttribute('data-transfer-number');
+            
+            // Update modal content
+            document.getElementById('returnCompleteTransferNumberDisplay').textContent = transferNumber;
+            document.getElementById('completeReturnForm').action = '{{ path("aparatura_pomiarowa_return_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+        });
+    }
+});
+</script>
+{% endblock %}
