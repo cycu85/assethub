@@ -11,6 +11,10 @@ use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipment;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyEquipmentSet;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReview;
 use App\AsekuracyjnySPM\Entity\AsekuracyjnyReviewEquipment;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipment;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaEquipmentSet;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReview;
+use App\AparaturaPomiarowa\Entity\AparaturaPomiarowaReviewEquipment;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -28,6 +32,7 @@ class AppFixtures extends Fixture
         $adminModule = $moduleRepository->findOneBy(['name' => 'admin']);
         $equipmentModule = $moduleRepository->findOneBy(['name' => 'equipment']);
         $asekuracyjnyModule = $moduleRepository->findOneBy(['name' => 'asekuracja']);
+        $aparaturaPomiarowaModule = $moduleRepository->findOneBy(['name' => 'aparatura_pomiarowa']);
 
         // Create modules only if they don't exist
         if (!$adminModule) {
@@ -55,6 +60,15 @@ class AppFixtures extends Fixture
                 ->setDescription('Zarządzanie sprzętem asekuracyjnym/wysokościowym')
                 ->setRequiredPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER']);
             $manager->persist($asekuracyjnyModule);
+        }
+
+        if (!$aparaturaPomiarowaModule) {
+            $aparaturaPomiarowaModule = new Module();
+            $aparaturaPomiarowaModule->setName('aparatura_pomiarowa')
+                ->setDisplayName('Aparatura Pomiarowa')
+                ->setDescription('Moduł zarządzania aparaturą pomiarową - mierniki i akcesoria')
+                ->setRequiredPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER']);
+            $manager->persist($aparaturaPomiarowaModule);
         }
 
 
@@ -173,6 +187,39 @@ class AppFixtures extends Fixture
             $manager->persist($assekListRole);
         }
 
+        // Aparatura Pomiarowa roles
+        $aparaturaAdminRole = $roleRepository->findOneBy(['name' => 'APARATURA_ADMIN']);
+        if (!$aparaturaAdminRole) {
+            $aparaturaAdminRole = new Role();
+            $aparaturaAdminRole->setName('APARATURA_ADMIN')
+                ->setDescription('Administrator Aparatury Pomiarowej - pełne prawa do modułu')
+                ->setModule($aparaturaPomiarowaModule)
+                ->setPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'TRANSFER'])
+                ->setIsSystemRole(false);
+            $manager->persist($aparaturaAdminRole);
+        }
+
+        $aparaturaEditorRole = $roleRepository->findOneBy(['name' => 'APARATURA_EDITOR']);
+        if (!$aparaturaEditorRole) {
+            $aparaturaEditorRole = new Role();
+            $aparaturaEditorRole->setName('APARATURA_EDITOR')
+                ->setDescription('Edytor Aparatury Pomiarowej - bez uprawnień do usuwania')
+                ->setModule($aparaturaPomiarowaModule)
+                ->setPermissions(['VIEW', 'CREATE', 'EDIT', 'ASSIGN', 'REVIEW', 'TRANSFER'])
+                ->setIsSystemRole(false);
+            $manager->persist($aparaturaEditorRole);
+        }
+
+        $aparaturaViewerRole = $roleRepository->findOneBy(['name' => 'APARATURA_VIEWER']);
+        if (!$aparaturaViewerRole) {
+            $aparaturaViewerRole = new Role();
+            $aparaturaViewerRole->setName('APARATURA_VIEWER')
+                ->setDescription('Przeglądający Aparatury Pomiarowej - tylko podgląd')
+                ->setModule($aparaturaPomiarowaModule)
+                ->setPermissions(['VIEW'])
+                ->setIsSystemRole(false);
+            $manager->persist($aparaturaViewerRole);
+        }
 
         // Create users only if they don't exist
         $userRepository = $manager->getRepository(User::class);
@@ -245,6 +292,12 @@ class AppFixtures extends Fixture
             ->setAssignedBy($adminUser);
         $manager->persist($assekAdminUserRole);
 
+        $aparaturaAdminUserRole = new UserRole();
+        $aparaturaAdminUserRole->setUser($adminUser)
+            ->setRole($aparaturaAdminRole)
+            ->setAssignedBy($adminUser);
+        $manager->persist($aparaturaAdminUserRole);
+
 
         $testUserRole = new UserRole();
         $testUserRole->setUser($testUser)
@@ -267,13 +320,20 @@ class AppFixtures extends Fixture
         // Create asekuracja dictionaries
         $this->createAsekuracijnyDictionaries($manager);
 
+        // Create aparatura pomiarowa dictionaries
+        $this->createAparaturaPomiarowaDictionaries($manager);
 
         // Create example asekuracyjny equipment and sets
         $this->createAsekuracyjnyExampleData($manager, $adminUser);
 
+        // Create example aparatura pomiarowa equipment and sets
+        $this->createAparaturaPomiarowaExampleData($manager, $adminUser);
 
         // Create example reviews with new structure
         $this->createExampleReviews($manager, $adminUser);
+
+        // Create example aparatura pomiarowa reviews
+        $this->createAparaturaPomiarowaExampleReviews($manager, $adminUser);
 
         // Update users with example data
         $this->updateUsersWithExampleData($manager, $adminUser, $testUser, $hrUser);
@@ -776,6 +836,342 @@ class AppFixtures extends Fixture
 
             $manager->persist($reviewEquipment);
         }
+
+        $manager->flush();
+    }
+
+    private function createAparaturaPomiarowaDictionaries(ObjectManager $manager): void
+    {
+        $dictionaryRepository = $manager->getRepository(Dictionary::class);
+        
+        // Check if aparatura pomiarowa dictionaries already exist
+        if ($dictionaryRepository->findOneBy(['type' => 'aparatura_equipment_types'])) {
+            return; // Skip if dictionaries already exist
+        }
+        
+        // Equipment types (typy aparatury pomiarowej)
+        $equipmentTypes = [
+            ['name' => 'Miernik uniwersalny', 'value' => 'multimeter', 'description' => 'Mierniki napięcia, prądu, rezystancji', 'color' => '#007bff'],
+            ['name' => 'Oscyloskop', 'value' => 'oscilloscope', 'description' => 'Przyrządy do pomiaru przebiegów', 'color' => '#28a745'],
+            ['name' => 'Generator', 'value' => 'generator', 'description' => 'Generatory sygnałów', 'color' => '#ffc107'],
+            ['name' => 'Zasilacz', 'value' => 'power_supply', 'description' => 'Zasilacze laboratoryjne', 'color' => '#dc3545'],
+            ['name' => 'Analizator', 'value' => 'analyzer', 'description' => 'Analizatory widma i sieci', 'color' => '#6f42c1'],
+        ];
+
+        foreach ($equipmentTypes as $index => $typeData) {
+            $type = new Dictionary();
+            $type->setType('aparatura_equipment_types')
+                ->setName($typeData['name'])
+                ->setValue($typeData['value'])
+                ->setDescription($typeData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor($typeData['color'])
+                ->setIcon('ri-tools-line');
+            $manager->persist($type);
+        }
+
+        // Review status (statusy przeglądów)
+        $reviewStatuses = [
+            ['name' => 'Przygotowanie', 'value' => 'preparation', 'description' => 'Przygotowanie do przeglądu', 'color' => '#6c757d'],
+            ['name' => 'Na przeglądzie', 'value' => 'sent', 'description' => 'Wysłane na przegląd', 'color' => '#ffc107'],
+            ['name' => 'Zakończone', 'value' => 'completed', 'description' => 'Przegląd zakończony', 'color' => '#28a745'],
+            ['name' => 'Anulowane', 'value' => 'cancelled', 'description' => 'Przegląd anulowany', 'color' => '#dc3545'],
+        ];
+
+        foreach ($reviewStatuses as $index => $statusData) {
+            $status = new Dictionary();
+            $status->setType('aparatura_review_status')
+                ->setName($statusData['name'])
+                ->setValue($statusData['value'])
+                ->setDescription($statusData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor($statusData['color'])
+                ->setIcon('ri-check-double-line');
+            $manager->persist($status);
+        }
+
+        // Set types (typy zestawów)
+        $setTypes = [
+            ['name' => 'Zestaw podstawowy', 'value' => 'basic', 'description' => 'Podstawowy zestaw pomiarowy', 'color' => '#28a745'],
+            ['name' => 'Zestaw zaawansowany', 'value' => 'advanced', 'description' => 'Zaawansowany zestaw pomiarowy', 'color' => '#007bff'],
+            ['name' => 'Zestaw specjalistyczny', 'value' => 'specialist', 'description' => 'Specjalistyczny zestaw pomiarowy', 'color' => '#6f42c1'],
+            ['name' => 'Zestaw serwisowy', 'value' => 'service', 'description' => 'Zestaw do prac serwisowych', 'color' => '#dc3545'],
+        ];
+
+        foreach ($setTypes as $index => $setData) {
+            $setType = new Dictionary();
+            $setType->setType('aparatura_set_types')
+                ->setName($setData['name'])
+                ->setValue($setData['value'])
+                ->setDescription($setData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor($setData['color'])
+                ->setIcon('ri-tools-fill');
+            $manager->persist($setType);
+        }
+
+        // Review types (typy przeglądów)
+        $reviewTypes = [
+            ['name' => 'Kalibracja', 'value' => 'calibration', 'description' => 'Kalibracja przyrządu pomiarowego', 'color' => '#007bff'],
+            ['name' => 'Przegląd techniczny', 'value' => 'technical', 'description' => 'Przegląd techniczny urządzenia', 'color' => '#ffc107'],
+            ['name' => 'Po naprawie', 'value' => 'post_repair', 'description' => 'Kontrola po wykonanej naprawie', 'color' => '#28a745'],
+            ['name' => 'Początkowy', 'value' => 'initial', 'description' => 'Pierwszy przegląd nowego sprzętu', 'color' => '#6c757d'],
+        ];
+
+        foreach ($reviewTypes as $index => $reviewData) {
+            $reviewType = new Dictionary();
+            $reviewType->setType('aparatura_review_types')
+                ->setName($reviewData['name'])
+                ->setValue($reviewData['value'])
+                ->setDescription($reviewData['description'])
+                ->setIsActive(true)
+                ->setIsSystem(true)
+                ->setSortOrder($index + 1)
+                ->setColor($reviewData['color'])
+                ->setIcon('ri-calendar-check-line');
+            $manager->persist($reviewType);
+        }
+    }
+
+    private array $aparaturaEquipment = [];
+    private ?AparaturaPomiarowaEquipmentSet $aparaturaEquipmentSet = null;
+
+    private function createAparaturaPomiarowaExampleData(ObjectManager $manager, User $createdBy): void
+    {
+        // Check if example equipment already exists
+        $equipmentRepository = $manager->getRepository(AparaturaPomiarowaEquipment::class);
+        if ($equipmentRepository->findOneBy(['inventoryNumber' => 'APM-001-2024'])) {
+            return; // Skip if example data already exists
+        }
+
+        // Create example equipment
+        $equipmentData = [
+            [
+                'inventory_number' => 'APM-001-2024',
+                'name' => 'Miernik uniwersalny Fluke 87V',
+                'description' => 'Profesjonalny miernik cyfrowy z funkcjami zaawansowanymi',
+                'equipment_type' => 'multimeter',
+                'manufacturer' => 'Fluke',
+                'model' => '87V',
+                'serial_number' => 'FL2023001234',
+                'manufacturing_date' => '2023-06-15',
+                'purchase_date' => '2024-01-20',
+                'purchase_price' => '1250.00',
+                'supplier' => 'ElektroMiar Sp. z o.o.',
+                'invoice_number' => 'EM/2024/015',
+                'projekt' => 'Projekt modernizacji laboratorium',
+                'warranty_expiry' => '2026-01-20',
+                'next_review_date' => '2025-01-20',
+                'review_interval_months' => 12,
+                'status' => 'available',
+                'location' => 'Laboratorium A, Szafka nr 3',
+                'notes' => 'Kalibracja ważna do 2025-01-20'
+            ],
+            [
+                'inventory_number' => 'APM-002-2024',
+                'name' => 'Oscyloskop Rigol DS1054Z',
+                'description' => 'Oscyloskop cyfrowy 4-kanałowy 50MHz',
+                'equipment_type' => 'oscilloscope',
+                'manufacturer' => 'Rigol',
+                'model' => 'DS1054Z',
+                'serial_number' => 'RG2023005678',
+                'manufacturing_date' => '2023-08-10',
+                'purchase_date' => '2024-02-15',
+                'purchase_price' => '2800.00',
+                'supplier' => 'TechMeasure',
+                'invoice_number' => 'TM/2024/089',
+                'projekt' => 'Projekt modernizacji laboratorium',
+                'warranty_expiry' => '2026-02-15',
+                'next_review_date' => '2025-02-15',
+                'review_interval_months' => 12,
+                'status' => 'available',
+                'location' => 'Laboratorium B, Stół pomiarowy nr 1',
+                'notes' => 'Wymaga sprawdzenia sond pomiarowych'
+            ],
+            [
+                'inventory_number' => 'APM-003-2024',
+                'name' => 'Generator funkcyjny Agilent 33220A',
+                'description' => 'Generator funkcyjny 20MHz z modulacjami',
+                'equipment_type' => 'generator',
+                'manufacturer' => 'Keysight (Agilent)',
+                'model' => '33220A',
+                'serial_number' => 'AG2023009876',
+                'manufacturing_date' => '2023-04-20',
+                'purchase_date' => '2024-03-10',
+                'purchase_price' => '3200.00',
+                'supplier' => 'Keysight Poland',
+                'invoice_number' => 'KS/2024/123',
+                'projekt' => 'Projekt badawczy XYZ',
+                'warranty_expiry' => '2026-03-10',
+                'next_review_date' => '2025-03-10',
+                'review_interval_months' => 12,
+                'status' => 'assigned',
+                'location' => 'Laboratorium C, Stanowisko testowe',
+                'notes' => 'Przypisany do projektu badawczego'
+            ]
+        ];
+
+        $equipment = [];
+        foreach ($equipmentData as $data) {
+            $eq = new AparaturaPomiarowaEquipment();
+            $eq->setInventoryNumber($data['inventory_number'])
+               ->setName($data['name'])
+               ->setDescription($data['description'])
+               ->setEquipmentType($data['equipment_type'])
+               ->setManufacturer($data['manufacturer'])
+               ->setModel($data['model'])
+               ->setSerialNumber($data['serial_number'])
+               ->setManufacturingDate(new \DateTime($data['manufacturing_date']))
+               ->setPurchaseDate(new \DateTime($data['purchase_date']))
+               ->setPurchasePrice($data['purchase_price'])
+               ->setSupplier($data['supplier'])
+               ->setInvoiceNumber($data['invoice_number'])
+               ->setProjekt($data['projekt'])
+               ->setWarrantyExpiry(new \DateTime($data['warranty_expiry']))
+               ->setNextReviewDate(new \DateTime($data['next_review_date']))
+               ->setReviewIntervalMonths($data['review_interval_months'])
+               ->setStatus($data['status'])
+               ->setLocation($data['location'])
+               ->setNotes($data['notes'])
+               ->setCreatedBy($createdBy);
+            
+            $manager->persist($eq);
+            $equipment[] = $eq;
+        }
+
+        // Create example equipment set
+        $equipmentSet = new AparaturaPomiarowaEquipmentSet();
+        $equipmentSet->setName('Zestaw podstawowy pomiarowy')
+            ->setDescription('Kompletny zestaw do podstawowych pomiarów elektronicznych')
+            ->setSetType('basic')
+            ->setLocation('Laboratorium A')
+            ->setStatus('available')
+            ->setCreatedBy($createdBy);
+        
+        $manager->persist($equipmentSet);
+
+        // Add equipment to set (first two items)
+        foreach (array_slice($equipment, 0, 2) as $eq) {
+            $equipmentSet->addEquipment($eq);
+        }
+
+        $manager->flush();
+        
+        // Store equipment and set for use in reviews
+        $this->aparaturaEquipment = $equipment;
+        $this->aparaturaEquipmentSet = $equipmentSet;
+    }
+
+    private function createAparaturaPomiarowaExampleReviews(ObjectManager $manager, User $createdBy): void
+    {
+        // Check if example reviews already exist
+        $reviewRepository = $manager->getRepository(AparaturaPomiarowaReview::class);
+        if ($reviewRepository->findOneBy(['reviewNumber' => 'APM/2024/08/001'])) {
+            return; // Skip if example reviews already exist
+        }
+
+        if (empty($this->aparaturaEquipment) || !$this->aparaturaEquipmentSet) {
+            return; // Skip if no equipment data
+        }
+
+        // Example 1: Individual equipment calibration (completed)
+        $calibrationReview = new AparaturaPomiarowaReview();
+        $calibrationReview->setEquipment($this->aparaturaEquipment[0]) // Miernik Fluke
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_CALIBRATION)
+            ->setPlannedDate(new \DateTime('2024-08-15'))
+            ->setReviewCompany('Laboratorium Wzorcujące CALIBRA')
+            ->setNotes('Kalibracja roczna miernika uniwersalnego')
+            ->setStatus(AparaturaPomiarowaReview::STATUS_COMPLETED)
+            ->setSentDate(new \DateTime('2024-08-20'))
+            ->setCompletedDate(new \DateTime('2024-08-28'))
+            ->setResult(AparaturaPomiarowaReview::RESULT_PASSED)
+            ->setCertificateNumber('CALIBRA/2024/08/345')
+            ->setCost('350.00')
+            ->setNextReviewDate(new \DateTime('2025-08-28'))
+            ->setFindings('Przyrząd w doskonałym stanie, wszystkie parametry w normie')
+            ->setRecommendations('Kontynuować regularne kalibracje co 12 miesięcy')
+            ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy)
+            ->setSentBy($createdBy)
+            ->setCompletedBy($createdBy);
+
+        $manager->persist($calibrationReview);
+        $manager->flush();
+
+        // Create review equipment entry for calibration review
+        $reviewEquipment1 = new AparaturaPomiarowaReviewEquipment();
+        $reviewEquipment1->setReview($calibrationReview)
+            ->setEquipment($this->aparaturaEquipment[0])
+            ->setWasInSetAtReview(false)
+            ->captureEquipmentSnapshot($this->aparaturaEquipment[0]);
+
+        $manager->persist($reviewEquipment1);
+
+        // Example 2: Set review (technical inspection)
+        $setReview = new AparaturaPomiarowaReview();
+        $setReview->setEquipmentSet($this->aparaturaEquipmentSet)
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_TECHNICAL)
+            ->setPlannedDate(new \DateTime('2024-09-01'))
+            ->setReviewCompany('Serwis TechMeasure')
+            ->setNotes('Przegląd techniczny zestawu podstawowego')
+            ->setStatus(AparaturaPomiarowaReview::STATUS_COMPLETED)
+            ->setSentDate(new \DateTime('2024-09-05'))
+            ->setCompletedDate(new \DateTime('2024-09-10'))
+            ->setResult(AparaturaPomiarowaReview::RESULT_PASSED)
+            ->setCertificateNumber('TM/2024/09/156')
+            ->setCost('480.00')
+            ->setNextReviewDate(new \DateTime('2025-09-10'))
+            ->setFindings('Wszystkie przyrządy w dobrym stanie technicznym')
+            ->setRecommendations('Wymienić sondy oscyloskopu w ciągu 6 miesięcy')
+            ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy)
+            ->setSentBy($createdBy)
+            ->setCompletedBy($createdBy);
+
+        $manager->persist($setReview);
+        $manager->flush();
+
+        // Create review equipment entries for set review
+        foreach (array_slice($this->aparaturaEquipment, 0, 2) as $equipment) {
+            $reviewEquipment = new AparaturaPomiarowaReviewEquipment();
+            $reviewEquipment->setReview($setReview)
+                ->setEquipment($equipment)
+                ->setWasInSetAtReview(true)
+                ->setIndividualResult(AparaturaPomiarowaReviewEquipment::RESULT_INHERITED)
+                ->captureEquipmentSnapshot($equipment)
+                ->captureSetContext($this->aparaturaEquipmentSet);
+
+            $manager->persist($reviewEquipment);
+        }
+
+        // Example 3: Equipment in preparation for review
+        $preparationReview = new AparaturaPomiarowaReview();
+        $preparationReview->setEquipment($this->aparaturaEquipment[2]) // Generator
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_CALIBRATION)
+            ->setPlannedDate(new \DateTime('2024-10-15'))
+            ->setReviewCompany('Laboratorium Wzorcujące CALIBRA')
+            ->setNotes('Planowana kalibracja generatora funkcyjnego')
+            ->setStatus(AparaturaPomiarowaReview::STATUS_PREPARATION)
+            ->setCreatedBy($createdBy)
+            ->setPreparedBy($createdBy);
+
+        $manager->persist($preparationReview);
+        $manager->flush();
+
+        // Create review equipment entry for preparation review
+        $reviewEquipment3 = new AparaturaPomiarowaReviewEquipment();
+        $reviewEquipment3->setReview($preparationReview)
+            ->setEquipment($this->aparaturaEquipment[2])
+            ->setWasInSetAtReview(false)
+            ->captureEquipmentSnapshot($this->aparaturaEquipment[2]);
+
+        $manager->persist($reviewEquipment3);
 
         $manager->flush();
     }
