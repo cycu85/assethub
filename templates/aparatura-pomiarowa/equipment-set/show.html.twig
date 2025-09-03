@@ -936,7 +936,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('transferNumberDisplay').textContent = transferNumber;
-            document.getElementById('completeTransferForm').action = '{{ path("aparatura_pomiarowa_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeTransferForm').action = '/aparatura-pomiarowa/transfer/' + transferId + '/complete';
             document.getElementById('completeTransferToken').name = '_token';
             document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer") }}';
         });
