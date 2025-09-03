@@ -1083,7 +1083,7 @@ class AppFixtures extends Fixture
         // Example 1: Individual equipment calibration (completed)
         $calibrationReview = new AparaturaPomiarowaReview();
         $calibrationReview->setEquipment($this->aparaturaEquipment[0]) // Miernik Fluke
-            ->setReviewType(AparaturaPomiarowaReview::TYPE_CALIBRATION)
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_PERIODIC)
             ->setPlannedDate(new \DateTime('2024-08-15'))
             ->setReviewCompany('Laboratorium Wzorcujące CALIBRA')
             ->setNotes('Kalibracja roczna miernika uniwersalnego')
@@ -1116,7 +1116,7 @@ class AppFixtures extends Fixture
         // Example 2: Set review (technical inspection)
         $setReview = new AparaturaPomiarowaReview();
         $setReview->setEquipmentSet($this->aparaturaEquipmentSet)
-            ->setReviewType(AparaturaPomiarowaReview::TYPE_TECHNICAL)
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_POST_REPAIR)
             ->setPlannedDate(new \DateTime('2024-09-01'))
             ->setReviewCompany('Serwis TechMeasure')
             ->setNotes('Przegląd techniczny zestawu podstawowego')
@@ -1153,7 +1153,7 @@ class AppFixtures extends Fixture
         // Example 3: Equipment in preparation for review
         $preparationReview = new AparaturaPomiarowaReview();
         $preparationReview->setEquipment($this->aparaturaEquipment[2]) // Generator
-            ->setReviewType(AparaturaPomiarowaReview::TYPE_CALIBRATION)
+            ->setReviewType(AparaturaPomiarowaReview::TYPE_INITIAL)
             ->setPlannedDate(new \DateTime('2024-10-15'))
             ->setReviewCompany('Laboratorium Wzorcujące CALIBRA')
             ->setNotes('Planowana kalibracja generatora funkcyjnego')
