@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('returnTransferNumberDisplay').textContent = transferNumber;
-            document.getElementById('prepareReturnForTransferForm').action = '{{ path("aparatura_pomiarowa_transfer_return", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('prepareReturnForTransferForm').action = '/aparatura-pomiarowa/transfer/' + transferId + '/return';
             document.getElementById('prepareReturnForTransferToken').value = '{{ csrf_token("prepare_return") }}';
         });
     }
@@ -967,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('returnCompleteTransferNumberDisplay').textContent = transferNumber;
-            document.getElementById('completeReturnForm').action = '{{ path("aparatura_pomiarowa_return_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeReturnForm').action = '/aparatura-pomiarowa/return/' + transferId + '/complete';
         });
     }
 });
