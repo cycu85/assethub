@@ -936,7 +936,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('transferNumberDisplay').textContent = transferNumber;
-            document.getElementById('completeTransferForm').action = '{{ path("asekuracja_transfer_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeTransferForm').action = '{{ path("asekuracja_transfer_complete", {id: 1}) }}'.replace('1', transferId);
             document.getElementById('completeTransferToken').name = '_token';
             document.getElementById('completeTransferToken').value = '{{ csrf_token("complete_transfer") }}';
         });
@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('returnTransferNumberDisplay').textContent = transferNumber;
-            document.getElementById('prepareReturnForTransferForm').action = '{{ path("asekuracja_transfer_return", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('prepareReturnForTransferForm').action = '{{ path("asekuracja_transfer_return", {id: 1}) }}'.replace('1', transferId);
             document.getElementById('prepareReturnForTransferToken').value = '{{ csrf_token("prepare_return") }}';
         });
     }
@@ -967,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update modal content
             document.getElementById('returnCompleteTransferNumberDisplay').textContent = transferNumber;
-            document.getElementById('completeReturnForm').action = '{{ path("asekuracja_return_complete", {id: "TRANSFER_ID"}) }}'.replace('TRANSFER_ID', transferId);
+            document.getElementById('completeReturnForm').action = '{{ path("asekuracja_return_complete", {id: 1}) }}'.replace('1', transferId);
         });
     }
 });
