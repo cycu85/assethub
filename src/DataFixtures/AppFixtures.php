@@ -30,7 +30,7 @@ class AppFixtures extends Fixture
         // Check if modules already exist
         $moduleRepository = $manager->getRepository(Module::class);
         $adminModule = $moduleRepository->findOneBy(['name' => 'admin']);
-        $equipmentModule = $moduleRepository->findOneBy(['name' => 'equipment']);
+        // Equipment module removed - old legacy module
         $asekuracyjnyModule = $moduleRepository->findOneBy(['name' => 'asekuracja']);
         $aparaturaPomiarowaModule = $moduleRepository->findOneBy(['name' => 'aparatura_pomiarowa']);
 
@@ -44,14 +44,7 @@ class AppFixtures extends Fixture
             $manager->persist($adminModule);
         }
 
-        if (!$equipmentModule) {
-            $equipmentModule = new Module();
-            $equipmentModule->setName('equipment')
-                ->setDisplayName('Sprzęt wysokościowy')
-                ->setDescription('Zarządzanie sprzętem wysokościowym')
-                ->setRequiredPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'EXPORT']);
-            $manager->persist($equipmentModule);
-        }
+        // Equipment module creation removed - legacy module disabled
 
         if (!$asekuracyjnyModule) {
             $asekuracyjnyModule = new Module();
@@ -120,27 +113,7 @@ class AppFixtures extends Fixture
             $manager->persist($employeesManagerRole);
         }
 
-        $equipmentManagerRole = $roleRepository->findOneBy(['name' => 'equipment_manager']);
-        if (!$equipmentManagerRole) {
-            $equipmentManagerRole = new Role();
-            $equipmentManagerRole->setName('equipment_manager')
-                ->setDescription('Menedżer sprzętu wysokościowego')
-                ->setModule($equipmentModule)
-                ->setPermissions(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'EXPORT'])
-                ->setIsSystemRole(true);
-            $manager->persist($equipmentManagerRole);
-        }
-
-        $equipmentViewerRole = $roleRepository->findOneBy(['name' => 'equipment_viewer']);
-        if (!$equipmentViewerRole) {
-            $equipmentViewerRole = new Role();
-            $equipmentViewerRole->setName('equipment_viewer')
-                ->setDescription('Przeglądanie sprzętu wysokościowego')
-                ->setModule($equipmentModule)
-                ->setPermissions(['VIEW'])
-                ->setIsSystemRole(true);
-            $manager->persist($equipmentViewerRole);
-        }
+        // Equipment module roles removed - legacy module disabled
 
         // Asekuracja roles
         $assekAdminRole = $roleRepository->findOneBy(['name' => 'ASSEK_ADMIN']);
@@ -280,11 +253,7 @@ class AppFixtures extends Fixture
             ->setAssignedBy($adminUser);
         $manager->persist($adminUserRole);
 
-        $equipmentAdminRole = new UserRole();
-        $equipmentAdminRole->setUser($adminUser)
-            ->setRole($equipmentManagerRole)
-            ->setAssignedBy($adminUser);
-        $manager->persist($equipmentAdminRole);
+        // Equipment admin role removed - legacy module disabled
 
         $assekAdminUserRole = new UserRole();
         $assekAdminUserRole->setUser($adminUser)
@@ -299,11 +268,7 @@ class AppFixtures extends Fixture
         $manager->persist($aparaturaAdminUserRole);
 
 
-        $testUserRole = new UserRole();
-        $testUserRole->setUser($testUser)
-            ->setRole($equipmentViewerRole)
-            ->setAssignedBy($adminUser);
-        $manager->persist($testUserRole);
+        // Test user equipment role removed - legacy module disabled
 
         // Assign HR role to HR user
         $hrUserRole = new UserRole();

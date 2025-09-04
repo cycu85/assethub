@@ -57,21 +57,14 @@ final class Version20250730100000 extends AbstractMigration
     {
         $now = date('Y-m-d H:i:s');
 
-        // Equipment Categories
+        // Equipment Categories (pozostały dla słowników systemowych)
         $this->addSql("INSERT INTO dictionaries (type, name, value, description, color, icon, is_active, sort_order, is_system, created_at, updated_at) VALUES
-            ('equipment_categories', 'Sprzęt wysokościowy', 'height_equipment', 'Sprzęt bezpieczeństwa do pracy na wysokości', '#e74c3c', 'ri-tools-line', 1, 1, 1, '$now', '$now'),
-            ('equipment_categories', 'Narzędzia ręczne', 'hand_tools', 'Różnego rodzaju narzędzia ręczne', '#3498db', 'ri-hammer-line', 1, 2, 1, '$now', '$now'),
-            ('equipment_categories', 'Elektronarzędzia', 'power_tools', 'Elektronarzędzia i urządzenia elektryczne', '#f39c12', 'ri-flashlight-line', 1, 3, 1, '$now', '$now'),
-            ('equipment_categories', 'Pomiary i kontrola', 'measurement_tools', 'Przyrządy pomiarowe i kontrolne', '#9b59b6', 'ri-ruler-line', 1, 4, 1, '$now', '$now'),
-            ('equipment_categories', 'Sprzęt warsztatowy', 'workshop_equipment', 'Większy sprzęt warsztatowy i stanowiska', '#1abc9c', 'ri-settings-3-line', 1, 5, 1, '$now', '$now')");
+            ('equipment_categories', 'Podstawowe', 'basic_equipment', 'Podstawowe kategorie sprzętu', '#3498db', 'ri-tools-line', 1, 1, 1, '$now', '$now')");
 
-        // Equipment Statuses
+        // Equipment Statuses (pozostały dla słowników systemowych)
         $this->addSql("INSERT INTO dictionaries (type, name, value, description, color, icon, is_active, sort_order, is_system, created_at, updated_at) VALUES
-            ('equipment_statuses', 'Dostępny', 'available', 'Sprzęt dostępny do wypożyczenia', '#27ae60', 'ri-check-line', 1, 1, 1, '$now', '$now'),
-            ('equipment_statuses', 'Wypożyczony', 'borrowed', 'Sprzęt obecnie wypożyczony', '#f39c12', 'ri-user-line', 1, 2, 1, '$now', '$now'),
-            ('equipment_statuses', 'W naprawie', 'repair', 'Sprzęt wymaga naprawy lub konserwacji', '#e67e22', 'ri-tools-fill', 1, 3, 1, '$now', '$now'),
-            ('equipment_statuses', 'Zepsuto', 'broken', 'Sprzęt uszkodzony, nie nadaje się do użytku', '#e74c3c', 'ri-close-line', 1, 4, 1, '$now', '$now'),
-            ('equipment_statuses', 'Wycofany', 'retired', 'Sprzęt wycofany z użytkowania', '#95a5a6', 'ri-archive-line', 1, 5, 1, '$now', '$now')");
+            ('equipment_statuses', 'Dostępny', 'available', 'Status podstawowy', '#27ae60', 'ri-check-line', 1, 1, 1, '$now', '$now'),
+            ('equipment_statuses', 'Niedostępny', 'unavailable', 'Status niedostępny', '#e74c3c', 'ri-close-line', 1, 2, 1, '$now', '$now')");
 
         // Locations
         $this->addSql("INSERT INTO dictionaries (type, name, value, description, color, icon, is_active, sort_order, is_system, created_at, updated_at) VALUES
@@ -96,12 +89,6 @@ final class Version20250730100000 extends AbstractMigration
             ('departments', 'IT', 'it', 'Dział informatyczny', '#9b59b6', 'ri-computer-line', 1, 4, 1, '$now', '$now'),
             ('departments', 'HR', 'hr', 'Dział kadr', '#e74c3c', 'ri-team-line', 1, 5, 1, '$now', '$now')");
 
-        // Height Equipment Subcategories (with parent relationships)
-        $heightEquipmentId = 1; // Assumes the first category is height equipment
-        $this->addSql("INSERT INTO dictionaries (type, name, value, description, color, icon, is_active, sort_order, is_system, parent_id, created_at, updated_at) VALUES
-            ('equipment_categories', 'Uprząże', 'harnesses', 'Uprząże bezpieczeństwa', '#c0392b', 'ri-shield-line', 1, 1, 1, $heightEquipmentId, '$now', '$now'),
-            ('equipment_categories', 'Hełmy', 'helmets', 'Hełmy ochronne', '#8e44ad', 'ri-shield-check-line', 1, 2, 1, $heightEquipmentId, '$now', '$now'),
-            ('equipment_categories', 'Liny', 'ropes', 'Liny statyczne i dynamiczne', '#27ae60', 'ri-links-line', 1, 3, 1, $heightEquipmentId, '$now', '$now'),
-            ('equipment_categories', 'Karabinki', 'carabiners', 'Karabinki i łączniki', '#f39c12', 'ri-attachment-line', 1, 4, 1, $heightEquipmentId, '$now', '$now')");
+        // Equipment subcategories removed - old equipment module disabled
     }
 }

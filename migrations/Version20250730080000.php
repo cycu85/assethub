@@ -83,7 +83,7 @@ final class Version20250730080000 extends AbstractMigration
             INDEX IDX_user_roles_assigned_by (assigned_by_id)
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
 
-        // Create equipment_categories table
+        // Create equipment_categories table (pozostała dla słowników)
         $this->addSql('CREATE TABLE equipment_categories (
             id INT AUTO_INCREMENT NOT NULL,
             name VARCHAR(255) NOT NULL,
@@ -99,78 +99,12 @@ final class Version20250730080000 extends AbstractMigration
             UNIQUE INDEX UNIQ_equipment_categories_name (name)
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
 
-        // Create equipment table
-        $this->addSql('CREATE TABLE equipment (
-            id INT AUTO_INCREMENT NOT NULL,
-            category_id INT NOT NULL,
-            assigned_to_id INT DEFAULT NULL,
-            created_by_id INT NOT NULL,
-            updated_by_id INT DEFAULT NULL,
-            inventory_number VARCHAR(100) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            description TEXT DEFAULT NULL,
-            manufacturer VARCHAR(255) DEFAULT NULL,
-            model VARCHAR(255) DEFAULT NULL,
-            serial_number VARCHAR(100) DEFAULT NULL,
-            purchase_date DATE DEFAULT NULL,
-            purchase_price DECIMAL(10,2) DEFAULT NULL,
-            warranty_expiry DATE DEFAULT NULL,
-            next_inspection_date DATE DEFAULT NULL,
-            status VARCHAR(50) NOT NULL DEFAULT "available",
-            location VARCHAR(255) DEFAULT NULL,
-            notes TEXT DEFAULT NULL,
-            custom_fields JSON DEFAULT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            PRIMARY KEY(id),
-            UNIQUE INDEX UNIQ_equipment_inventory_number (inventory_number),
-            INDEX IDX_equipment_category (category_id),
-            INDEX IDX_equipment_assigned_to (assigned_to_id),
-            INDEX IDX_equipment_created_by (created_by_id),
-            INDEX IDX_equipment_updated_by (updated_by_id)
-        ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
-
-        // Create equipment_log table
-        $this->addSql('CREATE TABLE equipment_log (
-            id INT AUTO_INCREMENT NOT NULL,
-            equipment_id INT NOT NULL,
-            created_by_id INT NOT NULL,
-            previous_assignee_id INT DEFAULT NULL,
-            new_assignee_id INT DEFAULT NULL,
-            action VARCHAR(50) NOT NULL,
-            description TEXT NOT NULL,
-            previous_status VARCHAR(50) DEFAULT NULL,
-            new_status VARCHAR(50) DEFAULT NULL,
-            additional_data JSON DEFAULT NULL,
-            created_at DATETIME NOT NULL,
-            PRIMARY KEY(id),
-            INDEX IDX_equipment_log_equipment (equipment_id),
-            INDEX IDX_equipment_log_created_by (created_by_id)
-        ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
-
-        // Create equipment_attachment table
-        $this->addSql('CREATE TABLE equipment_attachment (
-            id INT AUTO_INCREMENT NOT NULL,
-            equipment_id INT NOT NULL,
-            uploaded_by_id INT NOT NULL,
-            filename VARCHAR(255) NOT NULL,
-            original_filename VARCHAR(255) NOT NULL,
-            mime_type VARCHAR(100) NOT NULL,
-            file_size INT NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            description TEXT DEFAULT NULL,
-            created_at DATETIME NOT NULL,
-            PRIMARY KEY(id),
-            INDEX IDX_equipment_attachment_equipment (equipment_id),
-            INDEX IDX_equipment_attachment_uploaded_by (uploaded_by_id)
-        ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
+        // Equipment, equipment_log, equipment_attachment tables removed - module disabled
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP TABLE equipment_attachment');
-        $this->addSql('DROP TABLE equipment_log');
-        $this->addSql('DROP TABLE equipment');
+        // Equipment tables removed - only drop remaining tables
         $this->addSql('DROP TABLE equipment_categories');
         $this->addSql('DROP TABLE user_roles');
         $this->addSql('DROP TABLE roles');

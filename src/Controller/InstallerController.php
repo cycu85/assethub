@@ -290,7 +290,7 @@ class InstallerController extends AbstractController
             // Verify tables were created
             $tables = $schemaManager->listTableNames();
             
-            $requiredTables = ['modules', 'users', 'roles', 'user_roles', 'equipment_categories', 'equipment', 'equipment_log', 'equipment_attachment'];
+            $requiredTables = ['modules', 'users', 'roles', 'user_roles', 'equipment_categories'];
             $missingTables = array_diff($requiredTables, $tables);
             
             if (!empty($missingTables)) {
@@ -318,7 +318,7 @@ class InstallerController extends AbstractController
         // Create modules
         $modules = [
             ['name' => 'admin', 'display_name' => 'Panel Administracyjny', 'description' => 'Zarządzanie systemem', 'is_enabled' => true],
-            ['name' => 'equipment', 'display_name' => 'Sprzęt', 'description' => 'Zarządzanie sprzętem i narzędziami', 'is_enabled' => true],
+            // Equipment module removed - legacy module
             ['name' => 'asekuracja', 'display_name' => 'Asekuracja', 'description' => 'Zarządzanie sprzętem asekuracyjnym/wysokościowym', 'is_enabled' => true],
             ['name' => 'safety', 'display_name' => 'Sprzęt Ochronny', 'description' => 'Zarządzanie środkami ochrony osobistej', 'is_enabled' => false],
             ['name' => 'it', 'display_name' => 'Sprzęt IT', 'description' => 'Zarządzanie sprzętem informatycznym', 'is_enabled' => false],
@@ -341,7 +341,8 @@ class InstallerController extends AbstractController
 
         // Create basic roles
         $adminModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'admin']);
-        $equipmentModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'equipment']);
+        // Equipment module removed - get asekuracja module instead
+        $asekuracyjnyModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'asekuracja']);
         $asekuracijaModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'asekuracja']);
 
         $roles = [
@@ -352,20 +353,7 @@ class InstallerController extends AbstractController
                 'permissions' => ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'CONFIGURE', 'EMPLOYEES_VIEW', 'EMPLOYEES_EDIT_BASIC', 'EMPLOYEES_EDIT_FULL'],
                 'is_system' => true
             ],
-            [
-                'name' => 'equipment_manager',
-                'description' => 'Menedżer sprzętu - pełny dostęp',
-                'module' => $equipmentModule,
-                'permissions' => ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'REVIEW', 'EXPORT'],
-                'is_system' => true
-            ],
-            [
-                'name' => 'equipment_viewer',
-                'description' => 'Użytkownik sprzętu - tylko podgląd',
-                'module' => $equipmentModule,
-                'permissions' => ['VIEW'],
-                'is_system' => true
-            ],
+            // Equipment roles removed - legacy module disabled
             [
                 'name' => 'employees_viewer',
                 'description' => 'Przeglądanie listy pracowników',
@@ -551,7 +539,7 @@ class InstallerController extends AbstractController
                 'position' => 'Pracownik',
                 'department' => 'Produkcja',
                 'password' => 'user123',
-                'role' => 'equipment_viewer'
+                'role' => 'ASSEK_USER' // Changed from equipment_viewer to asekuracja role
             ]
         ];
 

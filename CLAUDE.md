@@ -90,7 +90,8 @@ All business logic resides in service classes, never in controllers. Controllers
 **Key Services:**
 - `AuthorizationService` - Centralized authorization replacing legacy PermissionService
 - `AuditService` - Comprehensive logging with multiple levels (INFO, ERROR, NOTICE)
-- `EquipmentService` - Main business logic for equipment management  
+- `AsekuracyjnyEquipmentService` - Business logic for safety equipment management
+- `AparaturaPomiarowaEquipmentService` - Business logic for measurement equipment
 - `AdminService` - System administration, backups, maintenance
 - `EmailService` - Centralized email with automatic history tracking
 
@@ -100,20 +101,20 @@ All business logic resides in service classes, never in controllers. Controllers
 public function create(Request $request): Response
 {
     $user = $this->getUser();
-    $this->authorizationService->checkPermission($user, 'equipment', 'CREATE', $request);
+    $this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
     
     if ($form->isSubmitted() && $form->isValid()) {
-        $equipment = $this->equipmentService->createEquipment($data, $user);
+        $equipment = $this->asekuracyjnyEquipmentService->createEquipment($data, $user);
         // Event dispatch, audit logging handled in service
-        return $this->redirectToRoute('equipment_index');
+        return $this->redirectToRoute('asekuracja_equipment_index');
     }
 }
 
 // Service (business logic)
-public function createEquipment(array $data, User $user): Equipment
+public function createEquipment(array $data, User $user): AsekuracyjnyEquipment
 {
     // Validation, persistence, audit logging, events
-    $this->auditService->logCrudOperation($user, 'Equipment', $id, 'CREATE', $data);
+    $this->auditService->logCrudOperation($user, 'AsekuracyjnyEquipment', $id, 'CREATE', $data);
     return $equipment;
 }
 ```
@@ -134,14 +135,14 @@ Domain events with subscribers for loose coupling:
 **AuthorizationService** provides centralized, granular permissions:
 ```php
 // Module access control
-$this->authorizationService->checkModuleAccess($user, 'equipment', $request);
+$this->authorizationService->checkModuleAccess($user, 'asekuracja', $request);
 
 // Permission checks
-$this->authorizationService->checkPermission($user, 'equipment', 'CREATE', $request);
-$canEdit = $this->authorizationService->hasPermission($user, 'equipment', 'EDIT');
+$this->authorizationService->checkPermission($user, 'asekuracja', 'CREATE', $request);
+$canEdit = $this->authorizationService->hasPermission($user, 'asekuracja', 'EDIT');
 
 // Multi-permission checks
-$canEditAny = $this->authorizationService->hasAnyPermission($user, 'equipment', ['EDIT', 'DELETE']);
+$canEditAny = $this->authorizationService->hasAnyPermission($user, 'asekuracja', ['EDIT', 'DELETE']);
 ```
 
 ### Audit System
@@ -156,6 +157,7 @@ $canEditAny = $this->authorizationService->hasAnyPermission($user, 'equipment', 
 ### Main Modules
 1. **Core** (`src/`) - Base entities, services, controllers
 2. **Asekuracja** (`src/AsekuracyjnySPM/`) - Safety equipment management (COMPLETE)
+3. **Aparatura Pomiarowa** (`src/AparaturaPomiarowa/`) - Measurement equipment management (NEW)
 
 ### Module Development Pattern
 Each module follows this structure:
@@ -186,8 +188,9 @@ The application uses **MySQL 8.0+** with Doctrine ORM. Migration files follow ch
 **Key Tables:**
 - `users`, `roles`, `user_roles` - Authorization system
 - `modules` - Module management
-- `equipment`, `equipment_categories` - Core equipment
+- `equipment_categories` - Legacy categories (dictionary only)
 - `asekuracyjny_*` - Safety equipment module tables
+- `aparatura_pomiarowa_*` - Measurement equipment module tables
 - `email_history` - Email tracking
 - `dictionaries` - System-wide lookup tables
 
@@ -217,9 +220,9 @@ tests/
 
 ### File Upload Security
 - **Avatar uploads**: `public/uploads/avatars/` (JPG, PNG, GIF, WebP)
-- **Equipment files**: `public/uploads/equipment/`
-- **Review attachments**: `public/uploads/reviews/`
+- **Legacy review attachments**: `public/uploads/reviews/` (legacy)
 - **Asekuracja files**: `public/uploads/asekuracja/{equipment,sets,transfers}/`
+- **Aparatura Pomiarowa files**: `public/uploads/aparatura_pomiarowa/{equipment,sets,transfers}/`
 - All uploads have size limits and file type validation
 
 ### Environment Configuration

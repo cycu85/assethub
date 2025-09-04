@@ -42,12 +42,12 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 
 ## ✨ Funkcjonalności
 
-### 🔧 Moduł Sprzętu i Narzędzi
-- Inwentaryzacja sprzętu z numerami inwentarzowymi
-- Śledzenie lokalizacji i przypisań do użytkowników
-- Harmonogram przeglądów i konserwacji
-- Historia użytkowania i napraw
-- Zarządzanie dokumentacją i certyfikatami
+### 📊 Aparatura Pomiarowa - **NOWY MODUŁ**
+- **Zarządzanie aparaturą i narzędziami pomiarowymi** - multimetry, oscyloskopy, generatory, analizatory
+- **System kalibracji i certyfikacji** - okresowe kalibracje, certyfikaty dokładności, protokoły
+- **Zestawy aparatury** - komplety pomiarowe z kontrolą kompletności i dostępności
+- **Harmonogram kalibracji** - automatyczne przypomnienia, planowanie terminów
+- **Historia pomiarów** - archiwum wyników kalibracji i użytkowania
 
 ### 🛡️ Moduł Asekuracja (Sprzęt Wysokościowy) - **KOMPLETNY**
 - **Zarządzanie sprzętem asekuracyjnym** - szelki, liny, kaski, zaciski, blokady z pełnymi metadanymi
@@ -119,9 +119,10 @@ AssetHub to enterprise-grade system zarządzania zasobami firmy, zbudowany w opa
 
 ### Service Layer Pattern
 Wszystkie operacje biznesowe realizowane przez dedykowane serwisy:
-- **EquipmentService** - Zarządzanie sprzętem z pełną logiką biznesową
 - **AsekuracyjnyEquipmentService** - Kompletne zarządzanie sprzętem asekuracyjnym i zestawami
 - **AsekuracyjnyReviewService** - System przeglądów z protokołami PDF i workflow
+- **AparaturaPomiarowaEquipmentService** - Zarządzanie aparaturą pomiarową i zestawami
+- **AparaturaPomiarowaReviewService** - System kalibracji aparatury pomiarowej
 - **AuthorizationService** - Centralizowana autoryzacja zastępująca stary PermissionService
 - **AuditService** - Kompleksowy system audytu z wielopoziomowym logowaniem
 - **AdminService** - Operacje administracyjne, backup, maintenance
@@ -572,7 +573,7 @@ MAILER_DSN=gmail://username:password@default
 
 2. **Konfiguracja Modułów**
    - Przejdź do Panel Administracyjny → Moduły
-   - Aktywuj potrzebne moduły (domyślnie: Admin, Sprzęt, Asekuracja)
+   - Aktywuj potrzebne moduły (domyślnie: Admin, Asekuracja, Aparatura Pomiarowa)
 
 3. **Dodawanie Użytkowników**
    - Panel Administracyjny → Użytkownicy → Dodaj użytkownika
@@ -777,11 +778,16 @@ assethub/
 │   ├── Form/        # Formularze Symfony
 │   ├── Repository/  # Repozytoria danych
 │   ├── Service/     # Usługi biznesowe
-│   └── AsekuracyjnySPM/  # Moduł Asekuracja - KOMPLETNY
+│   ├── AsekuracyjnySPM/  # Moduł Asekuracja - KOMPLETNY
+│   │   ├── Controller/   # EquipmentController, EquipmentSetController, ReviewController
+│   │   ├── Entity/      # AsekuracyjnyEquipment, AsekuracyjnyEquipmentSet, AsekuracyjnyReview, AsekuracyjnyTransfer
+│   │   ├── Repository/  # Repozytoria z zaawansowanymi zapytaniami i metrykami
+│   │   └── Service/     # AsekuracyjnyEquipmentService, AsekuracyjnyReviewService
+│   └── AparaturaPomiarowa/  # Moduł Aparatura Pomiarowa - NOWY
 │       ├── Controller/   # EquipmentController, EquipmentSetController, ReviewController
-│       ├── Entity/      # AsekuracyjnyEquipment, AsekuracyjnyEquipmentSet, AsekuracyjnyReview, AsekuracyjnyTransfer
-│       ├── Repository/  # Repozytoria z zaawansowanymi zapytaniami i metrykami
-│       └── Service/     # AsekuracyjnyEquipmentService, AsekuracyjnyReviewService
+│       ├── Entity/      # AparaturaPomiarowaEquipment, AparaturaPomiarowaEquipmentSet, AparaturaPomiarowaReview
+│       ├── Repository/  # Repozytoria dla aparatury pomiarowej
+│       └── Service/     # AparaturaPomiarowaEquipmentService, AparaturaPomiarowaReviewService
 ├── templates/       # Szablony Twig
 │   └── asekuracja/  # Szablony modułu Asekuracja
 ├── tests/          # Testy automatyczne
