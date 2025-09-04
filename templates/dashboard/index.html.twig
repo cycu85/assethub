@@ -182,11 +182,7 @@
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="flex-shrink-0">
-                                                    {% if module.name == 'equipment' %}
-                                                        <span class="avatar-title bg-warning-subtle text-warning rounded fs-3">
-                                                            <i class="ri-tools-line"></i>
-                                                        </span>
-                                                    {% elseif module.name == 'admin' %}
+                                                    {% if module.name == 'admin' %}
                                                         <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
                                                             <i class="ri-settings-3-line"></i>
                                                         </span>
@@ -263,11 +259,14 @@
 <script>
 function navigateToModule(moduleName) {
     switch(moduleName) {
-        case 'equipment':
-            window.location.href = '/equipment';
-            break;
         case 'admin':
             window.location.href = '/admin';
+            break;
+        case 'asekuracja':
+            window.location.href = '/asekuracja';
+            break;
+        case 'aparatura_pomiarowa':
+            window.location.href = '/aparatura-pomiarowa';
             break;
         default:
             console.log('Unknown module: ' + moduleName);
