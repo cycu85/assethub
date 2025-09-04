@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Repository\UserRepository;
 use App\Service\AuthorizationService;
 use App\Service\AuditService;
-use App\Service\EquipmentService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +19,6 @@ class SearchController extends AbstractController
         private UserRepository $userRepository,
         private AuthorizationService $authorizationService,
         private AuditService $auditService,
-        private EquipmentService $equipmentService,
         private RateLimiterFactory $searchLimiter,
         private LoggerInterface $logger
     ) {}
@@ -69,23 +67,7 @@ class SearchController extends AbstractController
                 $searchStats['users_found'] = count($users);
             }
 
-            // Wyszukiwanie sprzętu (jeśli ma uprawnienia)
-            if ($this->authorizationService->checkAnyPermission($user, 'equipment', ['VIEW'])) {
-                $equipment = $this->searchEquipment($query);
-                foreach ($equipment as $item) {
-                    $results[] = [
-                        'type' => 'equipment',
-                        'title' => $item->getName(),
-                        'subtitle' => 'Nr inwentarzowy: ' . ($item->getInventoryNumber() ?? 'Brak') . 
-                                     ($item->getModel() ? ' • ' . $item->getModel() : ''),
-                        'url' => $this->generateUrl('equipment_show', ['id' => $item->getId()]),
-                        'icon' => 'ri-computer-line',
-                        'badge' => $item->getStatus()
-                    ];
-                }
-                $searchStats['types_searched'][] = 'equipment';
-                $searchStats['equipment_found'] = count($equipment);
-            }
+            // Equipment search disabled - module removed
             
         } catch (\Exception $e) {
             $this->logger->error('Search operation failed', [
@@ -135,16 +117,4 @@ class SearchController extends AbstractController
             ->getResult();
     }
     
-    private function searchEquipment(string $query): array
-    {
-        try {
-            return $this->equipmentService->searchEquipment($query, 5);
-        } catch (\Exception $e) {
-            $this->logger->warning('Equipment search failed', [
-                'query' => $query,
-                'error' => $e->getMessage()
-            ]);
-            return [];
-        }
-    }
 }

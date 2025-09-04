@@ -535,7 +535,7 @@ class ConnectionConfig
     }
 
     /**
-     * @default false
+     * @default true
      * @param ParamConfigurator|bool $value
      * @return $this
      */
@@ -548,7 +548,7 @@ class ConnectionConfig
     }
 
     /**
-     * @default false
+     * @default true
      * @param ParamConfigurator|bool $value
      * @return $this
      */

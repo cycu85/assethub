@@ -36,8 +36,7 @@ class EquipmentCategory
     #[ORM\Column]
     private ?int $sortOrder = 0;
 
-    #[ORM\OneToMany(mappedBy: 'category', targetEntity: Equipment::class)]
-    private Collection $equipment;
+    // Equipment relationship removed - module disabled
 
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private array $customFieldsConfig = [];
@@ -50,7 +49,6 @@ class EquipmentCategory
 
     public function __construct()
     {
-        $this->equipment = new ArrayCollection();
         $this->customFieldsConfig = [];
         $this->isActive = true;
         $this->sortOrder = 0;
@@ -140,32 +138,7 @@ class EquipmentCategory
         return $this;
     }
 
-    /**
-     * @return Collection<int, Equipment>
-     */
-    public function getEquipment(): Collection
-    {
-        return $this->equipment;
-    }
-
-    public function addEquipment(Equipment $equipment): static
-    {
-        if (!$this->equipment->contains($equipment)) {
-            $this->equipment->add($equipment);
-            $equipment->setCategory($this);
-        }
-        return $this;
-    }
-
-    public function removeEquipment(Equipment $equipment): static
-    {
-        if ($this->equipment->removeElement($equipment)) {
-            if ($equipment->getCategory() === $this) {
-                $equipment->setCategory(null);
-            }
-        }
-        return $this;
-    }
+    // Equipment methods removed - module disabled
 
     public function getCustomFieldsConfig(): array
     {
@@ -202,7 +175,7 @@ class EquipmentCategory
 
     public function getEquipmentCount(): int
     {
-        return $this->equipment->count();
+        return 0; // Equipment module disabled
     }
 
     public function __toString(): string

@@ -56,13 +56,7 @@
                             {% set hasEmployeesRole = true %}
                         {% endif %}
                         
-                        {% if module.name == 'equipment' %}
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ app.request.get('_route') starts with 'equipment_' ? 'active' : '' }}" href="{{ path('equipment_index') }}">
-                                <i class="ri-tools-line"></i> <span>{{ module.displayName }}</span>
-                            </a>
-                        </li>
-                        {% elseif module.name == 'asekuracja' %}
+                        {% if module.name == 'asekuracja' %}
                         {# Sprawdź czy użytkownik jest w sekcji asekuracja #}
                         {% set current_route = app.request.get('_route') %}
                         {% set is_asekuracja_section = current_route starts with 'asekuracja_' %}

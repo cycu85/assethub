@@ -32,7 +32,7 @@ class PhpErrorsConfig
 
     /**
      * Throw PHP errors as \ErrorException instances.
-     * @default false
+     * @default true
      * @param ParamConfigurator|bool $value
      * @return $this
      */
