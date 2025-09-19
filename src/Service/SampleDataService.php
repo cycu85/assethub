@@ -2,9 +2,7 @@
 
 namespace App\Service;
 
-use App\Entity\Equipment;
 use App\Entity\EquipmentCategory;
-use App\Entity\EquipmentLog;
 use App\Entity\User;
 use App\DataFixtures\AppFixtures;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,13 +17,15 @@ class SampleDataService
 
     public function loadSampleData(): void
     {
-        // First load all fixtures (including asekuracja module data)
+        // Load all fixtures (including asekuracja and aparatura_pomiarowa module data)
         $fixtures = new AppFixtures($this->passwordHasher);
         $fixtures->load($this->entityManager);
-        
-        // Then load additional sample data
+
+        // Create additional sample users (beyond what fixtures provide)
         $this->createSampleUsers();
-        $this->createSampleEquipment();
+
+        // Equipment module disabled - no longer creating legacy equipment data
+
         $this->entityManager->flush();
     }
 
@@ -112,243 +112,18 @@ class SampleDataService
         return $createdUsers;
     }
 
-    private function createSampleEquipment(): void
-    {
-        $categories = $this->entityManager->getRepository(EquipmentCategory::class)->findAll();
-        $users = $this->entityManager->getRepository(User::class)->findAll();
-        
-        if (empty($categories) || empty($users)) {
-            return;
-        }
-
-        $equipmentData = [
-            [
-                'inventoryNumber' => 'EQ-001',
-                'name' => 'Młotek pneumatyczny Bosch GSH 11 VC',
-                'description' => 'Profesjonalny młotek pneumatyczny do prac rozbiórkowych. Wyposażony w system SDS-max.',
-                'manufacturer' => 'Bosch',
-                'model' => 'GSH 11 VC',
-                'serialNumber' => 'BSH2023001',
-                'purchaseDate' => new \DateTime('-18 months'),
-                'purchasePrice' => '2899.00',
-                'status' => Equipment::STATUS_IN_USE,
-                'location' => 'Magazyn A - Regał 1',
-                'warrantyExpiry' => new \DateTime('+6 months'),
-                'nextInspectionDate' => new \DateTime('+2 months'),
-                'notes' => 'Urządzenie w bardzo dobrym stanie. Ostatni serwis przeprowadzony 3 miesiące temu.',
-                'categoryIndex' => 1 // Narzędzia elektryczne
-            ],
-            [
-                'inventoryNumber' => 'EQ-002',
-                'name' => 'Wiertarka udarowa Makita HP2050',
-                'description' => 'Wiertarka udarowa 13mm z regulacją momentu obrotowego.',
-                'manufacturer' => 'Makita',
-                'model' => 'HP2050',
-                'serialNumber' => 'MKT2023002',
-                'purchaseDate' => new \DateTime('-12 months'),
-                'purchasePrice' => '459.00',
-                'status' => Equipment::STATUS_AVAILABLE,
-                'location' => 'Magazyn A - Regał 2',
-                'warrantyExpiry' => new \DateTime('+12 months'),
-                'nextInspectionDate' => new \DateTime('+6 months'),
-                'notes' => 'Nowa wiertarka, użyta tylko kilka razy.',
-                'categoryIndex' => 1
-            ],
-            [
-                'inventoryNumber' => 'EQ-003',
-                'name' => 'Klucz dynamometryczny 10-50 Nm',
-                'description' => 'Precyzyjny klucz dynamometryczny z certyfikatem kalibracji.',
-                'manufacturer' => 'Gedore',
-                'model' => 'DREMOSTAR',
-                'serialNumber' => 'GED2023003',
-                'purchaseDate' => new \DateTime('-24 months'),
-                'purchasePrice' => '890.00',
-                'status' => Equipment::STATUS_MAINTENANCE,
-                'location' => 'Serwis zewnętrzny',
-                'warrantyExpiry' => new \DateTime('-12 months'),
-                'nextInspectionDate' => new \DateTime('+1 month'),
-                'notes' => 'Klucz w serwisie na kalibracji. Planowany odbiór za tydzień.',
-                'categoryIndex' => 0 // Narzędzia ręczne
-            ],
-            [
-                'inventoryNumber' => 'EQ-004',
-                'name' => 'Szlifierka kątowa 125mm Hilti AG 125-A22',
-                'description' => 'Bezprzewodowa szlifierka kątowa z systemem antywibracjnym.',
-                'manufacturer' => 'Hilti',
-                'model' => 'AG 125-A22',
-                'serialNumber' => 'HLT2023004',
-                'purchaseDate' => new \DateTime('-6 months'),
-                'purchasePrice' => '1250.00',
-                'status' => Equipment::STATUS_IN_USE,
-                'location' => 'Plac budowy - Obiekt A',
-                'warrantyExpiry' => new \DateTime('+18 months'),
-                'nextInspectionDate' => new \DateTime('+3 months'),
-                'notes' => 'Szlifierka używana na bieżącym projekcie.',
-                'categoryIndex' => 1
-            ],
-            [
-                'inventoryNumber' => 'EQ-005',
-                'name' => 'Poziomica laserowa Bosch GLL 3-80',
-                'description' => 'Poziomica laserowa z trzema liniami i funkcją samopozwalania.',
-                'manufacturer' => 'Bosch',
-                'model' => 'GLL 3-80',
-                'serialNumber' => 'BSH2023005',
-                'purchaseDate' => new \DateTime('-15 months'),
-                'purchasePrice' => '1650.00',
-                'status' => Equipment::STATUS_AVAILABLE,
-                'location' => 'Magazyn B - Szafa 1',
-                'warrantyExpiry' => new \DateTime('+9 months'),
-                'nextInspectionDate' => new \DateTime('+4 months'),
-                'notes' => 'Poziomica po konserwacji, gotowa do użycia.',
-                'categoryIndex' => 2 // Sprzęt pomiarowy
-            ],
-            [
-                'inventoryNumber' => 'EQ-006',
-                'name' => 'Kask ochronny JSP EVO2',
-                'description' => 'Kask ochronny z regulacją obwodu głowy, wentylowany.',
-                'manufacturer' => 'JSP',
-                'model' => 'EVO2',
-                'serialNumber' => 'JSP2023006',
-                'purchaseDate' => new \DateTime('-8 months'),
-                'purchasePrice' => '125.00',
-                'status' => Equipment::STATUS_IN_USE,
-                'location' => 'Przypisany do pracownika',
-                'warrantyExpiry' => new \DateTime('+16 months'),
-                'nextInspectionDate' => new \DateTime('+4 months'),
-                'notes' => 'Kask w użyciu zgodnie z procedurami BHP.',
-                'categoryIndex' => 3 // Sprzęt ochronny
-            ],
-            [
-                'inventoryNumber' => 'EQ-007',
-                'name' => 'Piła tarczowa Festool TS 55 REQ',
-                'description' => 'Piła tarczowa z szyną prowadzącą, system odpylania.',
-                'manufacturer' => 'Festool',
-                'model' => 'TS 55 REQ',
-                'serialNumber' => 'FST2023007',
-                'purchaseDate' => new \DateTime('-20 months'),
-                'purchasePrice' => '2100.00',
-                'status' => Equipment::STATUS_REPAIR,
-                'location' => 'Warsztat serwisowy',
-                'warrantyExpiry' => new \DateTime('-8 months'),
-                'nextInspectionDate' => new \DateTime('+2 weeks'),
-                'notes' => 'Piła w naprawie - wymiana szczotek węglowych w silniku.',
-                'categoryIndex' => 1
-            ],
-            [
-                'inventoryNumber' => 'EQ-008',
-                'name' => 'Multimetr cyfrowy Fluke 87V',
-                'description' => 'Profesjonalny multimetr przemysłowy z funkcją TrueRMS.',
-                'manufacturer' => 'Fluke',
-                'model' => '87V',
-                'serialNumber' => 'FLK2023008',
-                'purchaseDate' => new \DateTime('-30 months'),
-                'purchasePrice' => '1450.00',
-                'status' => Equipment::STATUS_AVAILABLE,
-                'location' => 'Magazyn C - Szuflada 3',
-                'warrantyExpiry' => new \DateTime('-6 months'),
-                'nextInspectionDate' => new \DateTime('+6 months'),
-                'notes' => 'Multimetr skalibrowany, wyniki kalibracji w dokumentacji.',
-                'categoryIndex' => 2
-            ],
-            [
-                'inventoryNumber' => 'EQ-009',
-                'name' => 'Rękawice robocze Uvex Phynomic C3',
-                'description' => 'Rękawice robocze z powłoką nitrylową, rozmiar 9.',
-                'manufacturer' => 'Uvex',
-                'model' => 'Phynomic C3',
-                'serialNumber' => 'UVX2023009',
-                'purchaseDate' => new \DateTime('-4 months'),
-                'purchasePrice' => '25.50',
-                'status' => Equipment::STATUS_IN_USE,
-                'location' => 'Przypisane do pracownika',
-                'warrantyExpiry' => new \DateTime('+8 months'),
-                'nextInspectionDate' => new \DateTime('+2 months'),
-                'notes' => 'Rękawice w codziennym użyciu, stan dobry.',
-                'categoryIndex' => 3
-            ],
-            [
-                'inventoryNumber' => 'EQ-010',
-                'name' => 'Drabina aluminiowa 3x12 szczebli',
-                'description' => 'Drabina wielofunkcyjna aluminiowa z certyfikatem EN 131.',
-                'manufacturer' => 'Krause',
-                'model' => 'Corda',
-                'serialNumber' => 'KRS2023010',
-                'purchaseDate' => new \DateTime('-14 months'),
-                'purchasePrice' => '1850.00',
-                'status' => Equipment::STATUS_AVAILABLE,
-                'location' => 'Magazyn A - Strefa drabin',
-                'warrantyExpiry' => new \DateTime('+10 months'),
-                'nextInspectionDate' => new \DateTime('+2 months'),
-                'notes' => 'Drabina sprawna, ostatni przegląd techniczny przeprowadzony przed miesiącem.',
-                'categoryIndex' => 0
-            ]
-        ];
-
-        foreach ($equipmentData as $index => $data) {
-            $equipment = new Equipment();
-            $equipment->setInventoryNumber($data['inventoryNumber']);
-            $equipment->setName($data['name']);
-            $equipment->setDescription($data['description']);
-            $equipment->setManufacturer($data['manufacturer']);
-            $equipment->setModel($data['model']);
-            $equipment->setSerialNumber($data['serialNumber']);
-            $equipment->setPurchaseDate($data['purchaseDate']);
-            $equipment->setPurchasePrice($data['purchasePrice']);
-            $equipment->setStatus($data['status']);
-            $equipment->setLocation($data['location']);
-            $equipment->setWarrantyExpiry($data['warrantyExpiry']);
-            $equipment->setNextInspectionDate($data['nextInspectionDate']);
-            $equipment->setNotes($data['notes']);
-
-            // Assign category
-            if (isset($categories[$data['categoryIndex']])) {
-                $equipment->setCategory($categories[$data['categoryIndex']]);
-            }
-
-            // Assign to user for IN_USE items
-            if ($data['status'] === Equipment::STATUS_IN_USE) {
-                $randomUser = $users[array_rand($users)];
-                $equipment->setAssignedTo($randomUser);
-            }
-
-            // Set creator (use first admin user)
-            $adminUser = $users[0] ?? null;
-            if ($adminUser) {
-                $equipment->setCreatedBy($adminUser);
-            }
-
-            $this->entityManager->persist($equipment);
-
-            // Create initial log entry
-            if ($adminUser) {
-                $log = new EquipmentLog();
-                $log->setEquipment($equipment);
-                $log->setAction(EquipmentLog::ACTION_CREATED);
-                $log->setDescription('Sprzęt dodany do systemu podczas importu danych przykładowych');
-                $log->setCreatedBy($adminUser);
-                $this->entityManager->persist($log);
-
-                // Add assignment log for IN_USE items
-                if ($data['status'] === Equipment::STATUS_IN_USE && $equipment->getAssignedTo()) {
-                    $assignLog = new EquipmentLog();
-                    $assignLog->setEquipment($equipment);
-                    $assignLog->setAction(EquipmentLog::ACTION_ASSIGNED);
-                    $assignLog->setDescription('Sprzęt przypisany do użytkownika');
-                    $assignLog->setNewAssignee($equipment->getAssignedTo());
-                    $assignLog->setCreatedBy($adminUser);
-                    $this->entityManager->persist($assignLog);
-                }
-            }
-        }
-    }
+    // Legacy createSampleEquipment method removed - Equipment module disabled
 
     public function getSampleDataSummary(): array
     {
         return [
-            'users' => 5,
-            'equipment' => 10,
+            'users' => 8, // admin, hr, user + 5 additional sample users
+            'asekuracyjny_equipment' => 3, // From fixtures
+            'aparatura_pomiarowa_equipment' => 3, // From fixtures
+            'modules' => 'admin, asekuracja, aparatura_pomiarowa',
+            'dictionaries' => 'Complete system dictionaries for all modules',
             'categories' => 4,
-            'logs' => 'Automatycznie generowane dla każdego sprzętu'
+            'note' => 'Legacy equipment module disabled - replaced with specialized modules'
         ];
     }
 }

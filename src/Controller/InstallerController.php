@@ -320,6 +320,7 @@ class InstallerController extends AbstractController
             ['name' => 'admin', 'display_name' => 'Panel Administracyjny', 'description' => 'Zarządzanie systemem', 'is_enabled' => true],
             // Equipment module removed - legacy module
             ['name' => 'asekuracja', 'display_name' => 'Asekuracja', 'description' => 'Zarządzanie sprzętem asekuracyjnym/wysokościowym', 'is_enabled' => true],
+            ['name' => 'aparatura_pomiarowa', 'display_name' => 'Aparatura Pomiarowa', 'description' => 'Moduł zarządzania aparaturą pomiarową - mierniki i akcesoria', 'is_enabled' => true],
             ['name' => 'safety', 'display_name' => 'Sprzęt Ochronny', 'description' => 'Zarządzanie środkami ochrony osobistej', 'is_enabled' => false],
             ['name' => 'it', 'display_name' => 'Sprzęt IT', 'description' => 'Zarządzanie sprzętem informatycznym', 'is_enabled' => false],
             ['name' => 'vehicles', 'display_name' => 'Flota Pojazdów', 'description' => 'Zarządzanie flotą pojazdów', 'is_enabled' => false],
@@ -344,6 +345,7 @@ class InstallerController extends AbstractController
         // Equipment module removed - get asekuracja module instead
         $asekuracyjnyModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'asekuracja']);
         $asekuracijaModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'asekuracja']);
+        $aparaturaModule = $this->entityManager->getRepository(Module::class)->findOneBy(['name' => 'aparatura_pomiarowa']);
 
         $roles = [
             [
@@ -402,6 +404,28 @@ class InstallerController extends AbstractController
                 'description' => 'Lista Asekuracji - tylko lista zestawów i elementów',
                 'module' => $asekuracijaModule,
                 'permissions' => ['VIEW_LIST'],
+                'is_system' => false
+            ],
+            // Aparatura Pomiarowa roles
+            [
+                'name' => 'APARATURA_POMIAROWA_ADMIN',
+                'description' => 'Administrator Aparatury Pomiarowej - pełne prawa do modułu',
+                'module' => $aparaturaModule,
+                'permissions' => ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'ASSIGN', 'CALIBRATE', 'TRANSFER'],
+                'is_system' => false
+            ],
+            [
+                'name' => 'APARATURA_POMIAROWA_USER',
+                'description' => 'Użytkownik Aparatury Pomiarowej - podstawowe uprawnienia',
+                'module' => $aparaturaModule,
+                'permissions' => ['VIEW', 'CREATE', 'EDIT', 'ASSIGN', 'CALIBRATE'],
+                'is_system' => false
+            ],
+            [
+                'name' => 'APARATURA_POMIAROWA_VIEWER',
+                'description' => 'Przeglądający Aparatury Pomiarowej - tylko podgląd',
+                'module' => $aparaturaModule,
+                'permissions' => ['VIEW'],
                 'is_system' => false
             ]
         ];
@@ -498,6 +522,17 @@ class InstallerController extends AbstractController
             $userRole = new UserRole();
             $userRole->setUser($user);
             $userRole->setRole($assekAdminRole);
+            $userRole->setAssignedBy($user);
+            $userRole->setIsActive(true);
+            $this->entityManager->persist($userRole);
+        }
+
+        // Assign aparatura pomiarowa admin role
+        $aparaturaAdminRole = $this->entityManager->getRepository(Role::class)->findOneBy(['name' => 'APARATURA_POMIAROWA_ADMIN']);
+        if ($aparaturaAdminRole) {
+            $userRole = new UserRole();
+            $userRole->setUser($user);
+            $userRole->setRole($aparaturaAdminRole);
             $userRole->setAssignedBy($user);
             $userRole->setIsActive(true);
             $this->entityManager->persist($userRole);
