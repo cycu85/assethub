@@ -19,27 +19,28 @@ final class Version20250902070757 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Create module and roles
-        $this->addSql("INSERT INTO modules (name, display_name, description, is_enabled, created_at, updated_at) VALUES ('aparatura_pomiarowa', 'Aparatura Pomiarowa', 'Moduł zarządzania aparaturą pomiarową - mierniki i akcesoria', 1, NOW(), NOW())");
-        
-        $this->addSql("INSERT INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at) 
-                       SELECT 'APARATURA_POMIAROWA_ADMIN', 'Pełne uprawnienia do aparatury pomiarowej', 
-                       id, '[\"VIEW\", \"CREATE\", \"EDIT\", \"DELETE\", \"ASSIGN\", \"TRANSFER\", \"REVIEW\"]', 0, NOW(), NOW() 
+        // Create module only if it doesn't exist
+        $this->addSql("INSERT IGNORE INTO modules (name, display_name, description, is_enabled, created_at, updated_at) VALUES ('aparatura_pomiarowa', 'Aparatura Pomiarowa', 'Moduł zarządzania aparaturą pomiarową - mierniki i akcesoria', 1, NOW(), NOW())");
+
+        // Create roles only if they don't exist
+        $this->addSql("INSERT IGNORE INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at)
+                       SELECT 'APARATURA_POMIAROWA_ADMIN', 'Pełne uprawnienia do aparatury pomiarowej',
+                       id, '[\"VIEW\", \"CREATE\", \"EDIT\", \"DELETE\", \"ASSIGN\", \"TRANSFER\", \"REVIEW\"]', 0, NOW(), NOW()
                        FROM modules WHERE name = 'aparatura_pomiarowa'");
-        
-        $this->addSql("INSERT INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at) 
-                       SELECT 'APARATURA_POMIAROWA_USER', 'Podstawowe uprawnienia do aparatury pomiarowej', 
-                       id, '[\"VIEW\", \"CREATE\", \"EDIT\", \"ASSIGN\", \"REVIEW\"]', 0, NOW(), NOW() 
+
+        $this->addSql("INSERT IGNORE INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at)
+                       SELECT 'APARATURA_POMIAROWA_USER', 'Podstawowe uprawnienia do aparatury pomiarowej',
+                       id, '[\"VIEW\", \"CREATE\", \"EDIT\", \"ASSIGN\", \"REVIEW\"]', 0, NOW(), NOW()
                        FROM modules WHERE name = 'aparatura_pomiarowa'");
-        
-        $this->addSql("INSERT INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at) 
-                       SELECT 'APARATURA_POMIAROWA_VIEWER', 'Uprawnienia tylko do odczytu aparatury pomiarowej', 
-                       id, '[\"VIEW\"]', 0, NOW(), NOW() 
+
+        $this->addSql("INSERT IGNORE INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at)
+                       SELECT 'APARATURA_POMIAROWA_VIEWER', 'Uprawnienia tylko do odczytu aparatury pomiarowej',
+                       id, '[\"VIEW\"]', 0, NOW(), NOW()
                        FROM modules WHERE name = 'aparatura_pomiarowa'");
-        
-        $this->addSql("INSERT INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at) 
-                       SELECT 'APARATURA_POMIAROWA_OWN', 'Uprawnienia do zarządzania własną aparaturą pomiarową', 
-                       id, '[\"VIEW_OWN\"]', 0, NOW(), NOW() 
+
+        $this->addSql("INSERT IGNORE INTO roles (name, description, module_id, permissions, is_system_role, created_at, updated_at)
+                       SELECT 'APARATURA_POMIAROWA_OWN', 'Uprawnienia do zarządzania własną aparaturą pomiarową',
+                       id, '[\"VIEW_OWN\"]', 0, NOW(), NOW()
                        FROM modules WHERE name = 'aparatura_pomiarowa'");
     }
 
