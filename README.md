@@ -254,8 +254,8 @@ System zdarzeń domenowych z subskrybentami:
    sudo -u www-data php bin/console doctrine:database:create
    sudo -u www-data php bin/console doctrine:migrations:migrate --no-interaction
    
-   # Załadowanie przykładowych danych z nowymi przeglądami
-   sudo -u www-data php bin/console doctrine:fixtures:load --no-interaction
+   # Na serwerze produkcyjnym NIE ładuj fixtures - zawierają dane testowe
+   # sudo -u www-data php bin/console doctrine:fixtures:load --no-interaction  # TYLKO dla developmentu
    
    # Ustawienie uprawnień
    sudo chmod -R 755 var/
@@ -443,6 +443,42 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    - Procedura identyczna jak dla Ubuntu 22.04
    - Przejdź do: `http://your-domain.com/install`
 
+### ⚠️ INSTRUKCJE SPECJALNE DLA SERWERA PRODUKCYJNEGO
+
+**WAŻNE: Na serwerze produkcyjnym NIE używaj fixtures!**
+
+#### Instalacja Produkcyjna (bez fixtures)
+```bash
+cd /var/www/assethub
+
+# 1. Pobierz najnowsze zmiany
+git pull origin master
+
+# 2. Zainstaluj zależności produkcyjne (bez dev dependencies)
+sudo -u www-data composer install --no-dev --optimize-autoloader
+
+# 3. Uruchom TYLKO migracje (bez fixtures)
+sudo -u www-data php bin/console doctrine:migrations:migrate --no-interaction
+
+# 4. Utwórz administratora ręcznie (zamiast fixtures)
+sudo -u www-data php bin/console app:create-admin
+
+# 5. Wyczyść cache dla produkcji
+sudo -u www-data php bin/console cache:clear --env=prod
+sudo -u www-data php bin/console cache:warmup --env=prod
+
+# 6. Ustaw uprawnienia
+sudo chown -R www-data:www-data var/cache/ var/log/
+sudo chmod -R 755 var/cache/ var/log/
+```
+
+#### Dlaczego NIE fixtures na produkcji?
+- ❌ Fixtures zawierają dane testowe
+- ❌ Mogą referencować kod deweloperski
+- ❌ Nadpisują prawdziwe dane
+- ❌ Są przeznaczone tylko do developmentu
+- ✅ Używaj `app:create-admin` na produkcji
+
 ### Metoda 2: Instalacja Manualna
 
 1. **Utworzenie Pliku .env**
@@ -470,13 +506,17 @@ Ubuntu 24.04 zawiera nowsze wersje pakietów i niektóre zmiany w konfiguracji:
    ```bash
    php bin/console doctrine:database:create
    php bin/console doctrine:migrations:migrate --no-interaction
-   php bin/console doctrine:fixtures:load --no-interaction
+   # NIE używaj fixtures na serwerze produkcyjnym - zawierają dane testowe
    ```
 
-4. **Załadowanie Przykładowych Danych (opcjonalne)**
+4. **Załadowanie Przykładowych Danych (TYLKO development)**
    ```bash
-   # Załaduj kompletne dane przykładowe z modułem Asekuracja
-   php bin/console doctrine:fixtures:load --no-interaction
+   # UWAGA: Fixtures są TYLKO dla środowiska deweloperskiego
+   # NA PRODUKCJI: utworz konta administratora ręcznie
+   php bin/console doctrine:fixtures:load --no-interaction  # TYLKO development
+
+   # Alternatywnie na produkcji - ręczne utworzenie admina:
+   php bin/console app:create-admin
    ```
 
 5. **Utworzenie Użytkownika Administratora** (jeśli nie używasz fixtures)

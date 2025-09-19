@@ -19,7 +19,13 @@ AssetHub is an enterprise-grade asset management system built on Symfony 7.0 wit
 # Database setup and migrations
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console doctrine:fixtures:load --no-interaction
+
+# Load fixtures (DEVELOPMENT ONLY - never on production)
+# Production servers should NOT use fixtures as they contain test data
+php bin/console doctrine:fixtures:load --no-interaction  # DEVELOPMENT ONLY
+
+# Create admin user on production (instead of fixtures)
+php bin/console app:create-admin
 
 # Create new migration after entity changes
 php bin/console make:migration
