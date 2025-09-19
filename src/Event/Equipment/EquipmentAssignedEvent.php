@@ -2,51 +2,21 @@
 
 namespace App\Event\Equipment;
 
-use App\Entity\Equipment;
+// DEPRECATED: Legacy EquipmentAssignedEvent - Equipment module disabled
+// Use AsekuracyjnyEquipmentAssignedEvent or AparaturaPomiarowaEquipmentAssignedEvent instead
+
 use App\Entity\User;
 use Symfony\Contracts\EventDispatcher\Event;
 
+/**
+ * @deprecated Equipment module disabled. Use specialized module events instead.
+ */
 class EquipmentAssignedEvent extends Event
 {
     public const NAME = 'equipment.assigned';
 
-    public function __construct(
-        private Equipment $equipment,
-        private User $assignedTo,
-        private ?User $previousAssignee,
-        private User $assignedBy,
-        private string $notes = '',
-        private array $context = []
-    ) {
-    }
-
-    public function getEquipment(): Equipment
+    public function __construct()
     {
-        return $this->equipment;
-    }
-
-    public function getAssignedTo(): User
-    {
-        return $this->assignedTo;
-    }
-
-    public function getPreviousAssignee(): ?User
-    {
-        return $this->previousAssignee;
-    }
-
-    public function getAssignedBy(): User
-    {
-        return $this->assignedBy;
-    }
-
-    public function getNotes(): string
-    {
-        return $this->notes;
-    }
-
-    public function getContext(): array
-    {
-        return $this->context;
+        throw new \Exception('EquipmentAssignedEvent is deprecated. Equipment module disabled. Use specialized module events instead.');
     }
 }

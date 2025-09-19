@@ -67,10 +67,28 @@ class AdminService
      */
     public function getDashboardData(): array
     {
+        // Get equipment counts from active modules
+        $asekuracyjnyCount = 0;
+        $aparaturaCount = 0;
+
+        try {
+            $asekuracyjnyCount = $this->entityManager->getRepository('App\\AsekuracyjnySPM\\Entity\\AsekuracyjnyEquipment')->count([]);
+        } catch (\Exception $e) {
+            // Module not available
+        }
+
+        try {
+            $aparaturaCount = $this->entityManager->getRepository('App\\AparaturaPomiarowa\\Entity\\AparaturaPomiarowaEquipment')->count([]);
+        } catch (\Exception $e) {
+            // Module not available
+        }
+
         return [
             'system_stats' => [
                 'users_count' => $this->entityManager->getRepository('App\\Entity\\User')->count([]),
-                'equipment_count' => $this->entityManager->getRepository('App\\Entity\\Equipment')->count([]),
+                'asekuracyjny_equipment_count' => $asekuracyjnyCount,
+                'aparatura_pomiarowa_count' => $aparaturaCount,
+                'total_equipment_count' => $asekuracyjnyCount + $aparaturaCount,
                 'active_sessions' => 0, // TODO: Implement session counting
             ],
             'recent_activities' => [], // TODO: Get recent audit logs
