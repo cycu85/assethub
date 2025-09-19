@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language and Context
+
+**Language**: All communication should be conducted in Polish language (polski).
+
+**Session Initialization**: At the beginning of each session, always read and familiarize yourself with the `kontekst.txt` file to understand the current project context and any specific instructions or requirements.
+
 ## Project Overview
 
 AssetHub is an enterprise-grade asset management system built on Symfony 7.0 with PHP 8.2+. It features a sophisticated modular architecture using Service Layer Pattern, CQRS, and Event-Driven Architecture with comprehensive audit trails and authorization systems.

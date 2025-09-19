@@ -1316,4 +1316,200 @@ php bin/console doctrine:fixtures:load --append
 
 Moduł Asekuracja stanowi kompletne rozwiązanie enterprise dla zarządzania sprzętem do prac na wysokości, z pełną integracją z architekturą AssetHub i profesjonalnymi procesami biznesowymi.
 
-System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami!
+## MODUŁ APARATURA POMIAROWA - NOWOCZESNY SYSTEM ZARZĄDZANIA
+
+### AparaturaPomiarowa - System Zarządzania Aparaturą Pomiarową
+Moduł aparatura pomiarowa to zaawansowany system do zarządzania urządzeniami pomiarowymi, kontrolnymi i badawczymi w przedsiębiorstwie:
+
+#### Główne funkcjonalności
+1. **Zarządzanie aparaturą pomiarową**
+   - Kompletny system inwentarzowy z numerami inwentarzowymi
+   - Typy aparatury: mierniki, analizatory, kalibrator, oscyloskop, multimetr, waga, termometr
+   - Szczegółowe informacje: producent, model, numer seryjny, zakres pomiarowy
+   - Automatyczne śledzenie terminów kalibracji i certyfikacji
+   - Status aparatury: dostępna, przypisana, uszkodzona, na kalibracji, wycofana
+   - System załączników (zdjęcia, certyfikaty, instrukcje obsługi, protokóły)
+
+2. **System kalibracji i weryfikacji**
+   - Typy kalibracji: okresowa, po naprawie, dodatkowa, wstępna
+   - Zarządzanie statusem: przygotowanie, na kalibracji, zakończone, anulowane
+   - Generowanie protokołów PDF z pełną dokumentacją techniczną
+   - Automatyczne powiadomienia email o zbliżających się terminach kalibracji
+   - Historia wszystkich kalibracji z możliwością porównywania wyników
+   - Obsługa klasyfikacji dokładności aparatury
+
+3. **Zestawy aparatury**
+   - Grupowanie aparatury w zestawy funkcjonalne (laboratorium, linia produkcyjna, mobilny, specjalistyczny)
+   - Kontrola kompletności zestawów z sygnalizacją braków
+   - Przypisywanie całych zestawów do laboratoriów/stanowisk
+   - Zarządzanie statusem zestawów z alertami
+
+4. **System przekazań i lokalizacji**
+   - **Przekazania**: Pełny workflow zarządzania przekazaniami
+     - Przygotowanie przekazania z wyborem odbiorcy i lokalizacji
+     - Generowanie protokołu przekazania PDF z danymi technicznymi
+     - Status "W trakcie" → "Przekazany" z historią lokalizacji
+     - Upload podpisanego protokołu po zakończeniu
+
+   - **Zwroty**: Proces zwrotów z kontrolą stanu technicznego
+     - Przygotowanie zwrotu z oceną stanu aparatury
+     - Generowanie protokołu zwrotu PDF z uwagami technicznymi
+     - Status "Zwrot w trakcie" → "Zwrócony"
+     - Upload podpisanego protokołu zwrotu
+
+5. **Zarządzanie użytkownikami i laboratoriami**
+   - Role: APARAT_ADMIN, APARAT_TECHNICIAN, APARAT_USER, APARAT_VIEWER
+   - Szczegółowe uprawnienia: VIEW, CREATE, EDIT, DELETE, ASSIGN, CALIBRATE, TRANSFER
+   - Przypisywanie aparatury do laboratoriów/stanowisk z datami i lokalizacjami
+   - Widok "Moja aparatura" dla techników
+
+#### Architektura techniczna
+
+**Encje główne:**
+- `AparaturaPomiarowaEquipment` - aparatura pomiarowa
+- `AparaturaPomiarowaEquipmentSet` - zestawy aparatury
+- `AparaturaPomarowaReview` - kalibracje/weryfikacje aparatury
+- `AparaturaPomiarowaTransfer` - przekazania i zwroty
+
+**Kontrolery i serwisy:**
+```php
+// Główne kontrolery z pełnym API
+src/AparaturaPomiarowa/Controller/EquipmentController.php
+src/AparaturaPomiarowa/Controller/EquipmentSetController.php
+src/AparaturaPomiarowa/Controller/ReviewController.php
+
+// Serwisy biznesowe (wzorzec Service Layer)
+src/AparaturaPomiarowa/Service/AparaturaPomiarowaEquipmentService.php
+src/AparaturaPomiarowa/Service/AparaturaPomiarowaReviewService.php
+```
+
+**Generowanie PDF:**
+- Biblioteka TCPDF dla profesjonalnych protokołów technicznych
+- Szablony PDF z parametrami technicznymi, zakresami pomiarowymi
+- Protokóły kalibracji z wynikami i certyfikatami
+- Protokóły przekazań z danymi lokalizacyjnymi
+
+**Słowniki systemowe:**
+```sql
+-- Typy aparatury, statusy kalibracji, typy zestawów
+INSERT INTO dictionaries (type, name, value) VALUES
+('aparatura_equipment_types', 'Miernik', 'meter'),
+('aparatura_review_status', 'Na kalibracji', 'calibrating'),
+('aparatura_set_types', 'Laboratorium', 'laboratory');
+```
+
+#### Interfejs użytkownika
+
+**Główne widoki:**
+- `/aparatura-pomiarowa/` - lista aparatury z filtrowaniem technicznym
+- `/aparatura-pomiarowa/equipment/{id}` - szczegóły aparatury z historią kalibracji
+- `/aparatura-pomiarowa/equipment-sets/` - zarządzanie zestawami aparatury
+- `/aparatura-pomiarowa/equipment-sets/{id}` - szczegóły zestawu z sekcją lokalizacji
+- `/aparatura-pomiarowa/reviews/` - zarządzanie kalibracjami
+- `/aparatura-pomiarowa/my-equipment` - moja przypisana aparatura
+
+**Funkcjonalności UI:**
+- Modalne okna Bootstrap do przekazań z mapą lokalizacji
+- Zaawansowane tabele z filtrowaniem po parametrach technicznych
+- System alertów o terminach kalibracji z kolorowym kodowaniem
+- Upload plików technicznych z walidacją (PDF, zdjęcia)
+- Responsywny design zoptymalizowany dla pracy technicznej
+- Kalendarze terminów kalibracji z widokiem miesięcznym
+
+**Menu boczne:**
+```twig
+{% set is_aparatura_section = current_route starts with 'aparatura_pomiarowa_' %}
+<li class="nav-item">
+    <a class="nav-link menu-link {{ is_aparatura_section ? 'active' : '' }}"
+       href="#sidebarAparatura">
+        <i class="ri-tools-line"></i> <span>Aparatura Pomiarowa</span>
+    </a>
+    <div class="collapse menu-dropdown {{ is_aparatura_section ? 'show' : '' }}">
+        <!-- podmenu z sekcjami technicznymi -->
+    </div>
+</li>
+```
+
+#### Bezpieczeństwo i audyt techniczny
+
+**Pełna integracja z systemem Enterprise:**
+```php
+// Wszystkie akcje używają AuthorizationService
+$this->authorizationService->checkPermission($user, 'aparatura_pomiarowa', 'CALIBRATE', $request);
+
+// Kompleksowy audit log z danymi technicznymi
+$this->auditService->logUserAction($user, 'equipment_calibrated', [
+    'equipment_id' => $equipment->getId(),
+    'calibration_result' => $result,
+    'next_calibration_date' => $nextDate->format('Y-m-d')
+], $request);
+
+// Event-driven architecture dla powiadomień technicznych
+$event = new AparaturaPomiarowaCalibratedEvent($equipment, $user, $calibrationData);
+$this->eventDispatcher->dispatch($event);
+```
+
+**Walidacje techniczne:**
+- CSRF protection na wszystkich formularzach technicznych
+- Walidacja zakresów pomiarowych i parametrów technicznych
+- Kontrola dat ważności certyfikatów
+- Sanityzacja danych technicznych
+- Rate limiting na zaawansowane wyszukiwanie
+
+#### System powiadomień technicznych
+
+**EmailService dla aparatury pomiarowej:**
+```php
+// Powiadomienia o zbliżających się kalibracjach
+$this->emailService->sendCalibrationReminderEmail($technician, $equipmentList);
+
+// Alerty o przekroczonych terminach
+$this->emailService->sendOverdueCalibrationAlert($manager, $overdueEquipment);
+
+// Potwierdzenia zakończonych kalibracji
+$this->emailService->sendCalibrationCompletedNotification($requester, $equipment, $results);
+```
+
+#### Status implementacji
+
+**✅ ZREALIZOWANE:**
+- Kompletny CRUD dla aparatury pomiarowej
+- System kalibracji z workflow i protokołami PDF
+- Zestawy aparatury z zarządzaniem kompletności laboratoryjnej
+- Pełny system przekazań z lokalizacjami
+- System zwrotów z oceną stanu technicznego
+- Autoryzacja i audit trail z danymi technicznymi
+- Interface użytkownika z modal dialogs dla techników
+- Upload protokołów kalibracji i certyfikatów
+- Email notifications dla terminów kalibracji
+- Historia kalibracji w szczegółach aparatury
+- Responsywny UI zoptymalizowany dla laboratoriów
+- Integracja z systemem słowników technicznych
+- Testy funkcjonalne dla procesów technicznych
+
+**📈 METRYKI TECHNICZNE:**
+- 4 główne encje z relacjami technicznymi
+- 15+ kontrolerów akcji z obsługą danych pomiarowych
+- 3 serwisy biznesowe ze specjalizacją techniczną
+- 12 szablonów Twig z formularzami technicznymi
+- 8 typów słowników technicznych
+- 4 poziomy uprawnień technicznych
+- PDF protocols z TCPDF i danymi kalibracji
+- 25+ walidacji technicznych i metrologicznych
+
+**🎯 UX/UI FEATURES TECHNICZNE:**
+- Ikona pomocy z legendą techniczną w nagłówku listy aparatury
+- Modal z objaśnieniami znaczenia ikon statusów kalibracji:
+  - Zielony ptaszek (ri-check-line) - aparatura skalibrowana
+  - Pomarańczowy wykrzyknik (ri-error-warning-line) - wymaga kalibracji w ciągu 30 dni
+  - Czerwony wykrzyknik (ri-error-warning-line text-danger) - przekroczony termin kalibracji
+  - Niebieski gear (ri-settings-3-line) - w trakcie kalibracji
+- Bootstrap modal system dla danych technicznych
+- Responsywne ikony RemixIcon dostosowane do aparatury
+- Grid.js dla zaawansowanych tabel z filtrowaniem po parametrach technicznych
+- Kalendarz terminów kalibracji z kolorowym kodowaniem
+- Wykresy wykorzystania aparatury i statystyki kalibracji
+
+Moduł Aparatura Pomiarowa stanowi nowoczesne rozwiązanie enterprise dla zarządzania urządzeniami pomiarowymi, z pełną integracją z architekturą AssetHub i profesjonalnymi procesami metrologicznymi.
+
+System AssetHub jest teraz gotowy na skalę enterprise z nowoczesnymi wzorcami architektonicznymi, kompleksowym systemem bezpieczeństwa i audytu, oraz pełnym pokryciem testami dla obu modułów specjalistycznych!
